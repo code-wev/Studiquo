@@ -8,11 +8,14 @@ const Navbar = () => {
 
   return (
     <div className="sticky top-0 left-0 w-full h-max z-50">
-      <nav className="flex backdrop-blur-xl text-gray-200 font-bold flex-row justify-between bg-gradient-to-bl to-[#0F172A] from-[#080127] items-center md:px-[48px] lg:px-[110px] py-2 shadow-2xl">
+      <nav className="flex backdrop-blur text-black font-bold flex-row justify-between items-center md:px-[48px] lg:px-[110px] py-2 shadow-2xl">
         {/* Logo + Menu Icon */}
         <div className="flex flex-row justify-between w-full xl:w-fit items-center">
           <Link href="/" className="py-4 px-4 text-2xl">
-            <span className="text-yellow-500 cursor-pointer capitalize">STUDI</span>QUO
+            <span className="text-[#44141] cursor-pointer capitalize">
+              STUDI
+            </span>
+            <span className="text-yellow-500">QUO</span>
           </Link>
 
           {/* Mobile Menu Icon */}
@@ -26,16 +29,16 @@ const Navbar = () => {
           {/* Desktop Menu */}
           <ul className="xl:flex flex-row hidden gap-2">
             <li>
-              <Link href="/" className="py-3 px-6 rounded hover:bg-[#ffffff44]">
+              {/* <Link href="/" className="py-3 px-6 rounded hover:bg-[#ffffff44]">
                 Home
-              </Link>
+              </Link> */}
             </li>
             <li>
               <Link
                 href="/about"
                 className="py-3 px-6 rounded hover:bg-[#ffffff44]"
               >
-                About
+                About Us
               </Link>
             </li>
             {/* <li>
@@ -51,7 +54,7 @@ const Navbar = () => {
                 href="/how"
                 className="py-3 px-6 rounded hover:bg-[#ffffff44]"
               >
-                How It Work
+                How It Works
               </Link>
             </li>
             <li>
@@ -122,13 +125,13 @@ const Navbar = () => {
 
         <ul className="flex flex-col items-start text-start px-6 text-white">
           <li className="py-4 w-full">
-            <Link href="/" onClick={() => setIsOpen(false)}>
+            {/* <Link href="/" onClick={() => setIsOpen(false)}>
               Home
-            </Link>
+            </Link> */}
           </li>
           <li className="py-4 w-full">
             <Link href="/about" onClick={() => setIsOpen(false)}>
-              About
+              About Us
             </Link>
           </li>
           <li className="py-4 w-full">
@@ -138,7 +141,7 @@ const Navbar = () => {
           </li>
           <li className="py-4 w-full">
             <Link href="/how" onClick={() => setIsOpen(false)}>
-              How It Work
+              How It Works
             </Link>
           </li>
           <div className="flex flex-col gap-y-4 w-full mt-4">

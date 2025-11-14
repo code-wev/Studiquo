@@ -20,13 +20,12 @@ const Banner = () => {
         <div className="text-xl md:text-[20px] rounded text-white duration-300 mt-4">
           <Link
             href="/dashboard/studentDashboard"
-            className="bg-[#0A66C2] hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition duration-300 ease-in-out"
+            className="bg-[#38BDF8] hover:bg-blue-700 text-white px-6 py-3 rounded-3xl font-semibold transition duration-300 ease-in-out"
           >
             Discover More
           </Link>
         </div>
       </div>
-x
       {/* Right Section */}
       <div className="w-full lg:w-1/2 relative mt-12 lg:mt-0">
         {/* Animated Shapes */}
