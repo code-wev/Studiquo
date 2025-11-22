@@ -1,28 +1,29 @@
 "use client";
 import React from "react";
 import Image from "next/image";
-import englishImg from "@/public/home/pic2.jpg";
-import mathImg from "@/public/home/pic1.jpg";
-import scienceImg from "@/public/home/pic3.jpg";
+import img from '@/public/home/topic1.png'
 
 const Topics = () => {
   const topics = [
     {
       title: "English",
-      description: "Enhance grammar, vocabulary, and communication skills efficiently.",
-      image: englishImg,
+      description:
+        "Enhance grammar, vocabulary, and communication skills efficiently.",
+      image: "/home/tutor.jpg",
       bgColor: "from-[#FEB9AF] to-[#FEF0C8]",
     },
     {
       title: "Math",
-      description: "Master mathematical concepts with interactive lessons and exercises.",
-      image: mathImg,
+      description:
+        "Master mathematical concepts with interactive lessons and exercises.",
+      image: "/home/topic1.png",
       bgColor: "from-[#E3D9EF] to-[#D7E9DC]",
     },
     {
       title: "Science",
-      description: "Explore physics, chemistry, and biology through engaging experiments.",
-      image: scienceImg,
+      description:
+        "Explore physics, chemistry, and biology through engaging experiments.",
+      image: "/public/home/topic1.png",
       bgColor: "from-[#FEF0C8] to-[#E3D9EF]",
     },
   ];
@@ -36,8 +37,9 @@ const Topics = () => {
         </h2>
         {/* Section Description */}
         <p className="text-gray-600 mb-12 max-w-2xl mx-auto">
-          Explore our carefully curated topics designed to enhance your learning journey. 
-          Each topic is crafted to provide engaging lessons and practical knowledge.
+          Explore our carefully curated topics designed to enhance your learning
+          journey. Each topic is crafted to provide engaging lessons and
+          practical knowledge.
         </p>
 
         {/* Topic Cards */}
@@ -52,10 +54,13 @@ const Topics = () => {
                   src={topic.image}
                   alt={topic.title}
                   fill
-                  style={{ objectFit: "cover" }}
+                  className="object-cover"
                 />
               </div>
-              <h3 className="text-2xl font-bold mb-2 text-black">{topic.title}</h3>
+
+              <h3 className="text-2xl font-bold mb-2 text-black">
+                {topic.title}
+              </h3>
               <p className="text-black/80">{topic.description}</p>
             </div>
           ))}

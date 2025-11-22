@@ -1,60 +1,114 @@
-"use client";
-import React from "react";
-import Link from "next/link";
 import Image from "next/image";
-
-const Banner = () => {
+import { FiArrowRight, FiStar } from "react-icons/fi";
+import { IoIosStar } from "react-icons/io";
+export default function Banner() {
   return (
-    <div className="w-full p-10 md:p-[122px] overflow-hidden min-h-screen flex lg:justify-between items-center md:items-start lg:items-center flex-col lg:flex-row bg-opacity-25 bg-gradient-to-bl to-[#041b3a] from-[#0B1120]">
-      {/* Left Section */}
-      <div className="w-full lg:w-[45%] flex justify-start items-start flex-col gap-6 md:gap-3">
-        <h1 className="text-2xl lg:text-5xl md:text-5xl text-white text-left font-bold">
-          Best <span className="text-blue-500">Online Learning Platform</span>{" "}
-          for <br /> Skill & Career Growth
-        </h1>
+    <section className="w-full bg-white ">
+      <div className="relative grid lg:grid-cols-2 min-h-[80vh]">
+        {/* LEFT SIDE */}
+        <div className="bg-gradient-to-br from-[#CCB7F8] via-[#a495cc] to-[#575476] py-8 px-6 lg:px-32 flex flex-col justify-center text-white">
+          <h1 className="text-3xl md:text-4xl text-white lg:text-5xl font-extrabold leading-tight mb-6 text-black">
+            Find The Perfect Tutor For Any Subject — Anytime, Anywhere
+          </h1>
 
-        <p className="text-white text-lg">
-          Expert-led courses for flexible, online learning.
-        </p>
+          <p className="text-[#DADADA] text-lg leading-relaxed max-w-xl">
+            Learn from trusted, verified tutors for GCSE & A-Level subjects.
+            Book sessions instantly and study with confidence Learn from
+            trusted, verified tutors for GCSE & A-Level subjects.
+          </p>
 
-        <div className="text-xl md:text-[20px] rounded text-white duration-300 mt-4">
-          <Link
-            href="/dashboard/studentDashboard"
-            className="bg-[#38BDF8] hover:bg-blue-700 text-white px-6 py-3 rounded-3xl font-semibold transition duration-300 ease-in-out"
-          >
-            Discover More
-          </Link>
-        </div>
-      </div>
-      {/* Right Section */}
-      <div className="w-full lg:w-1/2 relative mt-12 lg:mt-0">
-        {/* Animated Shapes */}
-        <div
-          className="absolute top-[-300px] md:top-[-200px] z-[-1] right-[-300px] md:right-[-200px] w-[500px] h-[500px]"
-          style={{
-            transform: "rotate(45deg)",
-          }}
-        >
-          <div className="relative">
-            <div className="absolute rounded-[40px] w-[400px] h-[400px] bg-[rgba(0,0,0,0.4)] opacity-40 shadow transition-all duration-500"></div>
-            <div className="absolute rounded-[30px] w-[300px] h-[300px] bg-[rgba(0,0,0,0.2)] opacity-40 shadow transition-all duration-500"></div>
-            <div className="absolute rounded-[20px] w-[200px] h-[200px] bg-white opacity-55 shadow transition-all duration-500"></div>
+          {/* Button */}
+          <button className="mt-8 bg-white text-gray-900 px-6 py-3 rounded-lg font-bold flex items-center gap-2 w-fit shadow hover:bg-gray-100 transition">
+            Discover More <FiArrowRight />
+          </button>
+
+          {/* Rating */}
+          <div className="mt-6 flex items-center gap-3">
+            <div className="flex -space-x-3">
+              <Image
+                src="/home/user.png"
+                width={35}
+                height={35}
+                className="rounded-full border-2 w-9 h-9 bg-cover"
+                alt="user1"
+              />
+              <Image
+                src="/home/user.png"
+                width={35}
+                height={35}
+                className="rounded-full border-2 w-9 h-9 bg-cover"
+                alt="user1"
+              />
+              <Image
+                src="/home/user.png"
+                width={35}
+                height={35}
+                className="rounded-full border-2 w-9 h-9 bg-cover"
+                alt="user1"
+              />
+            </div>
+
+            <div className="flex items-center gap-1">
+              <div>
+                <div className="flex items-center gap-2">
+                  <IoIosStar className="text-yellow-300" />
+                  <span className="text-white font-semibold">145K</span>
+                </div>
+                <div>
+                  <span>Ratings</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Banner Image */}
-        <div className="relative w-full h-[400px]">
+        {/* RIGHT SIDE IMAGE */}
+        <div className="bg-[#F4F4F4] flex justify-center items-center p-6 lg:p-10">
           <Image
-            src="https://tutorsheba3.netlify.app/assets/banner1-BOT-BWkG.svg"
-            alt="Learning Banner"
-            fill
-            priority
-            className="object-contain bannerAnimation"
+            src="/home/banner.png"
+            alt="Tutor Illustration"
+            width={708}
+            height={450}
+            className="object-contain"
           />
         </div>
-      </div>
-    </div>
-  );
-};
 
-export default Banner;
+        {/* BOTTOM STAT BAR */}
+        <div className="absolute bottom-6 w-full flex justify-center">
+          <div
+            className="flex items-center justify-between bg-white rounded-full shadow-md px-12 py-3 md:py-6 
+                      max-w-4xl w-full"
+          >
+            {/* Item 1 */}
+            <div className="text-center flex flex-col items-center">
+              <span className="text-lg md:text-2xl font-semibold text-[#455176]">
+                150+
+              </span>
+              <span className="text-xs md:text-base text-gray-600">Students</span>
+            </div>
+
+            {/* Item 2 */}
+            <div className="text-center flex flex-col items-center">
+              <span className="text-lg md:text-2xl font-semibold text-[#0E7490]">50</span>
+              <span className="text-xs md:text-base text-gray-600">Online Courses</span>
+            </div>
+
+            {/* Item 3 */}
+            <div className="text-center flex flex-col items-center">
+              <span className="text-lg md:text-2xl font-semibold text-[#15803D]">200</span>
+              <span className="text-xs md:text-base text-gray-600">Finished Seasons</span>
+            </div>
+
+            {/* Item 4 */}
+            <div className="text-center flex flex-col items-center">
+              <span className="text-lg md:text-2xl font-semibold text-[#764545]">
+                100%
+              </span>
+              <span className="text-xs text-gray-600">Satisfaction</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
