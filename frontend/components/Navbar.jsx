@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { FiArrowRight, FiChevronDown } from "react-icons/fi";
 
 export default function Navbar() {
@@ -31,10 +32,12 @@ export default function Navbar() {
             Login
           </button>
 
-          <button className="bg-[#CCB7F8] flex items-center gap-1 text-[#3A0E95] px-6 py-3 rounded-lg hover:bg-purple-700 transition font-bold">
+        <Link href={'/register'}>
+        
+          <button className="bg-[#CCB7F8] flex cursor-pointer items-center gap-1 text-[#3A0E95] px-6 py-3 rounded-lg hover:bg-purple-700 transition font-bold">
             Register
             <FiArrowRight />
-          </button>
+          </button></Link>
         </div>
       </div>
     </nav>
