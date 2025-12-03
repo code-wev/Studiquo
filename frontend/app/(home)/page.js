@@ -12,17 +12,17 @@ import SiteFooter from "@/components/SiteFooter";
 import { useSession } from "next-auth/react";
 
 export default function page() {
-  const data = useSession();
-  console.log(data, "hey young man")
+  // const data = useSession();
+  // console.log(data, "hey young man")
   return (
     <div className="min-h-screen overfh bg-white">
-      <Navbar />
+
       <Banner/>
       <TopicsSection/>
       <Tutors/>
       <LearnerStories/>
       <SubscribeBox/>
-      <SiteFooter/>
+
     </div>
   );
 }
