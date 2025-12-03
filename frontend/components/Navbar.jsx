@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FiArrowRight, FiChevronDown } from "react-icons/fi";
 
+
 export default function Navbar() {
   return (
     <nav className="w-full bg-white border-b border-gray-100">
@@ -15,15 +16,15 @@ export default function Navbar() {
 
         {/* Menu */}
         <div className="hidden md:flex items-center space-x-8 text-gray-700 font-medium">
-          <a href="#" className="text-black hover:text-black">
+          <Link href="/find-tutor" className="text-black hover:text-black">
             Find a Tutor
-          </a>
-          <a href="#" className="text-gray-500 hover:text-black">
+          </Link>
+          <Link href="/about" className="text-gray-500 hover:text-black">
             About Us
-          </a>
-          <a href="#" className="text-gray-500 hover:text-black">
+          </Link>
+          <Link href="/how-its-works" className="text-gray-500 hover:text-black">
             How it works
-          </a>
+          </Link>
         </div>
 
         {/* Auth Buttons */}
