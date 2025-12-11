@@ -4,14 +4,12 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Review, ReviewSchema } from '../models/review.model';
 import { ReviewsController } from './reviews.controller';
 import { ReviewsService } from './reviews.service';
+import { jwtConfig } from 'src/common/jwt.config';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Review.name, schema: ReviewSchema }]),
-    JwtModule.register({
-      secret: 'your_jwt_secret',
-      signOptions: { expiresIn: '1d' },
-    }),
+    JwtModule.register(jwtConfig),
   ],
   controllers: [ReviewsController],
   providers: [ReviewsService],

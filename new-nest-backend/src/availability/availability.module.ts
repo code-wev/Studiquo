@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
+import { jwtConfig } from 'src/common/jwt.config';
 import { TimeSlot, TimeSlotSchema } from '../models/timeSlot.model';
 import {
   TutorAvailability,
@@ -15,10 +16,7 @@ import { AvailabilityService } from './availability.service';
       { name: TutorAvailability.name, schema: TutorAvailabilitySchema },
       { name: TimeSlot.name, schema: TimeSlotSchema },
     ]),
-    JwtModule.register({
-      secret: 'your_jwt_secret',
-      signOptions: { expiresIn: '1d' },
-    }),
+    JwtModule.register(jwtConfig),
   ],
   controllers: [AvailabilityController],
   providers: [AvailabilityService],

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
+import { jwtConfig } from '../common/jwt.config';
 import { ChatGroup, ChatGroupSchema } from '../models/chatGroup.model';
 import { Message, MessageSchema } from '../models/message.model';
 import { ChatController } from './chat.controller';
@@ -13,10 +14,7 @@ import { ChatService } from './chat.service';
       { name: ChatGroup.name, schema: ChatGroupSchema },
       { name: Message.name, schema: MessageSchema },
     ]),
-    JwtModule.register({
-      secret: 'your_jwt_secret',
-      signOptions: { expiresIn: '1d' },
-    }),
+    JwtModule.register(jwtConfig),
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway],

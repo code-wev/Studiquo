@@ -8,6 +8,7 @@ import {
 } from '../models/bookingStudents.model';
 import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
+import { jwtConfig } from 'src/common/jwt.config';
 
 @Module({
   imports: [
@@ -15,10 +16,7 @@ import { BookingsService } from './bookings.service';
       { name: Booking.name, schema: BookingSchema },
       { name: BookingStudents.name, schema: BookingStudentsSchema },
     ]),
-    JwtModule.register({
-      secret: 'your_jwt_secret',
-      signOptions: { expiresIn: '1d' },
-    }),
+   JwtModule.register(jwtConfig),
   ],
   controllers: [BookingsController],
   providers: [BookingsService],
