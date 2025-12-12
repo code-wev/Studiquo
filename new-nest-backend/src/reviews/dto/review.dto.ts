@@ -20,14 +20,14 @@ export class CreateReviewDto {
   tutor: string;
 
   @Type(() => Number)
-  @IsNumber()
-  @Min(1)
-  @Max(5)
+  @IsNumber({}, { message: 'Rating must be a number between 1 and 5' })
+  @Min(1, { message: 'Rating must be at least 1' })
+  @Max(5, { message: 'Rating cannot be greater than 5' })
   rating: number;
 
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(1)
-  @MaxLength(1000)
+  @IsString({ message: 'Comment must be a string' })
+  @IsNotEmpty({ message: 'Comment is required' })
+  @MinLength(1, { message: 'Comment must contain at least 1 character' })
+  @MaxLength(1000, { message: 'Comment cannot exceed 1000 characters' })
   comment: string;
 }

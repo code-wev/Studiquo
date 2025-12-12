@@ -52,7 +52,9 @@ export class MailService implements OnModuleInit {
   enqueue(mailOptions: nodemailer.SendMailOptions): Promise<any> {
     return new Promise((resolve, reject) => {
       this.queue.push({ mailOptions, resolve, reject });
-      this.logger.log(`Mail enqueued to ${mailOptions.to}`);
+      this.logger.log(
+        `Mail enqueued to ${mailOptions.to} (queue length ${this.queue.length})`,
+      );
     });
   }
 
@@ -64,7 +66,9 @@ export class MailService implements OnModuleInit {
     try {
       const info = await this.transporter.sendMail(job.mailOptions);
       job.resolve(info);
-      this.logger.log(`Mail sent: ${info.messageId}`);
+      this.logger.log(
+        `Mail sent: ${info.messageId} (remaining ${this.queue.length})`,
+      );
       // If using Ethereal, print preview URL
       try {
         const url = nodemailer.getTestMessageUrl(info);
@@ -74,7 +78,7 @@ export class MailService implements OnModuleInit {
       }
     } catch (err) {
       job.reject(err);
-      this.logger.error('Error sending mail', err as any);
+      this.logger.error('Error sending mail', err);
     } finally {
       this.processing = false;
     }
