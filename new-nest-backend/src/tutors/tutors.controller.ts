@@ -17,7 +17,7 @@ import {
 } from './dto/tutor-profile.dto';
 import { TutorsService } from './tutors.service';
 
-@Controller('api/tutors')
+@Controller('tutors')
 export class TutorsController {
   constructor(private readonly tutorsService: TutorsService) {}
 

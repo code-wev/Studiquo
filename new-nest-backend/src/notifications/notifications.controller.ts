@@ -5,7 +5,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { CreateNotificationDto } from './dto/notification.dto';
 import { NotificationsService } from './notifications.service';
 
-@Controller('api/notifications')
+@Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 

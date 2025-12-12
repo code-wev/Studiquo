@@ -18,7 +18,7 @@ import {
   UpdateTimeSlotDto,
 } from './dto/availability.dto';
 
-@Controller('api/availability')
+@Controller('availability')
 export class AvailabilityController {
   constructor(private readonly availabilityService: AvailabilityService) {}
 

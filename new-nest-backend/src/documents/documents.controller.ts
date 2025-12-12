@@ -5,7 +5,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { DocumentsService } from './documents.service';
 import { UploadDocumentDto } from './dto/document.dto';
 
-@Controller('api/documents')
+@Controller('documents')
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 

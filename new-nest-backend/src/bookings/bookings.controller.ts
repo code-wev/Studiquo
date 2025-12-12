@@ -14,7 +14,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/booking.dto';
 
-@Controller('api/bookings')
+@Controller('bookings')
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
