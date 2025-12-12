@@ -1,8 +1,7 @@
-import { IsDateString, IsEnum, IsMongoId, IsString } from 'class-validator';
+import { IsDateString, IsEnum, IsString } from 'class-validator';
 
 export class CreateBookingDto {
   @IsString()
-  @IsMongoId()
   timeSlot: string;
 
   @IsString()
@@ -15,9 +14,4 @@ export class CreateBookingDto {
   @IsString()
   @IsEnum(['ONE_TO_ONE', 'GROUP'])
   type: string;
-}
-
-export class UpdateBookingStatusDto {
-  @IsString()
-  status: string;
 }

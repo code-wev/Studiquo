@@ -11,12 +11,6 @@ export class TutorProfile extends Document {
 
   @Prop({ required: true })
   hourlyRate: number;
-
-  @Prop({ default: 0 })
-  rating: number;
-
-  @Prop({ default: 0 })
-  totalReviews: number;
 }
 
 export const TutorProfileSchema = SchemaFactory.createForClass(TutorProfile);

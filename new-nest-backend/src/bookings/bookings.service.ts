@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { getUserSub } from '../common/helpers';
 import { Booking } from '../models/booking.model';
 import { BookingStudents } from '../models/bookingStudents.model';
+import { LessonReport } from '../models/lessonReport.model';
 import { CreateBookingDto } from './dto/booking.dto';
 
 @Injectable()
@@ -12,6 +13,8 @@ export class BookingsService {
     @InjectModel(Booking.name) private bookingModel: Model<Booking>,
     @InjectModel(BookingStudents.name)
     private bookingStudentsModel: Model<BookingStudents>,
+    @InjectModel(LessonReport.name)
+    private lessonReportModel: Model<LessonReport>,
   ) {}
 
   async createBooking(req: { user: any }, dto: CreateBookingDto) {
@@ -22,6 +25,13 @@ export class BookingsService {
       student: getUserSub(req),
     });
     await bookingStudent.save();
+    // Optionally create a lesson report for this booking
+    await this.lessonReportModel.create({
+      booking: booking._id,
+      description: '',
+      dueDate: new Date(),
+      submitted: false,
+    });
     return booking;
   }
 

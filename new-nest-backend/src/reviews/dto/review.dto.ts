@@ -1,13 +1,13 @@
-import { IsNumber, IsString } from 'class-validator';
+import { IsMongoId, IsNumber, IsString } from 'class-validator';
 
 export class CreateReviewDto {
-  @IsString()
+  @IsMongoId()
   booking: string;
 
-  @IsString()
+  @IsMongoId()
   student: string;
 
-  @IsString()
+  @IsMongoId()
   tutor: string;
 
   @IsNumber()

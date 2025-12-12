@@ -11,7 +11,7 @@ export class ReviewsController {
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Student, Role.Tutor)
+  @Roles(Role.Student)
   async submitReview(@Req() req, @Body() dto: CreateReviewDto) {
     return this.reviewsService.submitReview(req.user, dto);
   }
