@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
 import * as cron from 'node-cron';
+import * as nodemailer from 'nodemailer';
 
 type MailJob = {
   mailOptions: nodemailer.SendMailOptions;

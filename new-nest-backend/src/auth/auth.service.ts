@@ -1,9 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { MailService } from 'src/common/mail.service';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
+import { MailService } from 'src/common/mail.service';
 import { User } from '../models/user.model';
 
 @Injectable()
@@ -37,7 +37,8 @@ export class AuthService {
 
   async forgotPassword(email: string) {
     const user = await this.userModel.findOne({ email });
-    if (!user) return { message: 'If the email exists, a reset link will be sent' };
+    if (!user)
+      return { message: 'If the email exists, a reset link will be sent' };
 
     const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?email=${encodeURIComponent(
       email,
