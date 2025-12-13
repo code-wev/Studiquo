@@ -1,133 +1,100 @@
 import React from 'react';
+import { TiArrowRight } from "react-icons/ti";
+
+const pendingRequests = [
+  {
+    name: "Saad Rayhan",
+    email: "saadrayhan@gmail.com",
+    subject: "Science",
+    btnColor: "bg-blue-500 hover:bg-blue-600",
+  },
+  {
+    name: "Liam O'Neilly",
+    email: "liamoneilly@queens.edu",
+    subject: "English",
+    btnColor: "bg-green-500 hover:bg-green-600",
+  },
+  {
+    name: "Asha Patel",
+    email: "emily.jones@nyc.com",
+    subject: "Math",
+    btnColor: "bg-red-500 hover:bg-red-600",
+  },
+  {
+    name: "Maya Chen",
+    email: "michael.brown@petco.com",
+    subject: "Math",
+    btnColor: "bg-orange-500 hover:bg-orange-600",
+  },
+  {
+    name: "Liam Peters",
+    email: "saadivryan1313@gmail.com",
+    subject: "Biology",
+    btnColor: "bg-blue-500 hover:bg-blue-600",
+  },
+];
 
 const PendingApproval = () => {
-    return (
-        <div>
-            <div className="container p-2 mx-auto sm:p-4 dark:text-gray-800">
-	<h2 className="mb-4 text-2xl font-semibold leading-tight">Invoices</h2>
-	<div className="overflow-x-auto">
-		<table className="min-w-full text-xs">
-			<colgroup>
-				<col />
-				<col />
-				<col />
-				<col />
-				<col />
-				<col className="w-24" />
-			</colgroup>
-			<thead className="dark:bg-gray-300">
-				<tr className="text-left">
-					<th className="p-3">Invoice #</th>
-					<th className="p-3">Client</th>
-					<th className="p-3">Issued</th>
-					<th className="p-3">Due</th>
-					<th className="p-3 text-right">Amount</th>
-					<th className="p-3">Status</th>
-				</tr>
-			</thead>
-			<tbody>
-				<tr className="border-b border-opacity-20 dark:border-gray-300 dark:bg-gray-50">
-					<td className="p-3">
-						<p>97412378923</p>
-					</td>
-					<td className="p-3">
-						<p>Microsoft Corporation</p>
-					</td>
-					<td className="p-3">
-						<p>14 Jan 2022</p>
-						<p className="dark:text-gray-600">Friday</p>
-					</td>
-					<td className="p-3">
-						<p>01 Feb 2022</p>
-						<p className="dark:text-gray-600">Tuesday</p>
-					</td>
-					<td className="p-3 text-right">
-						<p>$15,792</p>
-					</td>
-					<td className="p-3 text-right">
-						<span className="px-3 py-1 font-semibold rounded-md dark:bg-violet-600 dark:text-gray-50">
-							<span>Pending</span>
-						</span>
-					</td>
-				</tr>
-				<tr className="border-b border-opacity-20 dark:border-gray-300 dark:bg-gray-50">
-					<td className="p-3">
-						<p>97412378923</p>
-					</td>
-					<td className="p-3">
-						<p>Tesla Inc.</p>
-					</td>
-					<td className="p-3">
-						<p>14 Jan 2022</p>
-						<p className="dark:text-gray-600">Friday</p>
-					</td>
-					<td className="p-3">
-						<p>01 Feb 2022</p>
-						<p className="dark:text-gray-600">Tuesday</p>
-					</td>
-					<td className="p-3 text-right">
-						<p>$275</p>
-					</td>
-					<td className="p-3 text-right">
-						<span className="px-3 py-1 font-semibold rounded-md dark:bg-violet-600 dark:text-gray-50">
-							<span>Pending</span>
-						</span>
-					</td>
-				</tr>
-				<tr className="border-b border-opacity-20 dark:border-gray-300 dark:bg-gray-50">
-					<td className="p-3">
-						<p>97412378923</p>
-					</td>
-					<td className="p-3">
-						<p>Coca Cola co.</p>
-					</td>
-					<td className="p-3">
-						<p>14 Jan 2022</p>
-						<p className="dark:text-gray-600">Friday</p>
-					</td>
-					<td className="p-3">
-						<p>01 Feb 2022</p>
-						<p className="dark:text-gray-600">Tuesday</p>
-					</td>
-					<td className="p-3 text-right">
-						<p>$8,950,500</p>
-					</td>
-					<td className="p-3 text-right">
-						<span className="px-3 py-1 font-semibold rounded-md dark:bg-violet-600 dark:text-gray-50">
-							<span>Pending</span>
-						</span>
-					</td>
-				</tr>
-				<tr className="border-b border-opacity-20 dark:border-gray-300 dark:bg-gray-50">
-					<td className="p-3">
-						<p>97412378923</p>
-					</td>
-					<td className="p-3">
-						<p>Nvidia Corporation</p>
-					</td>
-					<td className="p-3">
-						<p>14 Jan 2022</p>
-						<p className="dark:text-gray-600">Friday</p>
-					</td>
-					<td className="p-3">
-						<p>01 Feb 2022</p>
-						<p className="dark:text-gray-600">Tuesday</p>
-					</td>
-					<td className="p-3 text-right">
-						<p>$98,218</p>
-					</td>
-					<td className="p-3 text-right">
-						<span className="px-3 py-1 font-semibold rounded-md dark:bg-violet-600 dark:text-gray-50">
-							<span>Pending</span>
-						</span>
-					</td>
-				</tr>
-			</tbody>
-		</table>
-	</div>
-</div>
-        </div>
-    );
+  return (
+    <div className="container p-4 mx-auto sm:p-4 dark:text-gray-800">
+      <h2 className="mb-4 text-2xl leading-tight">Pending Approval</h2>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full rounded-full  border border-[#CECECE]  text-sm table-auto">
+          <thead className="bg-gray-100  border-b border-[#CECECE]">
+            <tr className="text-left">
+              <th className="p-3 text-gray-600">Name</th>
+              <th className="p-3 text-gray-600">Email</th>
+              <th className="p-3 text-gray-600">Subject</th>
+              <th className="p-3 text-gray-600 text-right">Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {pendingRequests.map((item, index) => (
+              <tr
+                key={index}
+                className="border-b border-[#CECECE] border-opacity-20 bg-white"
+              >
+                <td className="p-3">
+                  <p className="text-gray-800">{item.name}</p>
+                </td>
+
+                <td className="p-3">
+                  <p>{item.email}</p>
+                </td>
+
+                <td className="p-3 text-gray-500">{item.subject}</td>
+
+                <td className="p-3 text-right">
+                  <button
+                    className={`text-[#28A745] cursor-pointer font-semibold`}
+                  >
+      <div className='flex items-center justify-between gap-2'>
+
+             <span> Approve Request</span>
+
+           <span> <TiArrowRight className='text-2xl'/></span>
+      </div>
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex justify-between mt-4">
+        <button className="bg-gray-200 text-gray-600 px-3 py-1 rounded-md hover:bg-gray-300">
+          Previous
+        </button>
+        <button className="bg-gray-200 text-gray-600 px-3 py-1 rounded-md hover:bg-gray-300">
+          Next
+        </button>
+      </div>
+    </div>
+  );
 };
 
 export default PendingApproval;
