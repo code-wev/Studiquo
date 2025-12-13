@@ -1,119 +1,118 @@
 'use client';
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { MdDashboard, MdMenu, MdClose } from "react-icons/md";
 import { FaChalkboardTeacher, FaUsers, FaCreditCard, FaUserCircle } from "react-icons/fa";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import logo from '@/public/dashboardlogo.png';
+import logo from "@/public/dashboardlogo.png";
 
 const navItems = [
-  { label: "Dashboard", icon: MdDashboard },
-  { label: "Tutor", icon: FaChalkboardTeacher },
-  { label: "Students", icon: FaUsers },
-  { label: "Payment", icon: FaCreditCard },
-  { label: "Profile", icon: FaUserCircle },
+  { label: "Dashboard", icon: MdDashboard, href: "/dashboard" },
+  { label: "Tutor", icon: FaChalkboardTeacher, href: "/dashboard/tutor" },
+  { label: "Students", icon: FaUsers, href: "/dashboard/students" },
+  { label: "Payment", icon: FaCreditCard, href: "/dashboard/payment" },
+  { label: "Profile", icon: FaUserCircle, href: "/dashboard/profile" },
 ];
 
 const Sidebar = () => {
-  const pathName = usePathname();
-  const [open, setOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Detect mobile view
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Close sidebar on route change
-  useEffect(() => {
-    setOpen(false);
-  }, [pathName]);
+  const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <>
-      {/* Mobile Menu Button - Fixed outside sidebar */}
-      <div className="md:hidden fixed top-4 left-4 z-50">
-        <button
-          onClick={() => setOpen(true)}
-          className="p-2 bg-white rounded-lg shadow-md"
-        >
-          <MdMenu size={24} />
-        </button>
+      {/* Mobile Top Bar - শুধু তিন লাইন আইকন */}
+      <div className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-white sticky top-0 z-30">
+        <Image src={logo} alt="logo" className="w-28" />
+        <MdMenu
+          size={26}
+          className="cursor-pointer"
+          onClick={() => setMobileOpen(true)}
+        />
       </div>
 
-      {/* Overlay - Only show on mobile when sidebar is open */}
-      {open && isMobile && (
+      {/* Overlay (Mobile) */}
+      {mobileOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 md:hidden"
-          onClick={() => setOpen(false)}
+          className="fixed inset-0 bg-black/40 z-40 md:hidden"
+          onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside
         className={`
-
-          min-h-screen
-          ${isMobile ? 'fixed' : 'relative'} 
-          top-0 left-0 z-50
-          w-[295px] h-full
+          fixed md:static top-0 left-0 z-50 h-screen
           bg-[#f5f5f5] border-r border-gray-200
-          flex flex-col justify-between
-          transition-transform duration-300 ease-in-out
-          ${open ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
-          ${isMobile ? 'shadow-xl' : ''}
+          transition-all duration-300
+          ${collapsed ? "w-[90px]" : "w-[295px]"}
+          ${mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
         `}
       >
-        {/* Top Section */}
-        <div>
-          {/* Logo */}
-          <div className="flex items-center justify-between px-6 py-5">
-            <Image alt="logo" src={logo} width={150} height={40} />
-            
-            {/* Close button (mobile only) */}
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5">
+          {!collapsed && <Image src={logo} alt="logo" className="w-32" />}
+          <div className="flex gap-2">
             <button
-              onClick={() => setOpen(false)}
-              className="md:hidden p-1 hover:bg-gray-200 rounded"
+              onClick={() => setCollapsed(!collapsed)}
+              className="hidden md:block text-gray-600"
             >
-              <MdClose size={22} />
+              ☰
             </button>
+            <MdClose
+              size={22}
+              className="md:hidden cursor-pointer"
+              onClick={() => setMobileOpen(false)}
+            />
           </div>
-
-          {/* Nav */}
-          <nav className="px-4 space-y-2 mt-8">
-            {navItems.map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg
-                  cursor-pointer transition
-                  border border-[#00000099] text-[#00000099]
-                  hover:bg-[#CCB7F8CC] hover:text-[#3A0E95]"
-                onClick={() => {
-                  if (isMobile) setOpen(false);
-                }}
-              >
-                <item.icon size={18} />
-                <span className="text-sm font-medium">{item.label}</span>
-              </div>
-            ))}
-          </nav>
         </div>
+
+        {/* Nav */}
+        <nav className="px-4 space-y-4 mt-6">
+          {navItems.map((item, index) => {
+            const isActive = pathname.startsWith(item.href);
+            return (
+              <a
+                key={index}
+                href={item.href}
+                className={`
+                  group flex items-center gap-3 px-4 py-2 rounded-lg cursor-pointer transition
+                  ${isActive
+                    ? "bg-[#CCB7F8CC] border border-[#00000099] text-[#3A0E95]"
+                    : "border border-[#00000099] text-[#00000099] hover:bg-[#CCB7F8CC] hover:text-[#3A0E95]"
+                  }
+                `}
+                onClick={() => setMobileOpen(false)}
+              >
+                <item.icon size={20} />
+
+                {!collapsed && (
+                  <span className="text-sm font-medium">
+                    {item.label}
+                  </span>
+                )}
+
+                {/* Tooltip (collapsed mode) */}
+                {collapsed && (
+                  <span className="absolute left-full ml-3 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap">
+                    {item.label}
+                  </span>
+                )}
+              </a>
+            );
+          })}
+        </nav>
 
         {/* Bottom Info */}
-        <div className="px-6 py-4 text-xs text-gray-500 border-t">
-          <div className="flex justify-between">
-            <span>Shei Shei</span>
-            <span>OPI</span>
+        {!collapsed && (
+          <div className="absolute bottom-4 w-full px-6 text-xs text-gray-500">
+            <div className="flex justify-between">
+              <span>295 Fill</span>
+              <span>1113 Fill</span>
+            </div>
           </div>
-        </div>
+        )}
       </aside>
     </>
   );
