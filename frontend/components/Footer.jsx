@@ -4,8 +4,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { FaGithub } from "react-icons/fa";
 import { CiLinkedin, CiFacebook } from "react-icons/ci";
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
+    const pathname = usePathname();
+    if(pathname.includes('dashboard')){
+      return null;
+    }
   return (
     <div className="relative bg-[#0F1729]">
       <div className="animate-gradient-x text-white">

@@ -1,9 +1,15 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { FaXTwitter, FaFacebookF, FaWhatsapp } from "react-icons/fa6";
 
 export default function SiteFooter() {
+
+    const pathname = usePathname();
+    if(pathname.includes('dashboard')){
+      return null;
+    }
   return (
     <footer className="w-full bg-[#444141] text-white">
       <div className="mx-auto max-w-6xl px-4 md:px-8 pt-10 pb-6 border-b border-[#585252]">
