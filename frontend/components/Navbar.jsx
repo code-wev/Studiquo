@@ -2,10 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useParams, usePathname } from "next/navigation";
 import { FiArrowRight, FiChevronDown } from "react-icons/fi";
 
 
 export default function Navbar() {
+
+  const pathname = usePathname();
+  if(pathname.includes('dashboard')){
+    return null;
+  }
   return (
     <nav className="w-full bg-white border-b border-gray-100">
       <div className="px-6 lg:px-32 py-4 flex items-center justify-between">
