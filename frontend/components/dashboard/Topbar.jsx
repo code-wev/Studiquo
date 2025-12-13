@@ -6,7 +6,7 @@ import Image from 'next/image';
 
 const Topbar = () => {
   return (
-    <div className="w-full h-[56px] min-w-full  bg-white  flex  justify-between px-6">
+    <div className="w-full sticky h-[56px] min-w-full  bg-white  flex  justify-between px-6">
       
       {/* Left side */}
       <div className="flex items-center gap-2 text-gray-600">
