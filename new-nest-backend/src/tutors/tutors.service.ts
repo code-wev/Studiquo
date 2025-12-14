@@ -4,7 +4,6 @@ import { Model } from 'mongoose';
 import { getUserSub } from '../common/helpers';
 import { TutorProfile } from '../models/tutorProfile.model';
 import { User } from '../models/user.model';
-import { CreateTutorProfileDto } from './dto/tutor-profile.dto';
 
 @Injectable()
 export class TutorsService {
@@ -14,7 +13,7 @@ export class TutorsService {
     @InjectModel(User.name) private userModel: Model<User>,
   ) {}
 
-  async createProfile(req: { user: any }, dto: CreateTutorProfileDto) {
+  async createProfile(req: { user: any }, dto: any) {
     const profile = new this.tutorProfileModel({
       ...dto,
       user: getUserSub(req),

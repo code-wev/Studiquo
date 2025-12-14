@@ -9,26 +9,56 @@ import { User } from '../models/user.model';
 @Injectable()
 export class UsersService extends BaseService<User> {
   private readonly logger = new Logger(UsersService.name);
+
+  /**
+   * Create the `UsersService`.
+   *
+   * @param userModel - injected Mongoose model for `User`
+   */
   constructor(@InjectModel(User.name) userModel: Model<User>) {
     super(userModel);
   }
 
+  /**
+   * Return the authenticated user's profile without the password field.
+   *
+   * @param req - the request object that contains `user` (set by auth guard)
+   */
   async getMe(req: { user: any }) {
     return this.model.findById(getUserSub(req)).select('-password');
   }
 
+  /**
+   * Update the authenticated user's document with provided data.
+   *
+   * @param req - the request object that contains `user` (set by auth guard)
+   * @param data - partial user fields to update
+   */
   async updateMe(req: { user: any }, data: any) {
     return this.model
       .findByIdAndUpdate(getUserSub(req), data, { new: true })
       .select('-password');
   }
 
+  /**
+   * Update the authenticated user's avatar field.
+   *
+   * @param req - the request object that contains `user` (set by auth guard)
+   * @param avatar - new avatar value (storage key or base64)
+   */
   async uploadAvatar(req: { user: any }, avatar: string) {
     return this.model
       .findByIdAndUpdate(getUserSub(req), { avatar }, { new: true })
       .select('-password');
   }
 
+  /**
+   * Change the authenticated user's password.
+   *
+   * @param req - the request object that contains `user` (set by auth guard)
+   * @param data - object containing `newPassword` property
+   * @returns an object with a message on success
+   */
   async updatePassword(req: { user: any }, data: any) {
     const userDoc = await this.model.findById(getUserSub(req));
     if (!userDoc) throw new UnauthorizedException('User not found');
@@ -37,7 +67,10 @@ export class UsersService extends BaseService<User> {
     return { message: 'Password updated' };
   }
 
-  /** Ensure a default admin user exists after DB connects. */
+  /**
+   * Ensure a default admin user exists after DB connects.
+   * If none is found, create one using environment defaults.
+   */
   async ensureAdminExists() {
     const admin = await this.model.findOne({ role: 'Admin' }).exec();
     if (admin) {
