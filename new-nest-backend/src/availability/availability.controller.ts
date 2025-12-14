@@ -12,26 +12,41 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Role, Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { AvailabilityService } from './availability.service';
-import {
-  CreateAvailabilityDto,
-  CreateTimeSlotDto,
-  UpdateTimeSlotDto,
-} from './dto/availability.dto';
+import { CreateTimeSlotDto, UpdateTimeSlotDto } from './dto/availability.dto';
 
+/**
+ * Controller for managing tutor availability and time slots.
+ *
+ * Routes are prefixed with `/availability` and protected using JWT and
+ * role-based guards where appropriate.
+ */
 @Controller('availability')
 export class AvailabilityController {
   constructor(private readonly availabilityService: AvailabilityService) {}
 
+  /**
+   * Add a new time slot for the authenticated tutor.
+   *
+   * @param req - the request object containing `user` set by the auth guard
+   * @param dto - timeslot DTO containing start/end times and optional meet link
+   */
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor, Role.Admin)
-  async addAvailability(@Req() req, @Body() dto: CreateAvailabilityDto) {
-    return this.availabilityService.addAvailability(req.user, dto);
+  @Roles(Role.Tutor)
+  async addTimeSlotForTutor(@Req() req, @Body() dto: CreateTimeSlotDto) {
+    return this.availabilityService.addTimeSlotForTutor(req.user, dto);
   }
 
+  /**
+   * Create a timeslot under a specific availability document.
+   * Kept for compatibility when availability id is known.
+   *
+   * @param availabilityId - id of the TutorAvailability document
+   * @param dto - timeslot DTO containing start/end times and optional meet link
+   */
   @Post(':availabilityId/slots')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor, Role.Admin)
+  @Roles(Role.Tutor)
   async addTimeSlot(
     @Param('availabilityId') availabilityId: string,
     @Body() dto: CreateTimeSlotDto,
@@ -39,9 +54,15 @@ export class AvailabilityController {
     return this.availabilityService.addTimeSlot(availabilityId, dto);
   }
 
-  @Put('slots/:slotId')
+  /**
+   * Update an existing time slot by its id.
+   *
+   * @param slotId - id of the TimeSlot document to update
+   * @param dto - DTO containing fields to update
+   */
+  @Put(':slotId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor, Role.Admin)
+  @Roles(Role.Tutor)
   async updateSlot(
     @Param('slotId') slotId: string,
     @Body() dto: UpdateTimeSlotDto,
@@ -49,8 +70,14 @@ export class AvailabilityController {
     return this.availabilityService.updateSlot(slotId, dto);
   }
 
-  @Delete('slots/:slotId')
-  @UseGuards(JwtAuthGuard)
+  /**
+   * Delete a time slot by its id.
+   *
+   * @param slotId - id of the TimeSlot document to delete
+   */
+  @Delete(':slotId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Tutor)
   async deleteSlot(@Param('slotId') slotId: string) {
     return this.availabilityService.deleteSlot(slotId);
   }

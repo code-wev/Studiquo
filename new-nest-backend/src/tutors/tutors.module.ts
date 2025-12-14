@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AvailabilityModule } from 'src/availability/availability.module';
 import { jwtConfig } from 'src/common/jwt.config';
 import { Review, ReviewSchema } from 'src/models/review.model';
 import { TutorProfile, TutorProfileSchema } from '../models/tutorProfile.model';
@@ -21,6 +22,7 @@ import { TutorsService } from './tutors.service';
       { name: User.name, schema: UserSchema },
       { name: Review.name, schema: ReviewSchema },
     ]),
+    AvailabilityModule,
     JwtModule.register(jwtConfig),
   ],
   controllers: [TutorsController],

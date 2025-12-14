@@ -1,4 +1,5 @@
 import { Controller, Get, Param, Query } from '@nestjs/common';
+import { AvailabilityService } from 'src/availability/availability.service';
 import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { ReviewQueryDto } from 'src/reviews/dto/review.dto';
 import { TutorSearchQueryDto } from './dto/tutor.dto';
@@ -11,7 +12,10 @@ import { TutorsService } from './tutors.service';
  */
 @Controller('tutors')
 export class TutorsController {
-  constructor(private readonly tutorsService: TutorsService) {}
+  constructor(
+    private readonly tutorsService: TutorsService,
+    private readonly availabilityService: AvailabilityService,
+  ) {}
 
   /**
    * Search tutors by profile and user fields.
@@ -50,5 +54,14 @@ export class TutorsController {
     @Query() query: ReviewQueryDto,
   ) {
     return this.tutorsService.getTutorReviews(params.id, query);
+  }
+
+  /**
+   * Return a tutor's public availability (available, unbooked slots) grouped by date.
+   * GET /api/tutors/:tutorId/availability
+   */
+  @Get(':tutorId/availability')
+  async tutorAvailability(@Param('tutorId') tutorId: string) {
+    return this.availabilityService.getTutorAvailability(tutorId);
   }
 }

@@ -10,6 +10,13 @@ import {
 import { AvailabilityController } from './availability.controller';
 import { AvailabilityService } from './availability.service';
 
+/**
+ * Availability feature module.
+ *
+ * Manages tutor availability dates and time slots. Exports the
+ * `AvailabilityService` so other modules (for example `TutorsModule`)
+ * can query availability.
+ */
 @Module({
   imports: [
     MongooseModule.forFeature([
