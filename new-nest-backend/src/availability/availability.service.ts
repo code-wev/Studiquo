@@ -41,20 +41,32 @@ export class AvailabilityService {
   ): Promise<TutorAvailability> {
     const date = new Date(dto.date);
     if (isNaN(date.getTime())) {
-      throw new BadRequestException('Invalid date format');
+      throw new BadRequestException('Invalid date');
     }
 
-    // Normalize to UTC midnight
+    // Only allow creating availability for the current month (UTC)
+    const now = new Date();
+    const startOfMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    );
+    const startOfNextMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+    );
+
+    if (date < startOfMonth || date >= startOfNextMonth) {
+      throw new BadRequestException(
+        'Only current month availability is allowed',
+      );
+    }
+
     const dateOnly = new Date(
       Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
     );
 
-    const availability = new this.availabilityModel({
+    return this.availabilityModel.create({
       user: getUserSub(req),
       date: dateOnly,
     });
-
-    return availability.save();
   }
 
   /**
@@ -186,16 +198,29 @@ export class AvailabilityService {
   /**
    * Update a time slot by ID.
    *
+   * @req - Request object containing authenticated user
    * @param slotId - ID of the TimeSlot to update
    * @param dto - Partial timeslot fields to update
    * @throws NotFoundException if time slot not found
    * @throws BadRequestException if updated times are invalid or overlap
    */
   async updateSlot(
+    req: { user: { sub: string } },
     slotId: MongoIdDto['id'],
     dto: UpdateTimeSlotDto,
   ): Promise<TimeSlot> {
-    const slot = await this.timeSlotModel.findById(slotId).exec();
+    const slot = await this.timeSlotModel
+      .findOne({
+        _id: slotId,
+        tutorAvailability: {
+          $in: await this.availabilityModel
+            .find({ user: req.user.sub })
+            .distinct('_id')
+            .exec(),
+        },
+      })
+      .exec();
+
     if (!slot) {
       throw new NotFoundException('Time slot not found');
     }
@@ -249,14 +274,30 @@ export class AvailabilityService {
   /**
    * Delete a time slot by ID.
    *
+   * @req - Request object containing authenticated user
    * @param slotId - ID of the TimeSlot to delete
    * @throws NotFoundException if time slot not found
    */
-  async deleteSlot(slotId: MongoIdDto['id']): Promise<TimeSlot> {
-    const deleted = await this.timeSlotModel.findByIdAndDelete(slotId).exec();
+  async deleteSlot(
+    req: { user: { sub: string } },
+    slotId: MongoIdDto['id'],
+  ): Promise<TimeSlot> {
+    const deleted = await this.timeSlotModel
+      .findOneAndDelete({
+        _id: slotId,
+        tutorAvailability: {
+          $in: await this.availabilityModel
+            .find({ user: req.user.sub })
+            .distinct('_id')
+            .exec(),
+        },
+      })
+      .exec();
+
     if (!deleted) {
       throw new NotFoundException('Time slot not found');
     }
+
     return deleted;
   }
 
@@ -269,8 +310,20 @@ export class AvailabilityService {
   async getTutorAvailability(
     tutorId: MongoIdDto['id'],
   ): Promise<Array<{ date: string; slots: TimeSlot[] }>> {
+    // Only return availability for the running (current) month (UTC)
+    const now = new Date();
+    const startOfMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    );
+    const startOfNextMonth = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+    );
+
     const availabilities = await this.availabilityModel
-      .find({ user: tutorId })
+      .find({
+        user: tutorId,
+        date: { $gte: startOfMonth, $lt: startOfNextMonth },
+      })
       .lean()
       .exec();
 
@@ -280,7 +333,11 @@ export class AvailabilityService {
 
     const availIds = availabilities.map((a) => a._id);
     const slots = await this.timeSlotModel
-      .find({ tutorAvailability: { $in: availIds }, isBooked: { $ne: true } })
+      .find({
+        tutorAvailability: { $in: availIds },
+        isBooked: { $ne: true },
+        startTime: { $gte: startOfMonth, $lt: startOfNextMonth },
+      })
       .sort({ startTime: 1 })
       .lean()
       .exec();
