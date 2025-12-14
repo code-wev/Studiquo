@@ -5,6 +5,8 @@ import { cookies } from "next/headers";
 
 /* ======================
    Register
+   POST /auth/register
+   Public Api
 ====================== */
 export async function registerAction(formData) {
   return apiFetch("/auth/register", {
@@ -23,9 +25,11 @@ export async function registerAction(formData) {
 
 /* ======================
    Login
+   POST /auth/login
+   Public Api
 ====================== */
 export async function loginAction(formData) {
-  const data = await apiFetch("/auth/login", {
+  const response = await apiFetch("/auth/login", {
     method: "POST",
     body: JSON.stringify({
       email: formData.email,
@@ -33,18 +37,28 @@ export async function loginAction(formData) {
     }),
   });
 
-  // Store JWT securely in HttpOnly cookie
-  cookies().set("token", data.token, {
+  const token = response?.token || response?.data?.token;
+
+  if (!token) {
+    throw new Error("JWT token not returned from API");
+  }
+
+  const cookieStore = await cookies();
+
+  cookieStore.set("token", String(token), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     path: "/",
+    sameSite: "lax",
   });
 
-  return data;
+  return response;
 }
 
 /* ======================
    Logout
+   POST /auth/logout
+   Public Api
 ====================== */
 export async function logoutAction() {
   cookies().delete("token");
@@ -53,6 +67,8 @@ export async function logoutAction() {
 
 /* ======================
    Forgot Password
+   POST /auth/forgot-password
+   Public Api
 ====================== */
 export async function forgotPasswordAction(email) {
   return apiFetch("/auth/forgot-password", {
@@ -63,6 +79,8 @@ export async function forgotPasswordAction(email) {
 
 /* ======================
    Reset Password
+   POST /auth/reset-password
+   Public Api
 ====================== */
 export async function resetPasswordAction(data) {
   return apiFetch("/auth/reset-password", {
@@ -77,6 +95,8 @@ export async function resetPasswordAction(data) {
 
 /* ======================
    Change Password (Authenticated)
+   PUT /auth/change-password
+   Private Api
 ====================== */
 export async function changePasswordAction(data) {
   const token = cookies().get("token")?.value;
