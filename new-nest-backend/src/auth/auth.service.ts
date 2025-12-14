@@ -3,7 +3,6 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
-import { MailService } from 'src/common/mail.service';
 import { User } from '../models/user.model';
 
 @Injectable()
@@ -11,7 +10,6 @@ export class AuthService {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private jwtService: JwtService,
-    private mailService?: MailService,
   ) {}
 
   async register(data: any) {
@@ -52,10 +50,7 @@ export class AuthService {
       html: `<p>Click the link to reset your password:</p><p><a href="${resetLink}">${resetLink}</a></p>`,
     };
 
-    if (this.mailService) {
-      await this.mailService.enqueue(mailOptions);
-      return { message: 'Password reset link queued for sending' };
-    }
+    // Send mail using a mail service (not implemented here)
 
     return { message: 'Mail service unavailable' };
   }
