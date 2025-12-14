@@ -10,6 +10,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 export class CreateReviewDto {
   @IsMongoId()
@@ -30,4 +31,13 @@ export class CreateReviewDto {
   @MinLength(1, { message: 'Comment must contain at least 1 character' })
   @MaxLength(1000, { message: 'Comment cannot exceed 1000 characters' })
   comment: string;
+}
+
+export class ReviewQueryDto extends PaginationDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  rating?: number;
 }

@@ -5,17 +5,36 @@ import * as bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
 import { MailService } from 'src/mail/mail.service';
 import { User } from '../models/user.model';
-import { ChangePasswordDto, ResetPasswordDto } from './dto/auth.dto';
+import {
+  ChangePasswordDto,
+  ForgotPasswordDto,
+  LoginDto,
+  RegisterDto,
+  ResetPasswordDto,
+} from './dto/auth.dto';
 
 @Injectable()
 export class AuthService {
+  /**
+   * AuthService handles registration, authentication and password flows.
+   *
+   * @param userModel - injected Mongoose model for `User`
+   * @param jwtService - JWT signing and verification service
+   * @param mailService - mail utility for sending transactional emails
+   */
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private jwtService: JwtService,
     private mailService: MailService,
   ) {}
 
-  async register(data: any) {
+  /**
+   * Register a new user with the provided details.
+   *
+   * @param data - registration data including email, password, etc.
+   * @returns a success message on completion
+   */
+  async register(data: RegisterDto) {
     const alreadyExists = await this.userModel.findOne({ email: data.email });
     if (alreadyExists) {
       throw new UnauthorizedException('Email already in use');
@@ -30,7 +49,13 @@ export class AuthService {
     return { message: 'Registration successful' };
   }
 
-  async login(data: any) {
+  /**
+   * Authenticate a user and return a JWT token.
+   *
+   * @param data - login data including email and password
+   * @returns an object containing the JWT token
+   */
+  async login(data: LoginDto) {
     const user = await this.userModel.findOne({ email: data.email });
     if (!user || !(await bcrypt.compare(data.password, user.password))) {
       throw new UnauthorizedException('Invalid credentials');
@@ -39,8 +64,14 @@ export class AuthService {
     return { token };
   }
 
-  async forgotPassword(email: string) {
-    const user = await this.userModel.findOne({ email });
+  /**
+   * Initiate the forgot-password flow by sending a reset link to email.
+   *
+   * @param data - object containing the user's email
+   * @returns a generic success message
+   */
+  async forgotPassword(data: ForgotPasswordDto['email']) {
+    const user = await this.userModel.findOne({ email: data });
     if (!user)
       return { message: 'If the email exists, a reset link will be sent' };
 
@@ -51,17 +82,22 @@ export class AuthService {
     );
 
     const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?email=${encodeURIComponent(
-      email,
+      data,
     )}&token=${resetToken}`;
 
     // Send mail using a mail utility
-    await this.mailService.sendResetPasswordEmail(email, resetLink);
-
+    await this.mailService.sendResetPasswordEmail(data, resetLink);
     return {
       message: 'Reset link sent to your email if it exists',
     };
   }
 
+  /**
+   * Reset the user's password using a valid reset token.
+   *
+   * @param data - data containing email, new password and reset token
+   * @returns a success message on completion
+   */
   async resetPassword(data: ResetPasswordDto) {
     const user = await this.userModel.findOne({
       email: data.email,
@@ -75,6 +111,12 @@ export class AuthService {
     return { message: 'Password reset successful' };
   }
 
+  /**
+   * Change the password for an authenticated user.
+   *
+   * @param data - data containing the new password
+   * @returns a success message on completion
+   */
   async changePassword(data: ChangePasswordDto) {
     const user = await this.userModel.findById(data.userId);
     if (!user) throw new UnauthorizedException('User not found');
