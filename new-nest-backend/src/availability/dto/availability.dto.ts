@@ -1,48 +1,52 @@
+// dto/availability.dto.ts
 import {
   IsBoolean,
   IsDateString,
   IsNotEmpty,
   IsOptional,
-  IsString,
+  IsUrl,
 } from 'class-validator';
 
 export class CreateAvailabilityDto {
-  @IsDateString()
-  @IsNotEmpty({
-    message: 'Date is required and must be a valid ISO date string',
-  })
-  date: string;
+  @IsDateString(
+    {},
+    { message: 'Date must be a valid ISO date string (e.g., 2025-12-14)' },
+  )
+  @IsNotEmpty({ message: 'Date is required' })
+  date: string; // YYYY-MM-DD
 }
 
 export class CreateTimeSlotDto {
-  @IsDateString()
-  @IsNotEmpty({
-    message: 'Start time is required and must be a valid ISO date string',
-  })
+  @IsDateString(
+    {},
+    { message: 'startTime must be a valid ISO datetime string' },
+  )
+  @IsNotEmpty()
   startTime: string;
 
-  @IsDateString()
-  @IsNotEmpty({
-    message: 'End time is required and must be a valid ISO date string',
-  })
+  @IsDateString({}, { message: 'endTime must be a valid ISO datetime string' })
+  @IsNotEmpty()
   endTime: string;
 
   @IsOptional()
-  @IsString({ message: 'Meet link must be a string' })
+  @IsUrl({}, { message: 'meetLink must be a valid URL' })
   meetLink?: string;
 }
 
 export class UpdateTimeSlotDto {
   @IsOptional()
-  @IsDateString()
+  @IsDateString(
+    {},
+    { message: 'startTime must be a valid ISO datetime string' },
+  )
   startTime?: string;
 
   @IsOptional()
-  @IsDateString()
+  @IsDateString({}, { message: 'endTime must be a valid ISO datetime string' })
   endTime?: string;
 
   @IsOptional()
-  @IsString({ message: 'Meet link must be a string' })
+  @IsUrl({}, { message: 'meetLink must be a valid URL' })
   meetLink?: string;
 
   @IsOptional()

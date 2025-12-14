@@ -12,3 +12,6 @@ export class TutorAvailability extends Document {
 
 export const TutorAvailabilitySchema =
   SchemaFactory.createForClass(TutorAvailability);
+
+// Compound index for frequent query
+TutorAvailabilitySchema.index({ user: 1, date: 1 }, { unique: true });

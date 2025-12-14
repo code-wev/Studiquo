@@ -20,3 +20,6 @@ export class TimeSlot extends Document {
 }
 
 export const TimeSlotSchema = SchemaFactory.createForClass(TimeSlot);
+
+TimeSlotSchema.index({ tutorAvailability: 1, startTime: 1 });
+TimeSlotSchema.index({ isBooked: 1 });
