@@ -1,0 +1,245 @@
+import React from "react";
+import TitleSection from "@/components/dashboard/shared/TitleSection";
+import Image from "next/image";
+
+const classes = [
+  {
+    studentAvatars: [
+      "https://i.pravatar.cc/150?img=1",
+      "https://i.pravatar.cc/150?img=2",
+    ],
+  },
+];
+
+export default function LessonPlanning() {
+  return (
+    <div className="w-full min-h-screen bg-gray-50  py-10 px-4">
+      <TitleSection bg={"#FFFFFF"} title={"Lesson Planning"} />
+
+      <div className="w-full max-w-400 bg-[#F7F7F7] shadow-sm  grid grid-cols-1 lg:grid-cols-4 gap-8 p-8">
+        {/* ---------------- LEFT SECTION ---------------- */}
+        <div className="lg:col-span-2">
+          {/* Toggle Buttons */}
+          <div className="flex items-center justify-between mb-6">
+            <p className="text-xl font-semibold text-gray-900">Calendar</p>
+            <div className="flex gap-2">
+              <button className="px-6 py-2 rounded-lg text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200">
+                Group
+              </button>
+              <button className="px-6 py-2 rounded-lg text-sm font-medium text-purple-700 bg-purple-100">
+                Single
+              </button>
+            </div>
+          </div>
+
+          {/* Calendar Box */}
+          <div className="border border-gray-200 rounded-2xl p-6 mb-6">
+            {/* Month Header */}
+            <div className="flex justify-between items-center mb-6">
+              <button className="text-gray-400 hover:text-gray-600 text-xl">
+                &lt;
+              </button>
+              <p className="font-semibold text-gray-900 text-lg">
+                October 2024
+              </p>
+              <button className="text-gray-400 hover:text-gray-600 text-xl">
+                &gt;
+              </button>
+            </div>
+
+            {/* Week Days */}
+            <div className="grid grid-cols-7 text-center text-xs font-medium text-gray-500 mb-4">
+              <p>Su</p>
+              <p>Mo</p>
+              <p>Tu</p>
+              <p>We</p>
+              <p>Th</p>
+              <p>Fr</p>
+              <p>Sa</p>
+            </div>
+
+            {/* Calendar Days */}
+            <div className="grid grid-cols-7 gap-2 text-center text-sm">
+              {/* Previous month days */}
+              <div className="py-3 text-orange-300">30</div>
+              <div className="py-3 text-orange-300">31</div>
+
+              {/* October days */}
+              <div className="py-3 rounded-xl bg-purple-200 text-purple-700 font-semibold">
+                1
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                2
+              </div>
+              <div className="py-3 rounded-xl bg-purple-200 text-purple-700 font-semibold">
+                3
+              </div>
+              <div className="py-3 rounded-xl bg-purple-200 text-purple-700 font-semibold">
+                4
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                5
+              </div>
+
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                6
+              </div>
+              <div className="py-3 rounded-xl bg-purple-200 text-purple-700 font-semibold">
+                7
+              </div>
+              <div className="py-3 rounded-xl bg-purple-200 text-purple-700 font-semibold">
+                8
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                9
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                10
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                11
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                12
+              </div>
+
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                13
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                14
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                15
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                16
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                17
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                18
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                19
+              </div>
+
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                20
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                21
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                22
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                23
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                24
+              </div>
+              <div className="py-3 rounded-xl bg-purple-100 text-purple-700 font-semibold relative">
+                25
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-400 rounded-full"></div>
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                26
+              </div>
+
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                27
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                28
+              </div>
+              <div className="py-3 rounded-xl bg-purple-200 text-purple-700 font-semibold">
+                29
+              </div>
+              <div className="py-3 hover:bg-gray-100 rounded-xl cursor-pointer">
+                30
+              </div>
+              <div className="py-3 text-orange-300">01</div>
+              <div className="py-3 text-orange-300">02</div>
+              <div className="py-3 text-orange-300">03</div>
+            </div>
+
+            {/* Time Slot Checkboxes */}
+            <div className="mt-6 space-y-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  defaultChecked
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <span className="text-sm text-gray-700">12:00pm – 02:00pm</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-gray-300"
+                />
+                <span className="text-sm text-gray-700">06:00pm – 06:00pm</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* ---------------- RIGHT SECTION ---------------- */}
+        <div className="lg:col-span-2">
+          <div>
+            {/* Toggle Buttons */}
+            <div className="flex flex-col  gap-y-9 justify-between mb-6">
+              <div className="text-xl font-semibold text-gray-900">
+                Friday October,25
+              </div>
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden p-6">
+                <div className="flex justify-between items-center">
+                  {/* Left side */}
+                  <div className="flex flex-col space-y-4">
+                    {/* Subject Badge */}
+                    <div className="bg-green-50 text-green-700 px-3 py-1 rounded-xl text-sm font-medium w-fit">
+                      Science
+                    </div>
+                    {/* Student Avatars */}
+                    <div className="flex -space-x-2 items-center">
+                      {classes.map((classItem, index) => (
+                        <div key={index} className="flex -space-x-2">
+                          {classItem.studentAvatars.map((avatar, idx) => (
+                            <Image
+                              key={idx}
+                              src={avatar}
+                              alt={`Student ${idx + 1}`}
+                              width={32}
+                              height={32}
+                              className="w-8 h-8 rounded-full border-2 border-white object-cover"
+                            />
+                          ))}
+                        </div>
+                      ))}
+                      <p className="px-8">48 Students</p>
+                    </div>
+                  </div>
+
+                  {/* Right side  */}
+                  <div className="flex items-center space-x-3 ">
+                    <div className="text-lg font-semibold text-gray-800">
+                      View Lecture
+                    </div>
+                    {/* Upload Button */}
+                    <div>
+                        <button className="gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors">
+                      <span className="text-lg font-medium">Upload</span>
+                    </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

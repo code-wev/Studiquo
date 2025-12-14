@@ -56,7 +56,7 @@ const TutorTable = () => {
   return (
     <div className="container mx-auto p-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 ">
         <h2 className="text-xl font-semibold text-gray-800">
           Tutor List
         </h2>
