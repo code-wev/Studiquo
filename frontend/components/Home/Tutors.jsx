@@ -26,7 +26,7 @@ export default function TutorsSection() {
 
   return (
     <section className="py-20 bg-[#F2F8F3] w-full relative">
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="mx-auto px-6 md:px-40">
         {/* HEADER */}
         <div className="flex items-start justify-between">
           <div>
@@ -37,7 +37,7 @@ export default function TutorsSection() {
               Lorem ipsum dolor sit amet, consectetur adipiscing elit.
             </p>
           </div>
-          <button className="bg-[#3E3C3A] text-white px-6 py-2 rounded-lg flex items-center gap-2 hover:bg-black transition">
+          <button className="bg-[#CCB7F8] text-[#3A0E95] px-5 py-3 rounded-lg flex items-center gap-2 hover:bg-white transition">
             View All <FiArrowRight />
           </button>
         </div>
@@ -47,7 +47,7 @@ export default function TutorsSection() {
           {/* Left Button */}
           <button
             onClick={slideLeft}
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white shadow rounded-full hover:bg-gray-100 border z-10"
+            className="absolute left-0 top-1/2 transform -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
           >
             <FiArrowLeft className="text-gray-700" />
           </button>
@@ -60,7 +60,7 @@ export default function TutorsSection() {
             {tutors.map((tutor, i) => (
               <div
                 key={i}
-                className="bg-white rounded-xl shadow-sm border w-72 flex-shrink-0"
+                className="bg-white rounded-xl shadow-sm border border-[#D8D8D8] hover:-translate-y-1 transition-all duration-300 w-72 shrink-0"
               >
                 {/* Image */}
                 <div className="w-full h-44 relative">
@@ -87,7 +87,7 @@ export default function TutorsSection() {
                   <h3 className="mt-3 font-bold text-gray-900">{tutor.name}</h3>
                   <p className="text-gray-500 text-sm mb-2">{tutor.role}</p>
 
-                  <button className="bg-[#3E3C3A] text-white px-6 py-2 rounded-lg flex items-center gap-2 hover:bg-black transition">
+                  <button className="bg-[#CCB7F8] text-[#3A0E95] px-6 py-2 font-medium rounded-lg flex items-center gap-2 hover:bg-white hover:border hover:border-[#D8D8D8] transition">
                     Book Tutor <FiArrowRight />
                   </button>
                 </div>
@@ -98,7 +98,7 @@ export default function TutorsSection() {
           {/* Right Button */}
           <button
             onClick={slideRight}
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white shadow rounded-full hover:bg-gray-100 border z-10"
+            className="absolute right-0 top-1/2 transform -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-white shadow rounded-full hover:bg-gray-100 z-10"
           >
             <FiArrowRight className="text-gray-700" />
           </button>

@@ -1,4 +1,3 @@
-// pages/api/auth/[...nextauth].js
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 
@@ -106,7 +105,7 @@ const handler = NextAuth({
     error: '/login?error='
   },
 
-  debug: true, // Enable debugging
+  debug: true, 
 });
 
 export { handler as GET, handler as POST };

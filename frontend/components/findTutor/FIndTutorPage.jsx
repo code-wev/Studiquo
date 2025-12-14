@@ -163,7 +163,7 @@ const FIndTutorPage = () => {
 
               <button
                 onClick={() => applyFilter(ratingFilter)}
-                className="w-full bg-[#CCB7F8] font-semibold text-[#3A0E95] font-medium py-2 px-4 rounded transition hover:bg-[#BBA5E9]"
+                className="w-full bg-[#CCB7F8] font-semibold text-[#3A0E95] py-2 px-4 rounded transition hover:bg-[#BBA5E9]"
               >
                 Apply Filters
               </button>
@@ -186,7 +186,7 @@ const FIndTutorPage = () => {
                     className="flex-1 outline-none"
                   />
                 </div>
-                <select
+                {/* <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value)}
                   className="border border-[#D8DCE1] rounded p-2"
@@ -194,7 +194,7 @@ const FIndTutorPage = () => {
                   <option value="">Sort by</option>
                   <option value="price-asc">A Lavel</option>
                   <option value="price-desc">GCSE</option>
-                </select>
+                </select> */}
                 <select className="border border-[#D8DCE1] rounded p-2">
                   <option>Sort by Subject</option>
                   <option>Mathematics</option>
@@ -231,7 +231,7 @@ const FIndTutorPage = () => {
                 </p>
                 <p className="font-semibold text-[20px] mb-2 pt-6 pb-4">${tutor.price}</p>
               <Link href={'/find-tutor/845'}>
-                <button className="mt-auto max-w-[140px] cursor-pointer flex items-center gap-4  bg-[#CCB7F8]  py-2 whitespace-nowrap px-6 rounded text-[#3A0E95]">
+                <button className="mt-auto max-w-35 cursor-pointer flex items-center gap-4  bg-[#CCB7F8]  py-2 whitespace-nowrap px-6 rounded text-[#3A0E95]">
                   <span>Book Now</span>
                   <span><FaArrowRight className="text-lg"/></span>
                 </button></Link>
