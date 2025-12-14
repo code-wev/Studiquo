@@ -16,9 +16,17 @@ export class AuthService {
   ) {}
 
   async register(data: any) {
+    const alreadyExists = await this.userModel.findOne({ email: data.email });
+    if (alreadyExists) {
+      throw new UnauthorizedException('Email already in use');
+    }
     const hashedPassword = await bcrypt.hash(data.password, 10);
     const user = new this.userModel({ ...data, password: hashedPassword });
     await user.save();
+    await this.mailService.sendWelcomeEmail(
+      user.email,
+      `${user.firstName} ${user.lastName}`,
+    );
     return { message: 'Registration successful' };
   }
 
@@ -30,8 +38,6 @@ export class AuthService {
     const token = this.jwtService.sign({ sub: user._id, role: user.role });
     return { token };
   }
-
- 
 
   async forgotPassword(email: string) {
     const user = await this.userModel.findOne({ email });

@@ -12,10 +12,15 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { TutorsModule } from './tutors/tutors.module';
 import { UsersModule } from './users/users.module';
-
+import { ConfigModule } from '@nestjs/config';
 @Module({
   imports: [
-    MongooseModule.forRoot('mongodb://localhost:27017/lsm'),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    MongooseModule.forRoot(
+      process.env.MONGO_URI || 'mongodb://localhost:27017/lsm',
+    ),
     AdminModule,
     AuthModule,
     AvailabilityModule,

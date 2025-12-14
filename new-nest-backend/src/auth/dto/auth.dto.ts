@@ -3,7 +3,6 @@ import {
   IsEnum,
   IsMongoId,
   IsNotEmpty,
-  IsOptional,
   IsString,
   MinLength,
 } from 'class-validator';
@@ -24,18 +23,10 @@ export class RegisterDto {
   @MinLength(6, { message: 'Password must be at least 6 characters' })
   password: string;
 
-  @IsEnum(['Tutor', 'Student', 'Parent', 'Admin'], {
-    message: 'Role must be one of Tutor|Student|Parent|Admin',
+  @IsEnum(['Tutor', 'Student', 'Parent'], {
+    message: 'Role must be one of Tutor|Student|Parent',
   })
   role: string;
-
-  @IsOptional()
-  @IsString({ message: 'Avatar must be a string (URL or path)' })
-  avatar?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Bio must be a string' })
-  bio?: string;
 }
 
 export class LoginDto {

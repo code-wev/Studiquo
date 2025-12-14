@@ -59,18 +59,15 @@ export class MailService {
     });
   }
 
-  async sendVerifyEmail(email: string, verifyLink: string) {
+  async sendWelcomeEmail(email: string, name: string) {
     return this.sendMail({
       to: email,
-      subject: 'Verify Your Email',
+      subject: 'Welcome to Our Service!',
       html: `
-        <p>Welcome!</p>
-        <p>Please verify your email address.</p>
-        <p>
-          <a href="${verifyLink}" target="_blank">
-            Verify Email
-          </a>
-        </p>
+        <p>Hi ${name},</p>
+        <p>Welcome to our service! We're excited to have you on board.</p>
+        <p>Feel free to explore and let us know if you have any questions.</p>
+        <p>Best regards,<br/>The Team</p>
       `,
     });
   }
