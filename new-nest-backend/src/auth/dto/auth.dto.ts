@@ -3,6 +3,7 @@ import {
   IsEnum,
   IsMongoId,
   IsNotEmpty,
+  IsOptional,
   IsString,
   MinLength,
 } from 'class-validator';
@@ -27,6 +28,18 @@ export class RegisterDto {
     message: 'Role must be one of Tutor|Student|Parent',
   })
   role: string;
+
+  @IsOptional()
+  @IsString({ message: 'Bio must be a string' })
+  bio?: string;
+
+  @IsOptional()
+  @IsString({ message: 'DBS must be a string' })
+  dbsLink?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Referral source must be a string' })
+  referralSource?: string;
 }
 
 export class LoginDto {

@@ -30,6 +30,9 @@ export class User extends Document {
 
   @Prop()
   dbsLink: string;
+
+  @Prop()
+  referralSource: string;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -28,7 +28,7 @@ export class UpdateProfileDto {
   avatar?: string;
 
   @IsOptional()
-  @IsUrl({}, { message: 'DBS link must be a valid URL' })
+  @IsString({ message: 'DBS must be a string' })
   dbsLink?: string;
 
   // Tutor fields

@@ -40,7 +40,7 @@ async function bootstrap() {
   // Global response formatting (wraps responses into a consistent shape).
   app.useGlobalInterceptors(new ResponseInterceptor());
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 8080);
 
   const logger = new Logger('Bootstrap');
   try {
