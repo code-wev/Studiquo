@@ -94,7 +94,7 @@ export default function RegisterPage() {
 
   return (
     <div className='w-full bg-white min-h-screen flex items-center justify-center'>
-      <div className='w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8 px-6'>
+      <div className='w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-8 px-6 my-20'>
         {/* Left Image */}
         <div className='relative w-full flex items-center justify-center'>
           <Image
