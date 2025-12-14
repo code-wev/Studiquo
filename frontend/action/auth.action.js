@@ -5,6 +5,8 @@ import { cookies } from "next/headers";
 
 /* ======================
    Register
+   POST /auth/register
+   Public Api
 ====================== */
 export async function registerAction(formData) {
   return apiFetch("/auth/register", {
@@ -23,6 +25,8 @@ export async function registerAction(formData) {
 
 /* ======================
    Login
+   POST /auth/login
+   Public Api
 ====================== */
 export async function loginAction(formData) {
   const response = await apiFetch("/auth/login", {
@@ -53,6 +57,8 @@ export async function loginAction(formData) {
 
 /* ======================
    Logout
+   POST /auth/logout
+   Public Api
 ====================== */
 export async function logoutAction() {
   cookies().delete("token");
@@ -61,6 +67,8 @@ export async function logoutAction() {
 
 /* ======================
    Forgot Password
+   POST /auth/forgot-password
+   Public Api
 ====================== */
 export async function forgotPasswordAction(email) {
   return apiFetch("/auth/forgot-password", {
@@ -71,6 +79,8 @@ export async function forgotPasswordAction(email) {
 
 /* ======================
    Reset Password
+   POST /auth/reset-password
+   Public Api
 ====================== */
 export async function resetPasswordAction(data) {
   return apiFetch("/auth/reset-password", {
@@ -85,6 +95,8 @@ export async function resetPasswordAction(data) {
 
 /* ======================
    Change Password (Authenticated)
+   PUT /auth/change-password
+   Private Api
 ====================== */
 export async function changePasswordAction(data) {
   const token = cookies().get("token")?.value;
