@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { LessonReport } from '../models/lessonReport.model';
 import {
   CreateLessonReportDto,
@@ -22,7 +23,7 @@ export class LessonReportService {
     return this.lessonReportModel.find().populate('booking').exec();
   }
 
-  async findOne(id: string): Promise<LessonReport> {
+  async findOne(id: MongoIdDto['id']): Promise<LessonReport> {
     const report = await this.lessonReportModel
       .findById(id)
       .populate('booking')
@@ -32,7 +33,7 @@ export class LessonReportService {
   }
 
   async update(
-    id: string,
+    id: MongoIdDto['id'],
     updateDto: UpdateLessonReportDto,
   ): Promise<LessonReport> {
     const report = await this.lessonReportModel.findByIdAndUpdate(
@@ -44,7 +45,7 @@ export class LessonReportService {
     return report;
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: MongoIdDto['id']): Promise<void> {
     const result = await this.lessonReportModel.findByIdAndDelete(id);
     if (!result) throw new NotFoundException('Lesson report not found');
   }

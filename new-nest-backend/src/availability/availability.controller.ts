@@ -8,6 +8,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Role, Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -48,7 +49,7 @@ export class AvailabilityController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Tutor)
   async addTimeSlot(
-    @Param('availabilityId') availabilityId: string,
+    @Param('availabilityId') availabilityId: MongoIdDto['id'],
     @Body() dto: CreateTimeSlotDto,
   ) {
     return this.availabilityService.addTimeSlot(availabilityId, dto);
@@ -64,7 +65,7 @@ export class AvailabilityController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Tutor)
   async updateSlot(
-    @Param('slotId') slotId: string,
+    @Param('slotId') slotId: MongoIdDto['id'],
     @Body() dto: UpdateTimeSlotDto,
   ) {
     return this.availabilityService.updateSlot(slotId, dto);
@@ -78,7 +79,7 @@ export class AvailabilityController {
   @Delete(':slotId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Tutor)
-  async deleteSlot(@Param('slotId') slotId: string) {
+  async deleteSlot(@Param('slotId') slotId: MongoIdDto['id']) {
     return this.availabilityService.deleteSlot(slotId);
   }
 }

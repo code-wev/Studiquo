@@ -7,6 +7,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Role, Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -20,7 +21,7 @@ export class ChatController {
   @Get(':bookingId/messages')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Student, Role.Tutor, Role.Parent, Role.Admin)
-  async getChatHistory(@Param('bookingId') bookingId: string) {
+  async getChatHistory(@Param('bookingId') bookingId: MongoIdDto['id']) {
     return this.chatService.getChatHistory(bookingId);
   }
 
@@ -28,7 +29,7 @@ export class ChatController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Student, Role.Tutor, Role.Parent, Role.Admin)
   async sendMessage(
-    @Param('bookingId') bookingId: string,
+    @Param('bookingId') bookingId: MongoIdDto['id'],
     @Req() req,
     @Body() dto: SendMessageDto,
   ) {

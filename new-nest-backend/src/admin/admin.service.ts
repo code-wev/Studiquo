@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { Booking } from '../models/booking.model';
 import { Payment } from '../models/payment.model';
 import { Payout } from '../models/payout.model';
@@ -34,7 +35,7 @@ export class AdminService {
     return this.payoutModel.find();
   }
 
-  async updatePayoutStatus(payoutId: string, status: string) {
+  async updatePayoutStatus(payoutId: MongoIdDto['id'], status: string) {
     return this.payoutModel.findByIdAndUpdate(
       payoutId,
       { status },
@@ -42,7 +43,7 @@ export class AdminService {
     );
   }
 
-  async verifyTutor(tutorId: string) {
+  async verifyTutor(tutorId: MongoIdDto['id']) {
     return this.tutorProfileModel.findByIdAndUpdate(
       tutorId,
       { verified: true },

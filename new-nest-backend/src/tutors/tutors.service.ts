@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { Review } from 'src/models/review.model';
 import { ReviewQueryDto } from 'src/reviews/dto/review.dto';
 import { TutorProfile } from '../models/tutorProfile.model';
@@ -76,7 +77,7 @@ export class TutorsService {
    *
    * @param tutorId - id of the tutor profile to fetch
    */
-  async getPublicProfile(tutorId: string) {
+  async getPublicProfile(tutorId: MongoIdDto['id']) {
     const tutorProfile = await this.tutorProfileModel
       .findById(tutorId)
       .populate({
@@ -102,7 +103,7 @@ export class TutorsService {
    * @param tutorId - tutor document id
    * @param query - pagination and filter options for reviews
    */
-  async getTutorReviews(tutorId: string, query: ReviewQueryDto) {
+  async getTutorReviews(tutorId: MongoIdDto['id'], query: ReviewQueryDto) {
     const { page = 1, limit = 10, rating } = query;
 
     const filter: any = { tutor: tutorId };

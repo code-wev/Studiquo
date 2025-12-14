@@ -8,6 +8,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Role, Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -28,13 +29,13 @@ export class BookingsController {
   @Put(':bookingId/cancel')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Student, Role.Tutor, Role.Admin)
-  async cancelBooking(@Param('bookingId') bookingId: string) {
+  async cancelBooking(@Param('bookingId') bookingId: MongoIdDto['id']) {
     return this.bookingsService.updateBookingStatus(bookingId, 'CANCELLED');
   }
   @Put(':bookingId/complete')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Tutor, Role.Admin)
-  async completeBooking(@Param('bookingId') bookingId: string) {
+  async completeBooking(@Param('bookingId') bookingId: MongoIdDto['id']) {
     return this.bookingsService.updateBookingStatus(bookingId, 'COMPLETED');
   }
 
@@ -55,7 +56,7 @@ export class BookingsController {
   @Get(':bookingId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Student, Role.Tutor, Role.Parent, Role.Admin)
-  async bookingDetails(@Param('bookingId') bookingId: string) {
+  async bookingDetails(@Param('bookingId') bookingId: MongoIdDto['id']) {
     return this.bookingsService.getBookingDetails(bookingId);
   }
 }

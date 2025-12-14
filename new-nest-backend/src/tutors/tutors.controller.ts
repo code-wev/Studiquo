@@ -37,7 +37,7 @@ export class TutorsController {
    * @returns the tutor's public profile information
    */
   @Get(':tutorId')
-  async publicProfile(@Param('tutorId') tutorId: string) {
+  async publicProfile(@Param('tutorId') tutorId: MongoIdDto['id']) {
     return this.tutorsService.getPublicProfile(tutorId);
   }
 
@@ -61,7 +61,7 @@ export class TutorsController {
    * GET /api/tutors/:tutorId/availability
    */
   @Get(':tutorId/availability')
-  async tutorAvailability(@Param('tutorId') tutorId: string) {
+  async tutorAvailability(@Param('tutorId') tutorId: MongoIdDto['id']) {
     return this.availabilityService.getTutorAvailability(tutorId);
   }
 }

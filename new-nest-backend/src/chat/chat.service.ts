@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { getUserSub } from '../common/helpers';
 import { ChatGroup } from '../models/chatGroup.model';
 import { Message } from '../models/message.model';
@@ -13,7 +14,7 @@ export class ChatService {
     @InjectModel(Message.name) private messageModel: Model<Message>,
   ) {}
 
-  async getChatHistory(bookingId: string) {
+  async getChatHistory(bookingId: MongoIdDto['id']) {
     // Find chat group by bookingId (stub: assumes chatGroup._id === bookingId)
     return this.messageModel
       .find({ chatGroup: bookingId })
@@ -21,7 +22,7 @@ export class ChatService {
   }
 
   async sendMessage(
-    bookingId: string,
+    bookingId: MongoIdDto['id'],
     req: { user: any },
     dto: SendMessageDto,
   ) {

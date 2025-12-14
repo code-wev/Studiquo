@@ -9,6 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Role, Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -40,21 +41,24 @@ export class LessonReportController {
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Tutor, Role.Admin)
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: MongoIdDto['id']) {
     return this.lessonReportService.findOne(id);
   }
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Tutor, Role.Admin)
-  update(@Param('id') id: string, @Body() updateDto: UpdateLessonReportDto) {
+  update(
+    @Param('id') id: MongoIdDto['id'],
+    @Body() updateDto: UpdateLessonReportDto,
+  ) {
     return this.lessonReportService.update(id, updateDto);
   }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Admin)
-  remove(@Param('id') id: string) {
+  remove(@Param('id') id: MongoIdDto['id']) {
     return this.lessonReportService.remove(id);
   }
 }

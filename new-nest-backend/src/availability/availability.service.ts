@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { getUserSub } from '../common/helpers';
 import { TimeSlot } from '../models/timeSlot.model';
 import { TutorAvailability } from '../models/tutorAvailability.model';
@@ -65,7 +66,7 @@ export class AvailabilityService {
    * @throws BadRequestException if time slot is invalid or overlaps
    */
   async addTimeSlot(
-    availabilityId: string,
+    availabilityId: MongoIdDto['id'],
     dto: CreateTimeSlotDto,
   ): Promise<TimeSlot> {
     const availability = await this.availabilityModel
@@ -190,7 +191,10 @@ export class AvailabilityService {
    * @throws NotFoundException if time slot not found
    * @throws BadRequestException if updated times are invalid or overlap
    */
-  async updateSlot(slotId: string, dto: UpdateTimeSlotDto): Promise<TimeSlot> {
+  async updateSlot(
+    slotId: MongoIdDto['id'],
+    dto: UpdateTimeSlotDto,
+  ): Promise<TimeSlot> {
     const slot = await this.timeSlotModel.findById(slotId).exec();
     if (!slot) {
       throw new NotFoundException('Time slot not found');
@@ -248,7 +252,7 @@ export class AvailabilityService {
    * @param slotId - ID of the TimeSlot to delete
    * @throws NotFoundException if time slot not found
    */
-  async deleteSlot(slotId: string): Promise<TimeSlot> {
+  async deleteSlot(slotId: MongoIdDto['id']): Promise<TimeSlot> {
     const deleted = await this.timeSlotModel.findByIdAndDelete(slotId).exec();
     if (!deleted) {
       throw new NotFoundException('Time slot not found');
@@ -263,7 +267,7 @@ export class AvailabilityService {
    * @returns Array of objects with date and corresponding slots
    */
   async getTutorAvailability(
-    tutorId: string,
+    tutorId: MongoIdDto['id'],
   ): Promise<Array<{ date: string; slots: TimeSlot[] }>> {
     const availabilities = await this.availabilityModel
       .find({ user: tutorId })
