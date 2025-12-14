@@ -25,7 +25,7 @@ export async function registerAction(formData) {
    Login
 ====================== */
 export async function loginAction(formData) {
-  const data = await apiFetch("/auth/login", {
+  const response = await apiFetch("/auth/login", {
     method: "POST",
     body: JSON.stringify({
       email: formData.email,
@@ -33,19 +33,24 @@ export async function loginAction(formData) {
     }),
   });
 
-  console.log(data);
+  console.log("LOGIN RESPONSE:", response);
+
+  const token = response?.token || response?.data?.token;
+
+  if (!token) {
+    throw new Error("JWT token not returned from API");
+  }
 
   const cookieStore = await cookies();
 
-  // Store JWT securely in HttpOnly cookie
-  cookieStore.set("token", data.token, {
+  cookieStore.set("token", String(token), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     path: "/",
     sameSite: "lax",
   });
 
-  return data;
+  return response;
 }
 
 /* ======================
