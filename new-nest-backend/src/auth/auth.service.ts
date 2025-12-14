@@ -61,7 +61,16 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
     const token = this.jwtService.sign({ sub: user._id, role: user.role });
-    return { token };
+    return {
+      message: 'Login successful',
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,
+      },
+      token,
+    };
   }
 
   /**

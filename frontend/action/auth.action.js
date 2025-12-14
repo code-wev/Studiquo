@@ -33,11 +33,16 @@ export async function loginAction(formData) {
     }),
   });
 
+  console.log(data);
+
+  const cookieStore = await cookies();
+
   // Store JWT securely in HttpOnly cookie
-  cookies().set("token", data.token, {
+  cookieStore.set("token", data.token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     path: "/",
+    sameSite: "lax",
   });
 
   return data;
