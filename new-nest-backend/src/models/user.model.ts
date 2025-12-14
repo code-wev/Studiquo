@@ -21,6 +21,10 @@ export class User extends Document {
   @Prop({ required: true, enum: ['Tutor', 'Student', 'Parent', 'Admin'] })
   role: string;
 
+  // Optional fields
+  @Prop()
+  token: string;
+
   @Prop()
   bio: string;
 

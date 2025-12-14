@@ -1,6 +1,7 @@
 import {
   IsEmail,
   IsEnum,
+  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -53,6 +54,21 @@ export class ForgotPasswordDto {
 export class ResetPasswordDto {
   @IsEmail({}, { message: 'Email must be a valid email address' })
   email: string;
+
+  @IsString({ message: 'New password must be a string' })
+  @MinLength(6, { message: 'New password must be at least 6 characters' })
+  newPassword: string;
+
+  @IsString({ message: 'Token is required' })
+  token: string;
+}
+
+export class ChangePasswordDto {
+  @IsMongoId({ message: 'User id must be a valid Mongo id' })
+  userId: string;
+
+  @IsString({ message: 'Old password must be a string' })
+  oldPassword: string;
 
   @IsString({ message: 'New password must be a string' })
   @MinLength(6, { message: 'New password must be at least 6 characters' })
