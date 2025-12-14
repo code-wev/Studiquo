@@ -5,7 +5,7 @@ export class TutorSearchQueryDto {
   @IsOptional()
   @IsString({ message: 'Subject must be a string' })
   @IsEnum(['MATH', 'SCIENCE', 'ENGLISH'], {
-    message: 'Subject must be one of MATH|SCIENCE|ENGLISH',
+    message: 'Subject must be one of MATH | SCIENCE | ENGLISH',
   })
   subject?: string;
 
