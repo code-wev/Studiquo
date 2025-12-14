@@ -2,6 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
+/**
+ * Unit tests for the application root controller.
+ *
+ * These tests verify that the controller returns the expected
+ * greeting string from `AppService`.
+ */
 describe('AppController', () => {
   let appController: AppController;
 

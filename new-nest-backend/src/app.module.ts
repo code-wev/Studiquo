@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AdminModule } from './admin/admin.module';
 import { AppController } from './app.controller';
@@ -12,7 +13,13 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { ReviewsModule } from './reviews/reviews.module';
 import { TutorsModule } from './tutors/tutors.module';
 import { UsersModule } from './users/users.module';
-import { ConfigModule } from '@nestjs/config';
+
+/**
+ * Root application module.
+ *
+ * Registers global configuration, connects to MongoDB via Mongoose,
+ * and imports feature modules for the application.
+ */
 @Module({
   imports: [
     ConfigModule.forRoot({
