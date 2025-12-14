@@ -1,9 +1,15 @@
 import { configureStore } from "@reduxjs/toolkit";
-// import your reducers here
+// import your reducers here (uncomment and add real slices when available)
 // import userReducer from "./slices/userSlice";
 
+// Provide a minimal placeholder reducer so the store initializes during development.
+// Replace or extend this with real slice reducers (e.g. userReducer) when ready.
+const placeholderReducer = (state = {}, action) => state;
+
 export const store = configureStore({
-  reducer: {},
+  reducer: {
+    app: placeholderReducer,
+  },
 
   middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat([]),
 });

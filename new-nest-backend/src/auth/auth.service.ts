@@ -116,6 +116,7 @@ export class AuthService {
     if (!user)
       throw new UnauthorizedException('User not found or session expired');
     user.password = await bcrypt.hash(data.newPassword, 10);
+    user.token = '';
     await user.save();
     return { message: 'Password reset successful' };
   }
