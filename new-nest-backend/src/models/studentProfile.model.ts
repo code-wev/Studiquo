@@ -14,9 +14,10 @@ export class StudentProfile extends Document {
 
   @Prop({ type: String, default: '' })
   currentGrade: string;
-  
+
   @Prop({ type: String, default: '' })
   targetGrade: string;
 }
 
-export const StudentProfileSchema = SchemaFactory.createForClass(StudentProfile);
+export const StudentProfileSchema =
+  SchemaFactory.createForClass(StudentProfile);

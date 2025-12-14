@@ -2,9 +2,12 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
+import { StudentProfile } from 'src/models/studentProfile.model';
+import { TutorProfile } from 'src/models/tutorProfile.model';
 import { BaseService } from '../common/base.service';
 import { getUserSub } from '../common/helpers';
 import { User } from '../models/user.model';
+import { UpdateProfileDto } from './dto/user.dto';
 
 @Injectable()
 export class UsersService extends BaseService<User> {
@@ -13,19 +16,42 @@ export class UsersService extends BaseService<User> {
   /**
    * Create the `UsersService`.
    *
-   * @param userModel - injected Mongoose model for `User`
+   * @param userModel - injected Mongoose model for `User`.
    */
-  constructor(@InjectModel(User.name) userModel: Model<User>) {
+  constructor(
+    @InjectModel(User.name)
+    userModel: Model<User>,
+
+    @InjectModel(TutorProfile.name)
+    private readonly tutorProfileModel: Model<TutorProfile>,
+
+    @InjectModel(StudentProfile.name)
+    private readonly studentProfileModel: Model<StudentProfile>,
+  ) {
     super(userModel);
   }
-
   /**
    * Return the authenticated user's profile without the password field.
    *
    * @param req - the request object that contains `user` (set by auth guard)
    */
   async getMe(req: { user: any }) {
-    return this.model.findById(getUserSub(req)).select('-password');
+    const userId = getUserSub(req);
+
+    const user = await this.model.findById(userId).select('-password').lean();
+    if (!user) throw new UnauthorizedException('User not found');
+
+    let profile: any = null;
+
+    if (user.role === 'Tutor') {
+      profile = await this.tutorProfileModel.findOne({ user: userId }).lean();
+    }
+
+    if (user.role === 'Student') {
+      profile = await this.studentProfileModel.findOne({ user: userId }).lean();
+    }
+
+    return { ...user, profile };
   }
 
   /**
@@ -34,22 +60,98 @@ export class UsersService extends BaseService<User> {
    * @param req - the request object that contains `user` (set by auth guard)
    * @param data - partial user fields to update
    */
-  async updateMe(req: { user: any }, data: any) {
-    return this.model
-      .findByIdAndUpdate(getUserSub(req), data, { new: true })
-      .select('-password');
-  }
+  async updateMe(req, data: UpdateProfileDto) {
+    const userId = getUserSub(req);
 
-  /**
-   * Update the authenticated user's avatar field.
-   *
-   * @param req - the request object that contains `user` (set by auth guard)
-   * @param avatar - new avatar value (storage key or base64)
-   */
-  async uploadAvatar(req: { user: any }, avatar: string) {
-    return this.model
-      .findByIdAndUpdate(getUserSub(req), { avatar }, { new: true })
-      .select('-password');
+    // Check user exists
+    const userDoc = await this.model.findById(userId);
+    if (!userDoc) throw new UnauthorizedException('User not found');
+
+    const userRole = userDoc.role;
+
+    /**
+     * Split payload
+     */
+    const {
+      // user fields
+      firstName,
+      lastName,
+      bio,
+      avatar,
+      dbsLink,
+
+      // tutor fields
+      subject,
+      hourlyRate,
+
+      // student fields
+      yearGroup,
+      confidenceLevel,
+      currentGrade,
+      targetGrade,
+    } = data;
+
+    /**
+     * Update USER collection
+     */
+    const userUpdate: any = {};
+    if (firstName !== undefined) userUpdate.firstName = firstName;
+    if (lastName !== undefined) userUpdate.lastName = lastName;
+    if (bio !== undefined) userUpdate.bio = bio;
+    if (avatar !== undefined) userUpdate.avatar = avatar;
+    if (dbsLink !== undefined) userUpdate.dbsLink = dbsLink;
+
+    if (Object.keys(userUpdate).length > 0) {
+      await this.model.findByIdAndUpdate(userId, { $set: userUpdate });
+    }
+
+    /**
+     * Role-specific profile updates
+     */
+    let profile = null;
+
+    if (userRole === 'Tutor') {
+      const tutorUpdate: any = {};
+      if (subject !== undefined) tutorUpdate.subjects = [subject];
+      if (hourlyRate !== undefined) tutorUpdate.hourlyRate = hourlyRate;
+
+      profile = await this.tutorProfileModel.findOneAndUpdate(
+        { user: userId },
+        { $set: tutorUpdate },
+        { new: true, upsert: true },
+      );
+    }
+
+    if (userRole === 'Student') {
+      const studentUpdate: any = {};
+      if (yearGroup !== undefined) studentUpdate.yearGroup = yearGroup;
+      if (confidenceLevel !== undefined)
+        studentUpdate.confidenceLevel = confidenceLevel;
+      if (currentGrade !== undefined) studentUpdate.currentGrade = currentGrade;
+      if (targetGrade !== undefined) studentUpdate.targetGrade = targetGrade;
+
+      profile = await this.studentProfileModel.findOneAndUpdate(
+        { user: userId },
+        { $set: studentUpdate },
+        { new: true, upsert: true },
+      );
+    }
+
+    /**
+     * Fetch updated user
+     */
+    const updatedUser = await this.model
+      .findById(userId)
+      .select('-password')
+      .lean();
+
+    /**
+     * Return merged response
+     */
+    return {
+      ...updatedUser,
+      profile,
+    };
   }
 
   /**

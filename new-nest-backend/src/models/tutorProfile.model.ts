@@ -6,7 +6,11 @@ export class TutorProfile extends Document {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   user: Types.ObjectId;
 
-  @Prop({ type: [String], required: true })
+  @Prop({
+    type: [String],
+    enum: ['MATH', 'SCIENCE', 'ENGLISH'],
+    required: true,
+  })
   subjects: string[];
 
   @Prop({ required: true })

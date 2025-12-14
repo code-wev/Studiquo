@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Post,
-  Put,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Role, Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -53,23 +45,6 @@ export class UsersController {
   @Roles(Role.Student, Role.Tutor, Role.Parent, Role.Admin)
   async updateMe(@Req() req: { user: any }, @Body() body: UpdateProfileDto) {
     return this.usersService.updateMe(req.user, body);
-  }
-
-  /**
-   * Upload or set a user's avatar image reference.
-   *
-   * @param req - the request object containing `user` set by the auth guard
-   * @param avatar - base64 string or storage key for the avatar image
-   * @returns the updated user document (without password)
-   */
-  @Post('me/avatar')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Student, Role.Tutor, Role.Parent, Role.Admin)
-  async uploadAvatar(
-    @Req() req: { user: any },
-    @Body('avatar') avatar: string,
-  ) {
-    return this.usersService.uploadAvatar(req.user, avatar);
   }
 
   /**

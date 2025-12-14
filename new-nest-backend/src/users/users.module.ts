@@ -2,6 +2,14 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { jwtConfig } from 'src/common/jwt.config';
+import {
+  StudentProfile,
+  StudentProfileSchema,
+} from 'src/models/studentProfile.model';
+import {
+  TutorProfile,
+  TutorProfileSchema,
+} from 'src/models/tutorProfile.model';
 import { User, UserSchema } from '../models/user.model';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
@@ -14,7 +22,11 @@ import { UsersService } from './users.service';
  */
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: TutorProfile.name, schema: TutorProfileSchema },
+      { name: StudentProfile.name, schema: StudentProfileSchema },
+    ]),
     JwtModule.register(jwtConfig),
   ],
   controllers: [UsersController],

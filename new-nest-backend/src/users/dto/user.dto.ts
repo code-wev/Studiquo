@@ -8,6 +8,7 @@ import {
 } from 'class-validator';
 
 export class UpdateProfileDto {
+  // User fields
   @IsOptional()
   @IsString({ message: 'First name must be a string' })
   @IsNotEmpty()
@@ -30,6 +31,7 @@ export class UpdateProfileDto {
   @IsUrl({}, { message: 'DBS link must be a valid URL' })
   dbsLink?: string;
 
+  // Tutor fields
   @IsOptional()
   @IsString({ message: 'Subject must be a string' })
   @IsEnum(['MATH', 'SCIENCE', 'ENGLISH'], {
@@ -40,4 +42,21 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsNumber({}, { message: 'Hourly rate must be a number' })
   hourlyRate?: number;
+
+  // Student fields
+  @IsOptional()
+  @IsString({ message: 'Year group must be a string' })
+  yearGroup?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Confidence level must be a string' })
+  confidenceLevel?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Current grade must be a string' })
+  currentGrade?: string;
+
+  @IsOptional()
+  @IsString({ message: 'Target grade must be a string' })
+  targetGrade?: string;
 }
