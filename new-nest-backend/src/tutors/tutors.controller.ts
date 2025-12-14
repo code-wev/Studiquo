@@ -11,10 +11,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Role, Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
-import {
-  CreateTutorProfileDto,
-  UpdateTutorProfileDto,
-} from './dto/tutor-profile.dto';
+import { CreateTutorProfileDto } from './dto/tutor-profile.dto';
 import { TutorsService } from './tutors.service';
 
 @Controller('tutors')
@@ -26,19 +23,6 @@ export class TutorsController {
   @Roles(Role.Tutor, Role.Admin)
   async createProfile(@Req() req, @Body() dto: CreateTutorProfileDto) {
     return this.tutorsService.createProfile(req.user, dto);
-  }
-
-  @Get('me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor, Role.Admin)
-  async myProfile(@Req() req) {
-    return this.tutorsService.getMyProfile(req.user);
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor, Role.Admin)
-  async updateMyProfile(@Req() req, @Body() dto: UpdateTutorProfileDto) {
-    return this.tutorsService.updateMyProfile(req.user, dto);
   }
 
   @Get()

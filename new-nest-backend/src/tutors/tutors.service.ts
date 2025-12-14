@@ -4,10 +4,7 @@ import { Model } from 'mongoose';
 import { getUserSub } from '../common/helpers';
 import { TutorProfile } from '../models/tutorProfile.model';
 import { User } from '../models/user.model';
-import {
-  CreateTutorProfileDto,
-  UpdateTutorProfileDto,
-} from './dto/tutor-profile.dto';
+import { CreateTutorProfileDto } from './dto/tutor-profile.dto';
 
 @Injectable()
 export class TutorsService {
@@ -24,20 +21,6 @@ export class TutorsService {
     });
     await profile.save();
     return profile;
-  }
-
-  async getMyProfile(req: { user: any }) {
-    return this.tutorProfileModel.findOne({ user: getUserSub(req) });
-  }
-
-  async updateMyProfile(req: { user: any }, dto: UpdateTutorProfileDto) {
-    return this.tutorProfileModel.findOneAndUpdate(
-      { user: getUserSub(req) },
-      dto,
-      {
-        new: true,
-      },
-    );
   }
 
   async searchTutors(query: any) {
