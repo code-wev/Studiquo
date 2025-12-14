@@ -33,8 +33,6 @@ export async function loginAction(formData) {
     }),
   });
 
-  console.log("LOGIN RESPONSE:", response);
-
   const token = response?.token || response?.data?.token;
 
   if (!token) {
