@@ -31,7 +31,7 @@ export function isTokenValid(token) {
 
 /**
  * Get auth user from cookies (client-side)
- * @returns {{ id: string, role: string } | null}
+ * @returns {{ id: string, firstName: string, lastName: string, email: string, role: string } | null}
  */
 export function getAuthUser() {
   if (typeof document === "undefined") return null;
