@@ -43,7 +43,7 @@ const PendingApproval = () => {
         <table className="min-w-full rounded-full  border border-[#CECECE]  text-sm table-auto">
           <thead className="bg-gray-100  border-b border-[#CECECE]">
             <tr className="text-left">
-              <th className="p-3 text-gray-600">Name</th>
+              <th className="p-3 text-gray-600 w-[40%]">Name</th>
               <th className="p-3 text-gray-600">Email</th>
               <th className="p-3 text-gray-600">Subject</th>
               <th className="p-3 text-gray-600 text-right">Action</th>

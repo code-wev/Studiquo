@@ -77,7 +77,7 @@ export default function Earnings() {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {/* Table Header */}
         <div className="grid grid-cols-6 gap-4 px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <div className="text-sm font-medium text-gray-600">Date</div>
+          <div className="text-sm font-medium text-gray-600 w-[40%]">Date</div>
           <div className="text-sm font-medium text-gray-600">Slot</div>
           <div className="text-sm font-medium text-gray-600">Transaction ID</div>
           <div className="text-sm font-medium text-gray-600">No of Bookings</div>
