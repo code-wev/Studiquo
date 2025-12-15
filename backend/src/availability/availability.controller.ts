@@ -8,10 +8,11 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { MongoIdDto } from 'src/common/dto/mongoId.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Role, Roles } from '../auth/roles.decorator';
-import { RolesGuard } from '../auth/roles.guard';
+import { MongoIdDto } from 'common/dto/mongoId.dto';
+import { UserRole } from 'src/models/user.model';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
 import { AvailabilityService } from './availability.service';
 import {
   CreateAvailabilityDto,
@@ -38,7 +39,7 @@ export class AvailabilityController {
    */
   @Post('date')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor)
+  @Roles(UserRole.Tutor)
   async addAvailability(@Req() req, @Body() dto: CreateAvailabilityDto) {
     return this.availabilityService.addAvailability(req, dto);
   }
@@ -52,7 +53,7 @@ export class AvailabilityController {
    */
   @Post('slot')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor)
+  @Roles(UserRole.Tutor)
   async addTimeSlotForTutor(@Req() req, @Body() dto: CreateTimeSlotDto) {
     return this.availabilityService.addTimeSlotForTutor(req, dto);
   }
@@ -66,7 +67,7 @@ export class AvailabilityController {
    */
   @Post(':availabilityId/slots')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor)
+  @Roles(UserRole.Tutor)
   async addTimeSlot(
     @Param('availabilityId') availabilityId: MongoIdDto['id'],
     @Body() dto: CreateTimeSlotDto,
@@ -84,7 +85,7 @@ export class AvailabilityController {
    */
   @Put(':slotId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor)
+  @Roles(UserRole.Tutor)
   async updateSlot(
     @Req() req,
     @Param('slotId') slotId: MongoIdDto['id'],
@@ -102,7 +103,7 @@ export class AvailabilityController {
    */
   @Delete(':slotId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor)
+  @Roles(UserRole.Tutor)
   async deleteSlot(@Req() req, @Param('slotId') slotId: MongoIdDto['id']) {
     return this.availabilityService.deleteSlot(req, slotId);
   }

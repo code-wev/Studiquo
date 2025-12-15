@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { getUserSub } from '../common/helpers';
+import { getUserSub } from '../../common/helpers';
 import { DocumentUpload } from '../models/document.model';
 import { UploadDocumentDto } from './dto/document.dto';
 

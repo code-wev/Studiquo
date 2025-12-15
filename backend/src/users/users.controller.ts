@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Role, Roles } from '../auth/roles.decorator';
-import { RolesGuard } from '../auth/roles.guard';
+import { GetUser } from 'common/decorators/get-user.decorator';
+import { UserRole } from 'src/models/user.model';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
 import { UpdateProfileDto } from './dto/user.dto';
 import { UsersService } from './users.service';
 
@@ -28,9 +30,9 @@ export class UsersController {
    */
   @Get('me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Student, Role.Tutor, Role.Parent, Role.Admin)
-  async getMe(@Req() req: { user: any }) {
-    return this.usersService.getMe(req.user);
+  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
+  async getMe(@GetUser() user: any) {
+    return this.usersService.getMe(user.userId);
   }
 
   /**
@@ -42,7 +44,7 @@ export class UsersController {
    */
   @Put('me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Student, Role.Tutor, Role.Parent, Role.Admin)
+  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async updateMe(@Req() req: { user: any }, @Body() body: UpdateProfileDto) {
     return this.usersService.updateMe(req.user, body);
   }
@@ -59,7 +61,7 @@ export class UsersController {
    */
   @Put('me/password')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Student, Role.Tutor, Role.Parent, Role.Admin)
+  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async updatePassword(@Req() req: { user: any }, @Body() body) {
     return this.usersService.updatePassword(req.user, body);
   }

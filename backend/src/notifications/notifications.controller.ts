@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Role, Roles } from '../auth/roles.decorator';
-import { RolesGuard } from '../auth/roles.guard';
+import { UserRole } from 'src/models/user.model';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
 import { CreateNotificationDto } from './dto/notification.dto';
 import { NotificationsService } from './notifications.service';
 
@@ -11,7 +12,7 @@ export class NotificationsController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Student, Role.Tutor, Role.Parent, Role.Admin)
+  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async getMyNotifications(@Req() req) {
     return this.notificationsService.getMyNotifications(req.user);
   }

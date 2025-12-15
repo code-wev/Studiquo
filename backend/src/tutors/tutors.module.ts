@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
+import { jwtConfig } from 'common/jwt.config';
 import { AvailabilityModule } from 'src/availability/availability.module';
-import { jwtConfig } from 'src/common/jwt.config';
 import { Booking, BookingSchema } from 'src/models/booking.model';
 import { Payment, PaymentSchema } from 'src/models/payment.model';
 import { Payout, PayoutSchema } from 'src/models/payout.model';

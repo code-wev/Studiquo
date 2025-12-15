@@ -1,15 +1,30 @@
 "use client";
 
+import { getAuthUser } from "@/action/auth.action";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiArrowRight, FiMenu, FiX } from "react-icons/fi";
 import logo from "../public/dashboardlogo.png";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const userDetails = await getAuthUser();
+        setUser(userDetails);
+      } catch (error) {
+        console.error("Failed to fetch user details:", error);
+      }
+    }
+
+    fetchUser();
+  }, []);
 
   if (pathname.includes("dashboard")) {
     return null;
@@ -71,26 +86,32 @@ export default function Navbar() {
 
         {/* Desktop Auth Buttons */}
         <div className='hidden md:flex items-center space-x-4'>
-          <Link href='/login'>
-            <button
-              className={`${
-                isActive("/login") ? "text-black" : "text-gray-500"
-              } hover:text-black font-medium cursor-pointer transition-colors`}>
-              Login
-            </button>
-          </Link>
+          {user ? (
+            <span className='text-gray-700'>Welcome, {user.name}</span>
+          ) : (
+            <>
+              <Link href='/login'>
+                <button
+                  className={`${
+                    isActive("/login") ? "text-black" : "text-gray-500"
+                  } hover:text-black font-medium cursor-pointer transition-colors`}>
+                  Login
+                </button>
+              </Link>
 
-          <Link href='/register'>
-            <button
-              className={`${
-                isActive("/register")
-                  ? "bg-[#3A0E95] text-white"
-                  : "bg-[#CCB7F8] text-[#3A0E95]"
-              } flex cursor-pointer items-center gap-1 px-6 py-3 rounded-lg hover:bg-purple-700 hover:text-white transition-all duration-300 font-bold`}>
-              Register
-              <FiArrowRight />
-            </button>
-          </Link>
+              <Link href='/register'>
+                <button
+                  className={`${
+                    isActive("/register")
+                      ? "bg-[#3A0E95] text-white"
+                      : "bg-[#CCB7F8] text-[#3A0E95]"
+                  } flex cursor-pointer items-center gap-1 px-6 py-3 rounded-lg hover:bg-purple-700 hover:text-white transition-all duration-300 font-bold`}>
+                  Register
+                  <FiArrowRight />
+                </button>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -143,28 +164,36 @@ export default function Navbar() {
 
             {/* Mobile Auth Buttons */}
             <div className='flex flex-col space-y-4'>
-              <Link href='/login' onClick={handleLinkClick}>
-                <button
-                  className={`w-full text-center text-lg ${
-                    isActive("/login")
-                      ? "text-black font-semibold"
-                      : "text-gray-600"
-                  } hover:text-black py-3 transition-colors`}>
-                  Login
-                </button>
-              </Link>
+              {user ? (
+                <span className='text-gray-700 text-center'>
+                  Welcome, {user.name}
+                </span>
+              ) : (
+                <>
+                  <Link href='/login' onClick={handleLinkClick}>
+                    <button
+                      className={`w-full text-center text-lg ${
+                        isActive("/login")
+                          ? "text-black font-semibold"
+                          : "text-gray-600"
+                      } hover:text-black py-3 transition-colors`}>
+                      Login
+                    </button>
+                  </Link>
 
-              <Link href='/register' onClick={handleLinkClick}>
-                <button
-                  className={`w-full flex justify-center items-center gap-2 px-6 py-3 rounded-lg ${
-                    isActive("/register")
-                      ? "bg-[#3A0E95] text-white"
-                      : "bg-[#CCB7F8] text-[#3A0E95]"
-                  } hover:bg-purple-700 transition-all duration-300 font-bold text-lg`}>
-                  Register
-                  <FiArrowRight />
-                </button>
-              </Link>
+                  <Link href='/register' onClick={handleLinkClick}>
+                    <button
+                      className={`w-full flex justify-center items-center gap-2 px-6 py-3 rounded-lg ${
+                        isActive("/register")
+                          ? "bg-[#3A0E95] text-white"
+                          : "bg-[#CCB7F8] text-[#3A0E95]"
+                      } hover:bg-purple-700 transition-all duration-300 font-bold text-lg`}>
+                      Register
+                      <FiArrowRight />
+                    </button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

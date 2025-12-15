@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { getUserSub } from '../common/helpers';
+import { getUserSub } from '../../common/helpers';
 import { Notification } from '../models/notification.model';
 import { CreateNotificationDto } from './dto/notification.dto';
 

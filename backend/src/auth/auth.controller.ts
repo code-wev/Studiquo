@@ -1,4 +1,5 @@
 import { Body, Controller, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
 import {
   ChangePasswordDto,
@@ -7,7 +8,6 @@ import {
   RegisterDto,
   ResetPasswordDto,
 } from './dto/auth.dto';
-import { JwtAuthGuard } from './jwt-auth.guard';
 
 /**
  * Authentication controller.

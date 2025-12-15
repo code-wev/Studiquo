@@ -1,7 +1,7 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { getUserSub } from '../common/helpers';
+import { getUserSub } from '../../common/helpers';
 import { Review } from '../models/review.model';
 import { CreateReviewDto } from './dto/review.dto';
 

@@ -116,3 +116,14 @@ export async function changePasswordAction(data) {
     }),
   });
 }
+
+/* ======================
+   Get Authenticated User
+   GET /users/me
+    Private Api
+====================== */
+export async function getAuthUser() {
+  return apiFetch("/users/me", {
+    method: "GET",
+  });
+}
