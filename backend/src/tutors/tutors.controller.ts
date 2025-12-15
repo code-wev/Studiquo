@@ -1,4 +1,7 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { Role, Roles } from 'src/auth/roles.decorator';
+import { RolesGuard } from 'src/auth/roles.guard';
 import { AvailabilityService } from 'src/availability/availability.service';
 import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { ReviewQueryDto } from 'src/reviews/dto/review.dto';
@@ -28,6 +31,26 @@ export class TutorsController {
   @Get()
   async searchTutors(@Query() query: TutorSearchQueryDto) {
     return this.tutorsService.searchTutors(query);
+  }
+
+  /**
+   * Get an overview of tutors including statistics like total classes, students and average total board.
+   *
+   * @returns overview statistics about tutors
+   */
+  @Get('overview')
+  async tutorOverview(@Req() req: { user: any }) {
+    return this.tutorsService.getMyOverview(req);
+  }
+
+  /**
+   * Return an overview for the authenticated tutor (me).
+   */
+  @Get('me/overview')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Tutor)
+  async myOverview(@Req() req: { user: any }) {
+    return this.tutorsService.getMyOverview(req);
   }
 
   /**

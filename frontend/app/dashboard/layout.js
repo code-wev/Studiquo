@@ -1,7 +1,7 @@
-import Provider from "@/provider/Provider";
-import { Toaster } from "react-hot-toast";
 import Sidebar from "@/components/dashboard/Sidebar";
 import Topbar from "@/components/dashboard/Topbar";
+import Provider from "@/provider/Provider";
+import { Toaster } from "react-hot-toast";
 
 export const metadata = {
   title: "Dashboard",
@@ -12,12 +12,12 @@ export default function DashboardLayout({ children }) {
   return (
     <Provider>
       <Toaster />
-      <div className="flex">
+      <div className='flex'>
         <section>
           <Sidebar />
         </section>
-        
-        <section className="flex-1">
+        {/*  */}
+        <section className='flex-1'>
           <Topbar />
           {children}
         </section>
