@@ -56,7 +56,7 @@ const StudentListTable = () => {
         <table className="min-w-full text-sm">
           <thead className="bg-gray-100 border-b border-gray-300">
             <tr className="text-left text-gray-600">
-              <th className="p-3">Name</th>
+              <th className="p-3 w-[40%]">Name</th>
               <th className="p-3">Email</th>
               <th className="p-3">Platform name</th>
             </tr>
