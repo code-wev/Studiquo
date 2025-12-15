@@ -50,11 +50,11 @@ const payments = [
 
 const PaymentTable = () => {
     return (
-        <div className="p-6 mx-auto border-[#dde2eb] w-full max-w-7xl">
-            <table className="w-full border">
+        <div className="p-6 mx-auto border-[#dde2eb] w-full rounded-2xl">
+            <table className="w-full border rounded-2xl">
                 <thead>
                     <tr className="bg-[#F5F7FA]">
-                        <th className="px-4 py-2 text-left text-sm font-semibold">Date</th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold w-[40%]">Date</th>
                         <th className="px-4 py-2 text-left text-sm font-semibold">Transaction ID</th>
                         <th className="px-4 py-2 text-left text-sm font-semibold">Tutor</th>
                         <th className="px-4 py-2 text-left text-sm font-semibold">Subject</th>
