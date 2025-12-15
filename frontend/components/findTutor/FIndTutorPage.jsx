@@ -28,26 +28,7 @@ const tutorsData = [
     rating: 5,
     image: image,
   },
-  {
-    id: 3,
-    name: "Jenny Wilson",
-    subject: "Mathematics, English Expert",
-    description:
-      "Hello, I'm Abdullah. I'm a friendly and patient GCSE Maths tutor who loves helping students feel more confident with maths. I explain topics in a clear, simple way and make sure my students really understand before moving on. One of my students went from a grade 3 to a grade 6 in just two months, an...",
-    price: 24,
-    rating: 5,
-    image: image,
-  },
-  {
-    id: 4,
-    name: "Wade Warren",
-    subject: "Mathematics, English Expert",
-    description:
-      "Hello, I'm Abdullah. I'm a friendly and patient GCSE Maths tutor who loves helping students feel more confident with maths. I explain topics in a clear, simple way and make sure my students really understand before moving on. One of my students went from a grade 3 to a grade 6 in just two months, an...",
-    price: 24,
-    rating: 5,
-    image: image,
-  },
+  // add more tutors as needed
 ];
 
 const FIndTutorPage = () => {
