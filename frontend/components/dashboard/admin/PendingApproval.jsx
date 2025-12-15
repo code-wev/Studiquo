@@ -56,7 +56,7 @@ const PendingApproval = () => {
                 key={index}
                 className="border-b border-[#CECECE] border-opacity-20 bg-white"
               >
-                <td className="p-3">
+                <td className="p-3 w-[40%]">
                   <p className="text-gray-800">{item.name}</p>
                 </td>
 

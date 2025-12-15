@@ -1,18 +1,17 @@
-import { UserApi } from "@/feature/UserApi";
 import { configureStore } from "@reduxjs/toolkit";
-// import your reducers here
+// import your reducers here (uncomment and add real slices when available)
 // import userReducer from "./slices/userSlice";
+
+// Provide a minimal placeholder reducer so the store initializes during development.
+// Replace or extend this with real slice reducers (e.g. userReducer) when ready.
+const placeholderReducer = (state = {}, action) => state;
 
 export const store = configureStore({
   reducer: {
-     [UserApi.reducerPath]:UserApi.reducer
+    app: placeholderReducer,
   },
 
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat([
-
-      UserApi.middleware
-    ]),
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat([]),
 });
 
 export default store;
