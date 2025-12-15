@@ -26,6 +26,8 @@ export default function Navbar() {
     fetchUser();
   }, []);
 
+  console.log(user);
+
   if (pathname.includes("dashboard")) {
     return null;
   }
