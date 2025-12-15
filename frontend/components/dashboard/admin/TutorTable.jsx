@@ -56,7 +56,7 @@ const TutorTable = () => {
   return (
     <div className="container mx-auto p-4">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 ">
         <h2 className="text-xl font-semibold text-gray-800">
           Tutor List
         </h2>
@@ -71,7 +71,7 @@ const TutorTable = () => {
         <table className="min-w-full text-sm">
           <thead className="bg-gray-100 border-b border-gray-300">
             <tr className="text-left text-gray-600">
-              <th className="p-3">Name</th>
+              <th className="p-3 w-[40%]">Name</th>
               <th className="p-3">Email</th>
               <th className="p-3">Platform name</th>
               <th className="p-3">Subject</th>

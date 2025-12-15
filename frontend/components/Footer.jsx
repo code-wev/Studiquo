@@ -14,9 +14,9 @@ export default function Footer() {
   return (
     <div className="relative bg-[#0F1729]">
       <div className="animate-gradient-x text-white">
-        <footer className="footer footer-center pt-20 w-10/12 mx-auto">
+        <footer className="footer footer-center pt-20  mx-auto">
 
-          <div className="flex flex-col md:flex-row items-start md:justify-between pl-4 container mx-auto text-white space-y-5">
+          <div className="flex flex-col md:flex-row items-start md:justify-between pl-4 mx-auto text-white space-y-5">
 
             {/* About Us */}
             <div className="text-start space-y-3">

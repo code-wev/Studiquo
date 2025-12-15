@@ -1,0 +1,38 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { MongoIdDto } from 'src/common/dto/mongoId.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Role, Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { ChatService } from './chat.service';
+import { SendMessageDto } from './dto/chat.dto';
+
+@Controller('chat')
+export class ChatController {
+  constructor(private readonly chatService: ChatService) {}
+
+  @Get(':bookingId/messages')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Student, Role.Tutor, Role.Parent, Role.Admin)
+  async getChatHistory(@Param('bookingId') bookingId: MongoIdDto['id']) {
+    return this.chatService.getChatHistory(bookingId);
+  }
+
+  @Post(':bookingId/messages')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Student, Role.Tutor, Role.Parent, Role.Admin)
+  async sendMessage(
+    @Param('bookingId') bookingId: MongoIdDto['id'],
+    @Req() req,
+    @Body() dto: SendMessageDto,
+  ) {
+    return this.chatService.sendMessage(bookingId, req.user, dto);
+  }
+}

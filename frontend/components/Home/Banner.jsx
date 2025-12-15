@@ -6,8 +6,8 @@ export default function Banner() {
     <section className="w-full bg-white ">
       <div className="relative grid lg:grid-cols-2 min-h-[80vh]">
         {/* LEFT SIDE */}
-        <div className="bg-gradient-to-br from-[#CCB7F8] via-[#a495cc] to-[#575476] py-8 px-6 lg:px-32 flex flex-col justify-center text-white">
-          <h1 className="text-3xl md:text-4xl text-white lg:text-5xl font-extrabold leading-tight mb-6 text-black">
+        <div className="bg-linear-to-br from-[#CCB7F8] via-[#a495cc] to-[#575476] py-8 px-6 lg:px-32 flex flex-col justify-center text-white">
+          <h1 className="text-3xl md:text-4xl text-white lg:text-5xl font-extrabold leading-tight mb-6">
             Find The Perfect Tutor For Any Subject — Anytime, Anywhere
           </h1>
 
@@ -18,7 +18,7 @@ export default function Banner() {
           </p>
 
           {/* Button */}
-          <button className="mt-8 bg-white text-gray-900 px-6 py-3 rounded-lg font-bold flex items-center gap-2 w-fit shadow hover:bg-gray-100 transition">
+          <button className="mt-8 bg-white text-gray-900 px-6 py-3 rounded-lg text-xl flex items-center gap-2 w-fit shadow hover:bg-gray-100 transition">
             Discover More <FiArrowRight />
           </button>
 
@@ -50,12 +50,12 @@ export default function Banner() {
 
             <div className="flex items-center gap-1">
               <div>
-                <div className="flex items-center gap-2">
-                  <IoIosStar className="text-yellow-300" />
+                <div className="flex items-center gap-1 justify-center">
+                  <IoIosStar className="text-yellow-200 text-xl" />
                   <span className="text-white font-semibold">145K</span>
                 </div>
                 <div>
-                  <span>Ratings</span>
+                  <span className="text-xs">Ratings</span>
                 </div>
               </div>
             </div>
@@ -77,26 +77,26 @@ export default function Banner() {
         <div className="absolute bottom-6 w-full flex justify-center">
           <div
             className="flex items-center justify-between bg-white rounded-full shadow-md px-12 py-3 md:py-6 
-                      max-w-4xl w-full"
+                      max-w-3xl w-full"
           >
             {/* Item 1 */}
             <div className="text-center flex flex-col items-center">
               <span className="text-lg md:text-2xl font-semibold text-[#455176]">
                 150+
               </span>
-              <span className="text-xs md:text-base text-gray-600">Students</span>
+              <span className="text-xs md:text-base">Students</span>
             </div>
 
             {/* Item 2 */}
             <div className="text-center flex flex-col items-center">
               <span className="text-lg md:text-2xl font-semibold text-[#0E7490]">50</span>
-              <span className="text-xs md:text-base text-gray-600">Online Courses</span>
+              <span className="text-xs md:text-base">Online Courses</span>
             </div>
 
             {/* Item 3 */}
             <div className="text-center flex flex-col items-center">
               <span className="text-lg md:text-2xl font-semibold text-[#15803D]">200</span>
-              <span className="text-xs md:text-base text-gray-600">Finished Seasons</span>
+              <span className="text-xs md:text-base">Finished Seasons</span>
             </div>
 
             {/* Item 4 */}
@@ -104,7 +104,7 @@ export default function Banner() {
               <span className="text-lg md:text-2xl font-semibold text-[#764545]">
                 100%
               </span>
-              <span className="text-xs text-gray-600">Satisfaction</span>
+              <span className="text-xs">Satisfaction</span>
             </div>
           </div>
         </div>
