@@ -1,4 +1,6 @@
 import TitleSection from "@/components/dashboard/shared/TitleSection";
+import Image from "next/image";
+import { BiChevronRight, BiX } from "react-icons/bi";
 
 const earnings = [
   {
@@ -70,12 +72,12 @@ const earnings = [
 
 export default function Earnings() {
   return (
-    <div >
-        <TitleSection className="bg-[#F7F7F7] " bg={"#FFF8F7"} title={"Earnings"} />
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden m-4">
+    <div className="bg-[#F7F7F7] m-4">
+        <TitleSection bg={"#FFF8F7"} title={"Earnings"} />
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {/* Table Header */}
         <div className="grid grid-cols-6 gap-4 px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <div className="text-sm font-medium text-gray-600 w-[40%]">Date</div>
+          <div className="text-sm font-medium text-gray-600">Date</div>
           <div className="text-sm font-medium text-gray-600">Slot</div>
           <div className="text-sm font-medium text-gray-600">Transaction ID</div>
           <div className="text-sm font-medium text-gray-600">No of Bookings</div>
@@ -90,7 +92,7 @@ export default function Earnings() {
             className="grid grid-cols-6 gap-4 px-6 py-4 items-center border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
           >
             {/* Subject */}
-            <div className="text-sm font-semibold ">
+            <div className="text-sm font-semibold">
               {classItem.date}
             </div>
 

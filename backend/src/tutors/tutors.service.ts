@@ -1,8 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { MongoIdDto } from 'src/common/dto/mongoId.dto';
+import { getUserSub } from 'src/common/helpers';
+import { Booking } from 'src/models/booking.model';
+import { Payment } from 'src/models/payment.model';
+import { Payout } from 'src/models/payout.model';
 import { Review } from 'src/models/review.model';
+import { TimeSlot } from 'src/models/timeSlot.model';
+import { TutorAvailability } from 'src/models/tutorAvailability.model';
 import { ReviewQueryDto } from 'src/reviews/dto/review.dto';
 import { TutorProfile } from '../models/tutorProfile.model';
 import { User } from '../models/user.model';
@@ -22,6 +28,21 @@ export class TutorsService {
 
     @InjectModel(Review.name)
     private reviewModel: Model<Review>,
+
+    @InjectModel(Booking.name)
+    private bookingModel: Model<Booking>,
+
+    @InjectModel(Payment.name)
+    private paymentModel: Model<Payment>,
+
+    @InjectModel(Payout.name)
+    private payoutModel: Model<Payout>,
+
+    @InjectModel(TimeSlot.name)
+    private timeSlotModel: Model<TimeSlot>,
+
+    @InjectModel(TutorAvailability.name)
+    private tutorAvailabilityModel: Model<TutorAvailability>,
   ) {}
   /**
    * Search tutors by profile and user fields.
@@ -134,6 +155,118 @@ export class TutorsService {
         limit,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  /**
+   * Return an overview for the authenticated (logged-in) tutor.
+   * Expects `req.user` to contain a `sub` field with the user's id (JWT payload).
+   */
+  async getMyOverview(req: { user: any }) {
+    const userId = getUserSub(req);
+
+    const tutorProfile = await this.tutorProfileModel
+      .findOne({ user: userId })
+      .lean();
+
+    if (!tutorProfile) {
+      throw new NotFoundException('Tutor profile not found');
+    }
+
+    // Aggregate key metrics in parallel
+    const [
+      distinctStudents,
+      totalSessions,
+      earningsAgg,
+      pendingPayoutAgg,
+      ratingAgg,
+      upcomingRaw,
+    ] = await Promise.all([
+      this.paymentModel.distinct('student', {
+        tutor: userId,
+        status: 'COMPLETED',
+      }),
+      this.paymentModel.countDocuments({ tutor: userId, status: 'COMPLETED' }),
+      this.paymentModel
+        .aggregate([
+          {
+            $match: { tutor: new Types.ObjectId(userId), status: 'COMPLETED' },
+          },
+          { $group: { _id: null, total: { $sum: '$tutorEarning' } } },
+        ])
+        .exec(),
+      this.payoutModel
+        .aggregate([
+          {
+            $match: {
+              tutorId: new Types.ObjectId(userId),
+              status: { $ne: 'COMPLETED' },
+            },
+          },
+          { $group: { _id: null, totalPending: { $sum: '$amount' } } },
+        ])
+        .exec(),
+      this.reviewModel
+        .aggregate([
+          { $match: { tutor: new Types.ObjectId(userId) } },
+          {
+            $group: {
+              _id: null,
+              avgRating: { $avg: '$rating' },
+              count: { $sum: 1 },
+            },
+          },
+        ])
+        .exec(),
+      // Upcoming bookings for this tutor (joined via timeSlot -> tutorAvailability)
+      this.bookingModel
+        .find({ status: 'SCHEDULED', date: { $gte: new Date() } })
+        .populate({
+          path: 'timeSlot',
+          populate: {
+            path: 'tutorAvailability',
+            match: { user: userId },
+            select: 'user date',
+          },
+        })
+        .sort({ date: 1 })
+        .limit(5)
+        .lean(),
+    ]);
+
+    const upcoming = (upcomingRaw || []).filter(
+      (b: any) => b.timeSlot && b.timeSlot.tutorAvailability,
+    );
+
+    return {
+      tutorProfileId: tutorProfile._id,
+      subjects: tutorProfile.subjects,
+      hourlyRate: tutorProfile.hourlyRate,
+      totalStudents: (distinctStudents || []).length,
+      totalSessions: totalSessions || 0,
+      totalEarnings:
+        (earningsAgg && earningsAgg[0] && earningsAgg[0].total) || 0,
+      pendingPayouts:
+        (pendingPayoutAgg &&
+          pendingPayoutAgg[0] &&
+          pendingPayoutAgg[0].totalPending) ||
+        0,
+      averageRating:
+        (ratingAgg && ratingAgg[0] && ratingAgg[0].avgRating) || null,
+      ratingCount: (ratingAgg && ratingAgg[0] && ratingAgg[0].count) || 0,
+      upcomingSessions: upcoming.map((b: any) => ({
+        id: b._id,
+        date: b.date,
+        subject: b.subject,
+        type: b.type,
+        timeSlot: b.timeSlot
+          ? {
+              id: b.timeSlot._id,
+              startTime: b.timeSlot.startTime,
+              endTime: b.timeSlot.endTime,
+            }
+          : null,
+      })),
     };
   }
 }
