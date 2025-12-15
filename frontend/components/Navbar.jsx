@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FiArrowRight, FiMenu, FiX } from "react-icons/fi";
 import { useState } from "react";
-import logo from "../public/dashboardlogo.png"
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -35,7 +34,7 @@ export default function Navbar() {
         <Link href="/" onClick={handleLinkClick}>
           <div className="flex items-center space-x-2">
             <Image
-              src={logo}
+              src="/dashboardlogo.png"
               alt="Studiquo Logo"
               width={280}
               height={90}

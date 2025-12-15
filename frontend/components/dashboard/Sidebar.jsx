@@ -1,28 +1,35 @@
-"use client";
+'use client';
 
 import React, { useState } from "react";
 import Link from "next/link";
-import {
-  MdDashboard,
-  MdMenu,
-  MdClose,
+import { 
+  MdDashboard, 
+  MdMenu, 
+  MdClose, 
+  MdSchedule,
   MdMessage,
+  MdPayments,
   MdSchool,
   MdPerson,
+  MdCalendarToday,
   MdAttachMoney,
+  MdPeople,
+  MdChildCare,
+  MdBook
 } from "react-icons/md";
-import {
-  FaChalkboardTeacher,
-  FaUsers,
-  FaCreditCard,
+import { 
+  FaChalkboardTeacher, 
+  FaUsers, 
+  FaCreditCard, 
   FaUserCircle,
   FaCalendarAlt,
   FaFileInvoiceDollar,
+  FaBookReader
 } from "react-icons/fa";
 import { BiMessageDetail } from "react-icons/bi";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import logo from "@/public/dashboardlogo.png";
+import logo from '@/public/dashboardlogo.png';
 
 const Sidebar = () => {
   const pathname = usePathname();
@@ -30,11 +37,11 @@ const Sidebar = () => {
 
   // Extract role from pathname
   const getRoleFromPath = () => {
-    if (pathname.includes("/dashboard/admin")) return "admin";
-    if (pathname.includes("/dashboard/tutor")) return "tutor";
-    if (pathname.includes("/dashboard/student")) return "student";
-    if (pathname.includes("/dashboard/parent")) return "parent";
-    return "admin"; // default
+    if (pathname.includes('/dashboard/admin')) return 'admin';
+    if (pathname.includes('/dashboard/tutor')) return 'tutor';
+    if (pathname.includes('/dashboard/student')) return 'student';
+    if (pathname.includes('/dashboard/parent')) return 'parent';
+    return 'admin'; // default
   };
 
   const currentRole = getRoleFromPath();
@@ -43,80 +50,38 @@ const Sidebar = () => {
   const navigationByRole = {
     admin: [
       { label: "Dashboard", icon: MdDashboard, href: "/dashboard/admin" },
-      {
-        label: "Tutor",
-        icon: FaChalkboardTeacher,
-        href: "/dashboard/admin/tutor",
-      },
+      { label: "Tutor", icon: FaChalkboardTeacher, href: "/dashboard/admin/tutor" },
       { label: "Students", icon: FaUsers, href: "/dashboard/admin/students" },
-      {
-        label: "Payment",
-        icon: FaCreditCard,
-        href: "/dashboard/admin/payment",
-      },
-      {
-        label: "Profile",
-        icon: FaUserCircle,
-        href: "/dashboard/admin/profile",
-      },
+      { label: "Payment", icon: FaCreditCard, href: "/dashboard/admin/payment" },
+      { label: "Profile", icon: FaUserCircle, href: "/dashboard/admin/profile" },
     ],
     tutor: [
       { label: "Dashboard", icon: MdDashboard, href: "/dashboard/tutor" },
-      {
-        label: "Bookings",
-        icon: FaChalkboardTeacher,
-        href: "/dashboard/tutor/bookings",
-      },
-      {
-        label: "Ratings",
-        icon: FaCalendarAlt,
-        href: "/dashboard/tutor/ratings",
-      },
-      {
-        label: "Earnings",
-        icon: BiMessageDetail,
-        href: "/dashboard/tutor/earnings",
-      },
-      {
-        label: "Calender",
-        icon: FaFileInvoiceDollar,
-        href: "/dashboard/tutor/calender",
-      },
-      {
-        label: "Lesson Planning",
-        icon: FaFileInvoiceDollar,
-        href: "/dashboard/tutor/lesson-planning",
-      },
-      {
-        label: "Chats",
-        icon: FaFileInvoiceDollar,
-        href: "/dashboard/tutor/chats",
-      },
+      { label: "Bookings", icon: FaChalkboardTeacher, href: "/dashboard/tutor/bookings" },
+      { label: "Ratings", icon: FaCalendarAlt, href: "/dashboard/tutor/ratings" },
+      { label: "Earnings", icon: BiMessageDetail, href: "/dashboard/tutor/earnings" },
+      { label: "Calender", icon: FaFileInvoiceDollar, href: "/dashboard/tutor/calender" },
+      { label: "Lesson Planning", icon: FaFileInvoiceDollar, href: "/dashboard/tutor/lesson-planning" },
+      { label: "Chats", icon: FaFileInvoiceDollar, href: "/dashboard/tutor/chats" },
       { label: "Profile", icon: MdPerson, href: "/dashboard/tutor/profile" },
     ],
     student: [
-      {
-        label: "Upcoming Classes",
-        icon: MdSchool,
-        href: "/dashboard/student/upcoming-class",
-      },
-      { label: "Chats", icon: MdSchool, href: "/dashboard/student/chats" },
-      {
-        label: "Exam Board",
-        icon: MdSchool,
-        href: "/dashboard/student/exam-board",
-      },
+      { label: "Dashboard", icon: MdDashboard, href: "/dashboard/student" },
+      { label: "My Tutors", icon: MdSchool, href: "/dashboard/student/tutors" },
+      { label: "Classes", icon: FaBookReader, href: "/dashboard/student/classes" },
+      { label: "Schedule", icon: MdCalendarToday, href: "/dashboard/student/schedule" },
+      { label: "Messages", icon: MdMessage, href: "/dashboard/student/messages" },
+      { label: "Payments", icon: MdPayments, href: "/dashboard/student/payments" },
       { label: "Profile", icon: MdPerson, href: "/dashboard/student/profile" },
     ],
     parent: [
-      {
-        label: "Payment History",
-        icon: MdAttachMoney,
-        href: "/dashboard/parent/payment-history",
-      },
-      { label: "chat", icon: MdMessage, href: "/dashboard/parent/chat" },
+      { label: "Dashboard", icon: MdDashboard, href: "/dashboard/parent" },
+      { label: "Children", icon: MdChildCare, href: "/dashboard/parent/children" },
+      { label: "Classes", icon: MdBook, href: "/dashboard/parent/classes" },
+      { label: "Payments", icon: MdAttachMoney, href: "/dashboard/parent/payments" },
+      { label: "Messages", icon: MdMessage, href: "/dashboard/parent/messages" },
       { label: "Profile", icon: MdPerson, href: "/dashboard/parent/profile" },
-    ],
+    ]
   };
 
   const navItems = navigationByRole[currentRole] || navigationByRole.admin;
@@ -134,9 +99,9 @@ const Sidebar = () => {
   // Role display names
   const roleDisplayNames = {
     admin: "Admin",
-    tutor: "Tutor",
+    tutor: "Tutor", 
     student: "Student",
-    parent: "Parent",
+    parent: "Parent"
   };
 
   return (
@@ -217,11 +182,6 @@ const Sidebar = () => {
           })}
         </nav>
 
-        <div>
-          <Link href={"/"}>
-            <button className="absolute bottom-4 left-0 px-4 btn text-red-500">Log Out</button>
-          </Link>
-        </div>
         {/* Quick Role Switcher - For development only */}
         {/* <div className="absolute bottom-4 left-0 right-0 px-4">
           <div className="bg-white border rounded-lg p-3">
