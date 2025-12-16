@@ -272,16 +272,13 @@ export class AvailabilityService {
    * @param slotId - ID of the TimeSlot to delete
    * @throws NotFoundException if time slot not found
    */
-  async deleteSlot(
-    req: { user: { sub: string } },
-    slotId: MongoIdDto['id'],
-  ): Promise<TimeSlot> {
+  async deleteSlot(user: any, slotId: MongoIdDto['id']): Promise<TimeSlot> {
     const deleted = await this.timeSlotModel
       .findOneAndDelete({
         _id: slotId,
         tutorAvailability: {
           $in: await this.availabilityModel
-            .find({ user: req.user.sub })
+            .find({ user: user.userId })
             .distinct('_id')
             .exec(),
         },

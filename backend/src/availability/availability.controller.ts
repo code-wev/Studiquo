@@ -5,7 +5,6 @@ import {
   Param,
   Post,
   Put,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { GetUser } from 'common/decorators/get-user.decorator';
@@ -111,7 +110,10 @@ export class AvailabilityController {
   @Delete(':slotId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
-  async deleteSlot(@Req() req, @Param('slotId') slotId: MongoIdDto['id']) {
-    return this.availabilityService.deleteSlot(req, slotId);
+  async deleteSlot(
+    @GetUser() user: any,
+    @Param('slotId') slotId: MongoIdDto['id'],
+  ) {
+    return this.availabilityService.deleteSlot(user, slotId);
   }
 }
