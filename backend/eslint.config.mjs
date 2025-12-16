@@ -40,6 +40,7 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-call': 'warn',
       '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
       '@typescript-eslint/require-await': 'warn',
+      'eslint@typescript-eslint/no-unsafe-member-access': 'warn',
 
       // --- Prettier formatting ---
       'prettier/prettier': ['error', { endOfLine: 'auto' }],
