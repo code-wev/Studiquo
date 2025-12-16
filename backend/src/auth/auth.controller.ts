@@ -63,9 +63,9 @@ export class AuthController {
    */
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
-  async googleAuthCallback(@Req() req: any, @Res() res: any) {
+  async googleAuthCallback(@GetUser() user: any, @Res() res: any) {
     // req.user is set by the Google strategy. It contains { user, token }.
-    const result = req.user;
+    const result = user;
     if (!result) {
       return res.status(401).json({ message: 'Authentication failed' });
     }
