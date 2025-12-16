@@ -48,23 +48,6 @@ export class AvailabilityController {
   }
 
   /**
-   * Add a time slot to an existing availability entry.
-   *
-   * @param req - the request object containing `user` set by the auth guard
-   * @param dto - data containing time slot details to add
-   * @returns the created TimeSlot document
-   */
-  @Post('slot')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.Tutor)
-  async addTimeSlotForTutor(
-    @GetUser() user: any,
-    @Body() dto: CreateTimeSlotDto,
-  ) {
-    return this.availabilityService.addTimeSlotForTutor(user, dto);
-  }
-
-  /**
    * Add a time slot to a specific availability entry by ID.
    *
    * @param availabilityId - the ID of the availability entry
