@@ -94,14 +94,17 @@ export class AuthService {
       return { message: 'If the email exists, a reset link will be sent' };
 
     // Generate a reset token with 5 min expiry
-    const resetToken = this.jwtService.sign(
-      { sub: user._id },
-      { expiresIn: '5m' },
-    );
+    const resetToken = this.jwtService.sign({ sub: user._id });
 
     const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?email=${encodeURIComponent(
       data,
     )}&token=${resetToken}`;
+
+    // Save the token and its expiry(5 min) to the user record
+    user.token = resetToken;
+    user.tokenExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+
+    await user.save();
 
     // Send mail using a mail utility
     await this.mailService.sendResetPasswordEmail(data, resetLink);
@@ -122,10 +125,18 @@ export class AuthService {
       token: data.token,
     });
 
+    // check the token is expired or not
+
     if (!user)
       throw new UnauthorizedException('User not found or session expired');
+
+    if (!user.tokenExpiry || user.tokenExpiry < new Date()) {
+      throw new UnauthorizedException('Reset token has expired');
+    }
+
     user.password = await bcrypt.hash(data.newPassword, 10);
     user.token = '';
+    user.tokenExpiry = undefined;
     await user.save();
     return { message: 'Password reset successful' };
   }

@@ -38,6 +38,9 @@ export class User extends Document {
   @Prop()
   token: string;
 
+  @Prop({ required: false })
+  tokenExpiry?: Date;
+
   @Prop()
   bio: string;
 
