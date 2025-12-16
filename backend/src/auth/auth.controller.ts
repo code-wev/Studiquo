@@ -34,11 +34,23 @@ export class AuthController {
   // ----- Google OAuth routes -----
   @Get('google')
   async googleAuth(@Req() req: any, @Res() res: any) {
+    // Require `role` from frontend. If not provided, return an error.
+    const role = (req.query.role as string) || undefined;
+    if (!role) {
+      return res.status(400).json({ message: 'role is required' });
+    }
+
     // Optional `redirect` query param will be passed through the OAuth state
     const redirect = (req.query.redirect as string) || process.env.FRONTEND_URL;
+
+    // Encode both redirect and role into the OAuth state so the callback
+    // can access them and enforce role-based registration.
+    const stateObj = { redirect, role };
+    const state = encodeURIComponent(JSON.stringify(stateObj));
+
     return passport.authenticate('google', {
       scope: ['email', 'profile'],
-      state: redirect ? encodeURIComponent(redirect) : undefined,
+      state,
     })(req, res);
   }
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { PassportStrategy } from '@nestjs/passport';
@@ -6,6 +6,12 @@ import { Request } from 'express';
 import { Model } from 'mongoose';
 import { Strategy, VerifyCallback } from 'passport-google-oauth20';
 import { User, UserRole } from '../models/user.model';
+
+const ALLOWED_GOOGLE_ROLES = [
+  UserRole.Student,
+  UserRole.Tutor,
+  UserRole.Parent,
+] as const;
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
@@ -36,10 +42,28 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       const { id, name, emails, photos } = profile;
       const email = emails && emails[0] && emails[0].value;
 
-      // If a redirect URL was provided when initiating auth, it will be
-      // available as the `state` query parameter. Use it to redirect after
-      // successful authentication.
+      // If a redirect URL and role were provided when initiating auth, they
+      // will be available as the `state` query parameter (JSON encoded).
       const state = req?.query?.state as string | undefined;
+      let requestedRole: string | undefined;
+      let redirectUrl: string | undefined;
+      if (state) {
+        try {
+          const parsed = JSON.parse(decodeURIComponent(state));
+          requestedRole = parsed?.role;
+          redirectUrl = parsed?.redirect;
+        } catch (err) {
+          // malformed state
+        }
+      }
+
+      // Role is required from the frontend. If missing or invalid, reject.
+      if (!requestedRole) {
+        return done(new UnauthorizedException('Role is required'), false);
+      }
+      if (!ALLOWED_GOOGLE_ROLES.includes(requestedRole as any)) {
+        return done(new UnauthorizedException('Invalid role'), false);
+      }
 
       let user = await this.userModel
         .findOne({ $or: [{ googleId: id }, { email }] })
@@ -53,12 +77,20 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
           lastName: (name && name.familyName) || '',
           avatar: photos && photos[0] && photos[0].value,
           password: '',
-          role: UserRole.Student,
+          role: requestedRole as UserRole,
         });
         await user.save();
-      } else if (!user.googleId) {
-        user.googleId = id;
-        await user.save();
+      } else {
+        // If the user exists but their role doesn't match the requested role,
+        // reject to prevent accidental privilege escalation or mismatched
+        // account types.
+        if (user.role !== (requestedRole as UserRole)) {
+          return done(new UnauthorizedException('Role mismatch'), false);
+        }
+        if (!user.googleId) {
+          user.googleId = id;
+          await user.save();
+        }
       }
 
       const payload = {
@@ -71,9 +103,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 
       const token = this.jwtService.sign(payload);
 
-      const frontend = state
-        ? decodeURIComponent(state)
-        : process.env.FRONTEND_URL;
+      const frontend = redirectUrl || process.env.FRONTEND_URL;
 
       done(null, {
         user: {
