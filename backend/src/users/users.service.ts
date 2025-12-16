@@ -53,7 +53,7 @@ export class UsersService extends BaseService<User> {
       profile = await this.studentProfileModel.findOne({ user: userId }).lean();
     }
 
-    return { message: 'User profile retrieved successfully', ...user, profile };
+    return { message: 'User profile retrieved successfully', user, profile };
   }
 
   /**

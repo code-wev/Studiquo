@@ -37,18 +37,8 @@ export class TutorsController {
 
   /**
    * Get an overview of tutors including statistics like total classes, students and average total board.
-   *
-   * @returns overview statistics about tutors
    */
   @Get('overview')
-  async tutorOverview(@GetUser() user: any) {
-    return this.tutorsService.getMyOverview(user);
-  }
-
-  /**
-   * Return an overview for the authenticated tutor (me).
-   */
-  @Get('me/overview')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
   async myOverview(@GetUser() user: any) {

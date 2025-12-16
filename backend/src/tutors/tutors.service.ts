@@ -90,6 +90,7 @@ export class TutorsService {
       })
       .exec();
   }
+
   /**
    * Return a public view of a tutor's profile including basic user info.
    *
@@ -117,6 +118,7 @@ export class TutorsService {
       user: tutorProfile.user,
     };
   }
+
   /**
    * Return paginated reviews for a tutor, including student info.
    *
