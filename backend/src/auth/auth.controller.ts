@@ -54,10 +54,17 @@ export class AuthController {
     })(req, res);
   }
 
+  /**
+   *  Handle Google OAuth callback.
+   *
+   * @param req - the request object
+   * @param res - the response object
+   * @returns redirects to frontend with token or returns token in JSON
+   */
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
   async googleAuthCallback(@Req() req: any, @Res() res: any) {
-    // `req.user` is set by the Google strategy. It contains `{ user, token }`.
+    // req.user is set by the Google strategy. It contains { user, token }.
     const result = req.user;
     if (!result) {
       return res.status(401).json({ message: 'Authentication failed' });
@@ -71,7 +78,12 @@ export class AuthController {
       const redirectUrl = `${cleanFrontend}/auth/success?token=${encodeURIComponent(
         token,
       )}`;
-      return res.redirect(redirectUrl);
+      res.cookie('token', token, {
+        httpOnly: false,
+        secure: true,
+        sameSite: 'strict',
+      });
+      res.redirect(redirectUrl);
     }
 
     return res.json({
