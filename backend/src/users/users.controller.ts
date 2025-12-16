@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
 import { GetUser } from 'common/decorators/get-user.decorator';
 import { UserRole } from 'src/models/user.model';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -45,8 +45,8 @@ export class UsersController {
   @Put('me')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
-  async updateMe(@Req() req: { user: any }, @Body() body: UpdateProfileDto) {
-    return this.usersService.updateMe(req.user, body);
+  async updateMe(@GetUser() user: any, @Body() body: UpdateProfileDto) {
+    return this.usersService.updateMe(user, body);
   }
 
   /**
@@ -62,7 +62,7 @@ export class UsersController {
   @Put('me/password')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
-  async updatePassword(@Req() req: { user: any }, @Body() body) {
-    return this.usersService.updatePassword(req.user, body);
+  async updatePassword(@GetUser() user: any, @Body() body) {
+    return this.usersService.updatePassword(user, body);
   }
 }

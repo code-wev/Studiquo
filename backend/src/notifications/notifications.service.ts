@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { getUserSub } from '../../common/helpers';
 import { Notification } from '../models/notification.model';
 import { CreateNotificationDto } from './dto/notification.dto';
 
@@ -12,8 +11,8 @@ export class NotificationsService {
     private notificationModel: Model<Notification>,
   ) {}
 
-  async getMyNotifications(req: { user: any }) {
-    return this.notificationModel.find({ user: getUserSub(req) });
+  async getMyNotifications(user: any) {
+    return this.notificationModel.find({ user: user.id });
   }
 
   async sendNotification(dto: CreateNotificationDto) {

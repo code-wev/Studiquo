@@ -5,9 +5,9 @@ import {
   Param,
   Post,
   Put,
-  Req,
   UseGuards,
 } from '@nestjs/common';
+import { GetUser } from 'common/decorators/get-user.decorator';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { UserRole } from 'src/models/user.model';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -23,8 +23,8 @@ export class BookingsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
-  async createBooking(@Req() req, @Body() dto: CreateBookingDto) {
-    return this.bookingsService.createBooking(req.user, dto);
+  async createBooking(@GetUser() user: any, @Body() dto: CreateBookingDto) {
+    return this.bookingsService.createBooking(user, dto);
   }
 
   @Put(':bookingId/cancel')
@@ -43,15 +43,15 @@ export class BookingsController {
   @Get('my-bookings')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
-  async myBookings(@Req() req) {
-    return this.bookingsService.getMyBookings(req.user);
+  async myBookings(@GetUser() user: any) {
+    return this.bookingsService.getMyBookings(user);
   }
 
   @Get('my-schedule')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor, UserRole.Admin)
-  async mySchedule(@Req() req) {
-    return this.bookingsService.getMySchedule(req.user);
+  async mySchedule(@GetUser() user: any) {
+    return this.bookingsService.getMySchedule(user);
   }
 
   @Get(':bookingId')

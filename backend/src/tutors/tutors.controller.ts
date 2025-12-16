@@ -1,4 +1,5 @@
-import { Controller, Get, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { GetUser } from 'common/decorators/get-user.decorator';
 import { Roles } from 'common/decorators/roles.decorator';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { JwtAuthGuard } from 'common/guards/jwt-auth.guard';
@@ -40,8 +41,8 @@ export class TutorsController {
    * @returns overview statistics about tutors
    */
   @Get('overview')
-  async tutorOverview(@Req() req: { user: any }) {
-    return this.tutorsService.getMyOverview(req);
+  async tutorOverview(@GetUser() user: any) {
+    return this.tutorsService.getMyOverview(user);
   }
 
   /**
@@ -50,8 +51,8 @@ export class TutorsController {
   @Get('me/overview')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
-  async myOverview(@Req() req: { user: any }) {
-    return this.tutorsService.getMyOverview(req);
+  async myOverview(@GetUser() user: any) {
+    return this.tutorsService.getMyOverview(user);
   }
 
   /**

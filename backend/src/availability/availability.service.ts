@@ -6,7 +6,6 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model } from 'mongoose';
-import { getUserSub } from '../../common/helpers';
 import { TimeSlot } from '../models/timeSlot.model';
 import { TutorAvailability } from '../models/tutorAvailability.model';
 import {
@@ -14,11 +13,6 @@ import {
   CreateTimeSlotDto,
   UpdateTimeSlotDto,
 } from './dto/availability.dto';
-
-// Interface for request object to ensure type safety
-interface AuthRequest {
-  user: { sub: string }; // Assuming JWT payload has 'sub' for user ID
-}
 
 @Injectable()
 export class AvailabilityService {
@@ -36,7 +30,7 @@ export class AvailabilityService {
    * @throws BadRequestException if date is invalid
    */
   async addAvailability(
-    req: AuthRequest,
+    user: any,
     dto: CreateAvailabilityDto,
   ): Promise<TutorAvailability> {
     const date = new Date(dto.date);
@@ -64,7 +58,7 @@ export class AvailabilityService {
     );
 
     return this.availabilityModel.create({
-      user: getUserSub(req),
+      user: user.userId,
       date: dateOnly,
     });
   }
@@ -134,10 +128,10 @@ export class AvailabilityService {
    * @throws BadRequestException if time slot is invalid or overlaps
    */
   async addTimeSlotForTutor(
-    req: AuthRequest,
+    user: any,
     dto: CreateTimeSlotDto,
   ): Promise<TimeSlot> {
-    const userId = getUserSub(req);
+    const userId = user.userId;
     const startTime = new Date(dto.startTime);
     const endTime = new Date(dto.endTime);
 
@@ -205,7 +199,7 @@ export class AvailabilityService {
    * @throws BadRequestException if updated times are invalid or overlap
    */
   async updateSlot(
-    req: { user: { sub: string } },
+    user: any,
     slotId: MongoIdDto['id'],
     dto: UpdateTimeSlotDto,
   ): Promise<TimeSlot> {
@@ -214,7 +208,7 @@ export class AvailabilityService {
         _id: slotId,
         tutorAvailability: {
           $in: await this.availabilityModel
-            .find({ user: req.user.sub })
+            .find({ user: user.userId })
             .distinct('_id')
             .exec(),
         },

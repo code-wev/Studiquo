@@ -8,6 +8,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { GetUser } from 'common/decorators/get-user.decorator';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { UserRole } from 'src/models/user.model';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -40,8 +41,11 @@ export class AvailabilityController {
   @Post('date')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
-  async addAvailability(@Req() req, @Body() dto: CreateAvailabilityDto) {
-    return this.availabilityService.addAvailability(req, dto);
+  async addAvailability(
+    @GetUser() user: any,
+    @Body() dto: CreateAvailabilityDto,
+  ) {
+    return this.availabilityService.addAvailability(user, dto);
   }
 
   /**
@@ -54,8 +58,11 @@ export class AvailabilityController {
   @Post('slot')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
-  async addTimeSlotForTutor(@Req() req, @Body() dto: CreateTimeSlotDto) {
-    return this.availabilityService.addTimeSlotForTutor(req, dto);
+  async addTimeSlotForTutor(
+    @GetUser() user: any,
+    @Body() dto: CreateTimeSlotDto,
+  ) {
+    return this.availabilityService.addTimeSlotForTutor(user, dto);
   }
 
   /**
@@ -87,11 +94,11 @@ export class AvailabilityController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
   async updateSlot(
-    @Req() req,
+    @GetUser() user: any,
     @Param('slotId') slotId: MongoIdDto['id'],
     @Body() dto: UpdateTimeSlotDto,
   ) {
-    return this.availabilityService.updateSlot(req, slotId, dto);
+    return this.availabilityService.updateSlot(user, slotId, dto);
   }
 
   /**

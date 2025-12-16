@@ -6,7 +6,6 @@ import {
   Param,
   Patch,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
@@ -27,7 +26,7 @@ export class LessonReportController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor, UserRole.Admin)
-  create(@Req() req, @Body() createDto: CreateLessonReportDto) {
+  create(@Body() createDto: CreateLessonReportDto) {
     // Optionally, you can use req.user for audit or ownership
     return this.lessonReportService.create(createDto);
   }

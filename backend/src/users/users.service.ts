@@ -1,11 +1,11 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
+import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model } from 'mongoose';
 import { StudentProfile } from 'src/models/studentProfile.model';
 import { TutorProfile } from 'src/models/tutorProfile.model';
 import { BaseService } from '../../common/base.service';
-import { getUserSub } from '../../common/helpers';
 import { User, UserRole } from '../models/user.model';
 import { UpdateProfileDto } from './dto/user.dto';
 
@@ -35,10 +35,9 @@ export class UsersService extends BaseService<User> {
    *
    * @param req - the request object that contains `user` (set by auth guard)
    */
-  async getMe(userId: string) {
+  async getMe(userId: MongoIdDto['id']) {
     const user = await this.model.findById(userId).select('-password').lean();
 
-    console.log(user);
     if (!user) throw new UnauthorizedException('User not found');
 
     let profile: any = null;
@@ -60,11 +59,9 @@ export class UsersService extends BaseService<User> {
    * @param req - the request object that contains `user` (set by auth guard)
    * @param data - partial user fields to update
    */
-  async updateMe(req, data: UpdateProfileDto) {
-    const userId = getUserSub(req);
-
+  async updateMe(user: any, data: UpdateProfileDto) {
     // Check user exists
-    const userDoc = await this.model.findById(userId);
+    const userDoc = await this.model.findById(user.userId);
     if (!userDoc) throw new UnauthorizedException('User not found');
 
     const userRole = userDoc.role;
@@ -102,7 +99,7 @@ export class UsersService extends BaseService<User> {
     if (dbsLink !== undefined) userUpdate.dbsLink = dbsLink;
 
     if (Object.keys(userUpdate).length > 0) {
-      await this.model.findByIdAndUpdate(userId, { $set: userUpdate });
+      await this.model.findByIdAndUpdate(user.userId, { $set: userUpdate });
     }
 
     /**
@@ -116,7 +113,7 @@ export class UsersService extends BaseService<User> {
       if (hourlyRate !== undefined) tutorUpdate.hourlyRate = hourlyRate;
 
       profile = await this.tutorProfileModel.findOneAndUpdate(
-        { user: userId },
+        { user: user.userId },
         { $set: tutorUpdate },
         { new: true, upsert: true },
       );
@@ -131,7 +128,7 @@ export class UsersService extends BaseService<User> {
       if (targetGrade !== undefined) studentUpdate.targetGrade = targetGrade;
 
       profile = await this.studentProfileModel.findOneAndUpdate(
-        { user: userId },
+        { user: user.userId },
         { $set: studentUpdate },
         { new: true, upsert: true },
       );
@@ -141,7 +138,7 @@ export class UsersService extends BaseService<User> {
      * Fetch updated user
      */
     const updatedUser = await this.model
-      .findById(userId)
+      .findById(user.userId)
       .select('-password')
       .lean();
 
@@ -161,8 +158,8 @@ export class UsersService extends BaseService<User> {
    * @param data - object containing `newPassword` property
    * @returns an object with a message on success
    */
-  async updatePassword(req: { user: any }, data: any) {
-    const userDoc = await this.model.findById(getUserSub(req));
+  async updatePassword(user: any, data: any) {
+    const userDoc = await this.model.findById(user.userId);
     if (!userDoc) throw new UnauthorizedException('User not found');
     userDoc.password = await bcrypt.hash(data.newPassword, 10);
     await userDoc.save();

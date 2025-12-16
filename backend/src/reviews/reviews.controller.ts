@@ -1,4 +1,5 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { GetUser } from 'common/decorators/get-user.decorator';
 import { UserRole } from 'src/models/user.model';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -13,7 +14,7 @@ export class ReviewsController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student)
-  async submitReview(@Req() req, @Body() dto: CreateReviewDto) {
-    return this.reviewsService.submitReview(req.user, dto);
+  async submitReview(@GetUser() user: any, @Body() dto: CreateReviewDto) {
+    return this.reviewsService.submitReview(user, dto);
   }
 }

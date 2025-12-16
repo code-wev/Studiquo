@@ -1,4 +1,5 @@
-import { Body, Controller, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, Put, UseGuards } from '@nestjs/common';
+import { GetUser } from 'common/decorators/get-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
 import {
@@ -66,13 +67,13 @@ export class AuthController {
   /**
    * Change the password for an authenticated user.
    *
-   * @param req - the request object containing `user` set by the auth guard
+   * @param user - the authenticated user object
    * @param body - data containing the new password
    * @returns a success message on completion
    */
   @Put('change-password')
   @UseGuards(JwtAuthGuard)
-  async changePassword(@Req() req, @Body() body: ChangePasswordDto) {
-    return this.authService.changePassword(body);
+  async changePassword(@GetUser() user: any, @Body() body: ChangePasswordDto) {
+    return this.authService.changePassword(user, body);
   }
 }
