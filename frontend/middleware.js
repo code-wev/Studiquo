@@ -28,64 +28,79 @@ export function middleware(req) {
   const { pathname, origin } = req.nextUrl;
   const now = Math.floor(Date.now() / 1000);
 
-  /**
-   * Auth-only public pages (block if logged in)
-   */
+  // Auth-only public pages (login, register etc.)
   const authPages = ["/login", "/register", "/forgot-password"];
 
-  /**
-   * Fully public pages (always accessible)
-   */
-  const openPages = ["/", "/about", "/how-its-works", "/find-tutor", "/home"];
+  // Fully public pages
+  const openPages = ["/", "/about", "/how-its-works", "/find-tutor", "/home", "/unauthorized"];
 
-  /**
-   * Read token
-   */
+  // API routes - allow all
+  if (pathname.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  // Read token from cookies
   const token =
     req.cookies.get("token")?.value ||
     req.cookies.get("accessToken")?.value ||
     req.cookies.get("studiquo_token")?.value;
 
   const payload = token ? parseJwt(token) : null;
-  const isAuthenticated = payload?.exp && payload.exp > now;
 
-  /**
-   * 🔒 Block auth pages if already logged in
-   */
+  const isAuthenticated = payload?.exp && payload.exp > now;
+  const userRole = payload?.role;
+
+  // 🔒 Block auth pages if already logged in
   if (authPages.includes(pathname) && isAuthenticated) {
+    // Role-based redirect
+    if (userRole === "Admin") return NextResponse.redirect(new URL("/dashboard/admin", origin));
+    if (userRole === "Tutor") return NextResponse.redirect(new URL("/dashboard/tutor/bookings", origin));
+    if (userRole === "Student") return NextResponse.redirect(new URL("/student/dashboard", origin));
+
+    // default redirect
     return NextResponse.redirect(new URL("/", origin));
   }
 
-  /**
-   * 🌍 Allow fully public pages
-   */
-  if (
-    openPages.some(
-      (page) => pathname === page || pathname.startsWith(page + "/")
-    )
-  ) {
+  // 🌍 Allow fully public pages
+  if (openPages.includes(pathname)) {
     return NextResponse.next();
   }
 
-  /**
-   * 🔓 Allow auth pages for logged-out users
-   */
-  if (authPages.includes(pathname)) {
-    return NextResponse.next();
-  }
+  // 🔓 Allow auth pages for logged-out users
+  if (authPages.includes(pathname)) return NextResponse.next();
 
-  /**
-   * 🔐 All other pages require authentication
-   */
+  // 🔐 All other pages require authentication
   if (!isAuthenticated) {
     const loginUrl = new URL("/login", origin);
     loginUrl.searchParams.set("from", pathname);
     return NextResponse.redirect(loginUrl);
   }
 
+  // Role-based access control
+  if (pathname.startsWith("/admin") || pathname.startsWith("/dashboard/admin")) {
+    if (userRole !== "Admin") {
+      return NextResponse.redirect(new URL("/login", origin));
+    }
+  }
+
+  if (pathname.startsWith("/dashboard/tutor") || pathname.startsWith("/tutor")) {
+    if (userRole !== "Tutor") {
+      return NextResponse.redirect(new URL("/login", origin));
+    }
+  }
+
+  if (pathname.startsWith("/dashboard/student") || pathname.startsWith("/student")) {
+    if (userRole !== "Student") {
+      return NextResponse.redirect(new URL("/login", origin));
+    }
+  }
+
+  // Allow other authenticated users
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!api|_next|static|public).*)"],
+  matcher: [
+    '/((?!api|_next/static|_next/image|favicon.ico|public/).*)',
+  ],
 };

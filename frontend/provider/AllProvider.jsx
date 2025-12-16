@@ -16,9 +16,12 @@
 
 "use client";
 
+import store from "@/store/store";
 import { SessionProvider } from "next-auth/react";
+import { Provider } from "react-redux";
 
-export default function Provider({ children }) {
+
+export default function AllProvider({ children }) {
   // Check if we're in development and NextAuth isn't set up
   const isAuthConfigured =
     process.env.NEXTAUTH_URL && process.env.NEXTAUTH_SECRET;
@@ -28,5 +31,14 @@ export default function Provider({ children }) {
     return <>{children}</>;
   }
 
-  return <SessionProvider>{children}</SessionProvider>;
+  return <SessionProvider>
+    
+<Provider store={store}>
+
+      {children}
+</Provider>
+    
+    
+    
+    </SessionProvider>;
 }
