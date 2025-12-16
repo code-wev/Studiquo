@@ -1,5 +1,16 @@
-import { Body, Controller, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
 import { GetUser } from 'common/decorators/get-user.decorator';
+import passport from 'passport';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
 import {
@@ -19,6 +30,40 @@ import {
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  // ----- Google OAuth routes -----
+  @Get('google')
+  async googleAuth(@Req() req: any, @Res() res: any) {
+    // Optional `redirect` query param will be passed through the OAuth state
+    const redirect = (req.query.redirect as string) || process.env.FRONTEND_URL;
+    return passport.authenticate('google', {
+      scope: ['email', 'profile'],
+      state: redirect ? encodeURIComponent(redirect) : undefined,
+    })(req, res);
+  }
+
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleAuthCallback(@Req() req: any, @Res() res: any) {
+    // `req.user` is set by the Google strategy. It contains `{ user, token }`.
+    const result = req.user;
+    if (!result) {
+      return res.status(401).json({ message: 'Authentication failed' });
+    }
+
+    const token = result.token;
+    const frontend = process.env.FRONTEND_URL;
+
+    if (frontend && token) {
+      const cleanFrontend = frontend.replace(/\/$/, '');
+      const redirectUrl = `${cleanFrontend}/auth/success?token=${encodeURIComponent(
+        token,
+      )}`;
+      return res.redirect(redirectUrl);
+    }
+
+    return res.json(result);
+  }
 
   /**
    * Register a new user with the provided details.

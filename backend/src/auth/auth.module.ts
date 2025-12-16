@@ -7,6 +7,7 @@ import { MailModule } from 'src/mail/mail.module';
 import { User, UserSchema } from '../models/user.model';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { GoogleStrategy } from './google.strategy';
 import { JwtStrategy } from './jwt.strategy';
 
 /**
@@ -23,7 +24,7 @@ import { JwtStrategy } from './jwt.strategy';
     MailModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, GoogleStrategy],
   exports: [AuthService],
 })
 export class AuthModule {}
