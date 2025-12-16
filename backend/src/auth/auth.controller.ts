@@ -68,7 +68,7 @@ export class AuthController {
 
     if (frontend && token) {
       const cleanFrontend = frontend.replace(/\/$/, '');
-      const redirectUrl = `${cleanFrontend}/auth/success?token=${encodeURIComponent(
+      const redirectUrl = `${cleanFrontend}/auth/success/${encodeURIComponent(
         token,
       )}`;
       return res.redirect(redirectUrl);

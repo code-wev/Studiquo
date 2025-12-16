@@ -162,7 +162,7 @@ export class UsersService extends BaseService<User> {
      */
     return {
       message: 'Profile updated successfully',
-      ...updatedUser,
+      user: updatedUser,
       profile,
       token,
     };
