@@ -17,7 +17,11 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const reflector = app.get(Reflector);
 
-  app.enableCors('*');
+  /* PUBLIC CORS */
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
 
   // Register `JwtAuthGuard` globally first so `request.user` is populated by
   // Passport/JWT before `RolesGuard` runs. Then register `RolesGuard`.
