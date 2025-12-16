@@ -1,4 +1,5 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
@@ -27,6 +28,8 @@ export class UsersService extends BaseService<User> {
 
     @InjectModel(StudentProfile.name)
     private readonly studentProfileModel: Model<StudentProfile>,
+
+    private jwtService: JwtService,
   ) {
     super(userModel);
   }
@@ -143,11 +146,24 @@ export class UsersService extends BaseService<User> {
       .lean();
 
     /**
+     * Generate the new access token
+     */
+
+    const token = this.jwtService.sign({
+      sub: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+    });
+    /**
      * Return merged response
      */
     return {
+      message: 'Profile updated successfully',
       ...updatedUser,
       profile,
+      token,
     };
   }
 
