@@ -29,7 +29,7 @@ export function middleware(req) {
   const now = Math.floor(Date.now() / 1000);
 
   // Auth-only public pages (login, register etc.)
-  const authPages = ["/login", "/register", "/forgot-password"];
+  const authPages = ["/login", "/register", "/forgot-password", "/reset-password"];
 
   // Fully public pages
   const openPages = ["/", "/about", "/how-its-works", "/find-tutor", "/home", "/unauthorized"];

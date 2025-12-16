@@ -33,6 +33,15 @@ prepareHeaders:(headers)=>{
         }),
         myProfile:builder.query({
             query:()=> `/users/me`
+        }),
+
+        resetPassword : builder.mutation({
+            query:(data)=>({
+                url:'/auth/reset-password',
+                method:"POST",
+                body:data
+
+            })
         })
 
 
@@ -41,4 +50,4 @@ prepareHeaders:(headers)=>{
 
 
 
-export const {useSaveUserMutation, useLoginMutation, useMyProfileQuery} = AuthApi;
+export const {useSaveUserMutation, useLoginMutation, useMyProfileQuery, useResetPasswordMutation} = AuthApi;
