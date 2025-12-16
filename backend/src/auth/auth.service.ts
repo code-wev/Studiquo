@@ -46,7 +46,15 @@ export class AuthService {
       user.email,
       `${user.firstName} ${user.lastName}`,
     );
-    return { message: 'Registration successful' };
+    const token = this.jwtService.sign({
+      sub: user._id,
+      studentId: user.studentId || null,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+    });
+    return { message: 'Registration successful', token };
   }
 
   /**
