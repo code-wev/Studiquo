@@ -298,9 +298,7 @@ export class AvailabilityService {
    * @param tutorId - ID of the tutor (user)
    * @returns Array of objects with date and corresponding slots
    */
-  async getTutorAvailability(
-    tutorId: MongoIdDto['id'],
-  ): Promise<Array<{ date: string; slots: TimeSlot[] }>> {
+  async getTutorAvailability(tutorId: MongoIdDto['id']) {
     // Only return availability for the running (current) month (UTC)
     const now = new Date();
     const startOfMonth = new Date(
@@ -351,8 +349,11 @@ export class AvailabilityService {
       byDate[key].push(s);
     }
 
-    return Object.keys(byDate)
-      .sort() // Sort dates for consistency
-      .map((date) => ({ date, slots: byDate[date] }));
+    return {
+      message: 'Tutor availability retrieved successfully',
+      availability: Object.keys(byDate)
+        .sort() // Sort dates for consistency
+        .map((date) => ({ date, slots: byDate[date] })),
+    };
   }
 }
