@@ -74,7 +74,10 @@ export class AuthController {
       return res.redirect(redirectUrl);
     }
 
-    return res.json(result);
+    return res.json({
+      message: 'Authentication successful',
+      token,
+    });
   }
 
   /**
