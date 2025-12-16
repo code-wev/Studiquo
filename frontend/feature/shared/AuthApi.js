@@ -1,9 +1,21 @@
 import { base_url } from "@/utils/utils";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import Cookies from "js-cookie";
+
 
 export const AuthApi = createApi({
     reducerPath:"AuthApi",
-    baseQuery: fetchBaseQuery({baseUrl: base_url}),
+    baseQuery: fetchBaseQuery({baseUrl: base_url,
+
+prepareHeaders:(headers)=>{
+    const token = Cookies.get("token");
+    if(token){
+        headers.set("Authorization", `Bearer ${token}`)
+    }
+    return headers;
+}
+
+    }),
     endpoints:(builder)=>({
         saveUser:builder.mutation({
             query:(data)=>({
@@ -19,6 +31,9 @@ export const AuthApi = createApi({
                 body:data
             })
         }),
+        myProfile:builder.query({
+            query:()=> `/users/me`
+        })
 
 
     })
@@ -26,4 +41,4 @@ export const AuthApi = createApi({
 
 
 
-export const {useSaveUserMutation, useLoginMutation} = AuthApi;
+export const {useSaveUserMutation, useLoginMutation, useMyProfileQuery} = AuthApi;

@@ -54,7 +54,7 @@ export function middleware(req) {
   if (authPages.includes(pathname) && isAuthenticated) {
     // Role-based redirect
     if (userRole === "Admin") return NextResponse.redirect(new URL("/dashboard/admin", origin));
-    if (userRole === "Tutor") return NextResponse.redirect(new URL("/dashboard/tutor/bookings", origin));
+    if (userRole === "Tutor") return NextResponse.redirect(new URL("/dashboard/tutor/", origin));
     if (userRole === "Student") return NextResponse.redirect(new URL("/student/dashboard", origin));
 
     // default redirect

@@ -71,7 +71,13 @@ export class AuthController {
       const redirectUrl = `${cleanFrontend}/auth/success?token=${encodeURIComponent(
         token,
       )}`;
-      return res.redirect(redirectUrl);
+      res.cookie("token", token, {
+  httpOnly: false,
+  secure: true,
+  sameSite: "strict",
+});
+res.redirect(redirectUrl);
+      // return res.redirect(redirectUrl);
     }
 
     return res.json({
