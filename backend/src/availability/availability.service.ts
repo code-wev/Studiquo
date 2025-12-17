@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { TimeSlot } from '../models/timeSlot.model';
 import { TutorAvailability } from '../models/tutorAvailability.model';
 import {
@@ -237,52 +237,64 @@ export class AvailabilityService {
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
     );
 
-    const availabilities = await this.availabilityModel
-      .find({
-        user: tutorId,
-        date: { $gte: startOfMonth, $lt: startOfNextMonth },
-      })
-      .lean()
-      .exec();
+    const availability = await this.availabilityModel.aggregate([
+      // Match tutor + month
+      {
+        $match: {
+          user: new Types.ObjectId(tutorId),
+          date: { $gte: startOfMonth, $lt: startOfNextMonth },
+        },
+      },
 
-    if (!availabilities.length) {
-      return [];
-    }
+      // Join time slots
+      {
+        $lookup: {
+          from: 'timeslots',
+          let: { availabilityId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$tutorAvailability', '$$availabilityId'] },
+                    { $ne: ['$isBooked', true] },
+                  ],
+                },
+              },
+            },
+            { $sort: { startTime: 1 } },
+          ],
+          as: 'slots',
+        },
+      },
 
-    const availIds = availabilities.map((a) => a._id);
-    const slots = await this.timeSlotModel
-      .find({
-        tutorAvailability: { $in: availIds },
-        isBooked: { $ne: true },
-        startTime: { $gte: startOfMonth, $lt: startOfNextMonth },
-      })
-      .sort({ startTime: 1 })
-      .lean()
-      .exec();
+      // Remove empty days
+      {
+        $match: {
+          'slots.0': { $exists: true },
+        },
+      },
 
-    // Group slots by availability date
-    const byDate: Record<string, TimeSlot[]> = {};
-    for (const a of availabilities) {
-      const key = new Date(a.date).toISOString().slice(0, 10);
-      byDate[key] = [];
-    }
+      // Format output
+      {
+        $project: {
+          _id: 0,
+          date: {
+            $dateToString: { format: '%Y-%m-%d', date: '$date' },
+          },
+          slots: 1,
+        },
+      },
 
-    for (const s of slots) {
-      const parent = availabilities.find(
-        (a) => a._id.toString() === s.tutorAvailability.toString(),
-      );
-      const key = parent
-        ? new Date(parent.date).toISOString().slice(0, 10)
-        : new Date(s.startTime).toISOString().slice(0, 10);
-      byDate[key] = byDate[key] || [];
-      byDate[key].push(s);
-    }
+      // Sort by date
+      {
+        $sort: { date: 1 },
+      },
+    ]);
 
     return {
       message: 'Tutor availability retrieved successfully',
-      availability: Object.keys(byDate)
-        .sort() // Sort dates for consistency
-        .map((date) => ({ date, slots: byDate[date] })),
+      availability,
     };
   }
 }
