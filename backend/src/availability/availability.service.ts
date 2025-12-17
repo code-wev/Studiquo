@@ -100,19 +100,34 @@ export class AvailabilityService {
    * @throws NotFoundException if availability not found
    */
   async deleteAvailability(user: any, availabilityId: MongoIdDto['id']) {
-    const deleted = await this.availabilityModel
-      .findOneAndDelete({
-        _id: availabilityId,
+    // check the availability has slots and slots are not booked
+    const availability = await this.availabilityModel
+      .findOne({
+        _id: new Types.ObjectId(availabilityId),
         user: new Types.ObjectId(user.userId),
       })
       .exec();
-    if (!deleted) {
+
+    if (!availability) {
       throw new NotFoundException('Availability not found');
     }
-    // Also delete associated time slots
-    await this.timeSlotModel
-      .deleteMany({ tutorAvailability: deleted._id })
-      .exec();
+
+    const bookedSlots = await this.timeSlotModel.find({
+      tutorAvailability: availability._id,
+      isBooked: true,
+    });
+
+    if (bookedSlots.length > 0) {
+      throw new BadRequestException(
+        'Cannot delete availability with booked time slots',
+      );
+    }
+
+    await this.timeSlotModel.deleteMany({
+      tutorAvailability: availability._id,
+    });
+
+    await availability.deleteOne();
     return {
       message: 'Availability and associated time slots deleted successfully',
     };
@@ -257,6 +272,13 @@ export class AvailabilityService {
       throw new NotFoundException('Time slot not found');
     }
 
+    // If the slot is already booked, prevent changing times
+    if (slot.isBooked && (dto.startTime || dto.endTime)) {
+      throw new BadRequestException(
+        'Cannot change times of a booked time slot',
+      );
+    }
+
     // Validate new times if provided
     if (dto.startTime || dto.endTime) {
       const startTime = dto.startTime
@@ -317,6 +339,24 @@ export class AvailabilityService {
    * @throws NotFoundException if time slot not found
    */
   async deleteSlot(user: any, slotId: MongoIdDto['id']): Promise<TimeSlot> {
+    const slot = await this.timeSlotModel.findOne({
+      _id: slotId,
+      tutorAvailability: {
+        $in: await this.availabilityModel
+          .find({ user: user.userId })
+          .distinct('_id')
+          .exec(),
+      },
+    });
+
+    if (!slot) {
+      throw new NotFoundException('Time slot not found');
+    }
+
+    if (slot.isBooked) {
+      throw new BadRequestException('Cannot delete a booked time slot');
+    }
+
     const deleted = await this.timeSlotModel
       .findOneAndDelete({
         _id: slotId,
