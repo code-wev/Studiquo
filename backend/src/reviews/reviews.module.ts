@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
+import { jwtConfig } from 'common/jwt.config';
 import { Review, ReviewSchema } from '../models/review.model';
 import { ReviewsController } from './reviews.controller';
 import { ReviewsService } from './reviews.service';
-import { jwtConfig } from 'src/common/jwt.config';
 
 @Module({
   imports: [

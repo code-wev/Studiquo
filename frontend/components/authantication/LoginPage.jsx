@@ -1,9 +1,9 @@
 "use client";
-
-import { loginAction } from "@/action/auth.action";
+import { useLoginMutation } from "@/feature/shared/AuthApi";
 import illustrationParent from "@/public/-Parent/illustrationParent.png";
 import illustrationStudent from "@/public/-Student/illustrationStudent.png";
 import illustrationTutor from "@/public/-Tutor/illustrationTutor.png";
+import Cookies from "js-cookie";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -19,6 +19,19 @@ export default function LoginPage() {
   const [activeRole, setActiveRole] = useState("Tutor");
   const [imageKey, setImageKey] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [login, {isLoading:loginLoading}] = useLoginMutation();
+
+  const  googleLoginHandler = async()=>{
+    try {
+      console.log(activeRole, "ami tomar active role");
+
+      window.location.href = `http://localhost:8080/api/auth/google?role=${activeRole}&redirect=http://localhost:3000`
+      
+    } catch (error) {
+      console.log(error);
+    }
+  }
+  
 
   const roleImages = {
     Tutor: illustrationTutor,
@@ -33,11 +46,31 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
 
-      await loginAction({
+  const data = {
         email: form.email,
         password: form.password,
+      };
+
+      console.log(data, "hayre amar data");
+      const result = await login(data);
+
+
+      if(result.error){
+        toast.error(result?.error?.data?.message);
+        return;
+
+      }
+      console.log(result.data?.data?.token, "baler result");
+      const token = result.data?.data?.token;
+    await  Cookies.set("token", token, {
+        expires:30,
+        secure:true,
+        sameSite:"strict"
       });
 
+
+
+      
       toast.success("Login successful!");
       window.location.href = "/";
     } catch (error) {
@@ -133,6 +166,10 @@ export default function LoginPage() {
 
             {/* Google Login Button */}
             <button
+
+            onClick={()=>{
+              googleLoginHandler()
+            }}
               type='button'
               className='w-full border border-gray-300 py-3 rounded-lg hover:bg-gray-50 transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 text-gray-700 font-medium'>
               <svg className='w-5 h-5' viewBox='0 0 24 24'>

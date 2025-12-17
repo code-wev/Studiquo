@@ -1,8 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model, Types } from 'mongoose';
-import { MongoIdDto } from 'src/common/dto/mongoId.dto';
-import { getUserSub } from 'src/common/helpers';
 import { Booking } from 'src/models/booking.model';
 import { Payment } from 'src/models/payment.model';
 import { Payout } from 'src/models/payout.model';
@@ -91,6 +90,7 @@ export class TutorsService {
       })
       .exec();
   }
+
   /**
    * Return a public view of a tutor's profile including basic user info.
    *
@@ -118,6 +118,7 @@ export class TutorsService {
       user: tutorProfile.user,
     };
   }
+
   /**
    * Return paginated reviews for a tutor, including student info.
    *
@@ -162,8 +163,8 @@ export class TutorsService {
    * Return an overview for the authenticated (logged-in) tutor.
    * Expects `req.user` to contain a `sub` field with the user's id (JWT payload).
    */
-  async getMyOverview(req: { user: any }) {
-    const userId = getUserSub(req);
+  async getMyOverview(user: any) {
+    const userId = user.userId;
 
     const tutorProfile = await this.tutorProfileModel
       .findOne({ user: userId })

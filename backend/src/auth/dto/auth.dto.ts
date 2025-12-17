@@ -1,7 +1,6 @@
 import {
   IsEmail,
   IsEnum,
-  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -68,9 +67,6 @@ export class ResetPasswordDto {
 }
 
 export class ChangePasswordDto {
-  @IsMongoId({ message: 'User id must be a valid Mongo id' })
-  userId: string;
-
   @IsString({ message: 'Old password must be a string' })
   oldPassword: string;
 

@@ -1,4 +1,17 @@
-import { Body, Controller, Post, Put, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { GetUser } from 'common/decorators/get-user.decorator';
+import passport from 'passport';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthService } from './auth.service';
 import {
   ChangePasswordDto,
@@ -7,7 +20,6 @@ import {
   RegisterDto,
   ResetPasswordDto,
 } from './dto/auth.dto';
-import { JwtAuthGuard } from './jwt-auth.guard';
 
 /**
  * Authentication controller.
@@ -18,6 +30,68 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  // ----- Google OAuth routes -----
+  @Get('google')
+  async googleAuth(@Req() req: any, @Res() res: any) {
+    // Require `role` from frontend. If not provided, return an error.
+    const role = (req.query.role as string) || undefined;
+    if (!role) {
+      return res.status(400).json({ message: 'role is required' });
+    }
+
+    // Optional `redirect` query param will be passed through the OAuth state
+    const redirect = (req.query.redirect as string) || process.env.FRONTEND_URL;
+
+    // Encode both redirect and role into the OAuth state so the callback
+    // can access them and enforce role-based registration.
+    const stateObj = { redirect, role };
+    const state = encodeURIComponent(JSON.stringify(stateObj));
+
+    return passport.authenticate('google', {
+      scope: ['email', 'profile'],
+      state,
+    })(req, res);
+  }
+
+  /**
+   *  Handle Google OAuth callback.
+   *
+   * @param req - the request object
+   * @param res - the response object
+   * @returns redirects to frontend with token or returns token in JSON
+   */
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  async googleAuthCallback(@GetUser() user: any, @Res() res: any) {
+    // req.user is set by the Google strategy. It contains { user, token }.
+    const result = user;
+    if (!result) {
+      return res.status(401).json({ message: 'Authentication failed' });
+    }
+
+    const token = result.token;
+    const frontend = process.env.FRONTEND_URL;
+
+    if (frontend && token) {
+      const cleanFrontend = frontend.replace(/\/$/, '');
+      const redirectUrl = `${cleanFrontend}/auth/success?token=${encodeURIComponent(
+        token,
+      )}`;
+      res.cookie('token', token, {
+        httpOnly: false,
+        secure: true,
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
+      res.redirect(redirectUrl);
+    }
+
+    return res.json({
+      message: 'Authentication successful',
+      token,
+    });
+  }
 
   /**
    * Register a new user with the provided details.
@@ -66,13 +140,13 @@ export class AuthController {
   /**
    * Change the password for an authenticated user.
    *
-   * @param req - the request object containing `user` set by the auth guard
+   * @param user - the authenticated user object
    * @param body - data containing the new password
    * @returns a success message on completion
    */
   @Put('change-password')
   @UseGuards(JwtAuthGuard)
-  async changePassword(@Req() req, @Body() body: ChangePasswordDto) {
-    return this.authService.changePassword(body);
+  async changePassword(@GetUser() user: any, @Body() body: ChangePasswordDto) {
+    return this.authService.changePassword(user, body);
   }
 }

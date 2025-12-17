@@ -1,7 +1,6 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { getUserSub } from '../common/helpers';
 import { Review } from '../models/review.model';
 import { CreateReviewDto } from './dto/review.dto';
 
@@ -11,12 +10,10 @@ export class ReviewsService {
     @InjectModel(Review.name) private readonly reviewModel: Model<Review>,
   ) {}
 
-  async submitReview(req: { user: any }, dto: CreateReviewDto) {
-    const studentId = getUserSub(req);
-
+  async submitReview(user: any, dto: CreateReviewDto) {
     const review = await this.reviewModel.create({
       booking: dto.booking || null,
-      student: studentId,
+      student: user.userId,
       tutor: dto.tutor,
       rating: dto.rating,
       comment: dto.comment,

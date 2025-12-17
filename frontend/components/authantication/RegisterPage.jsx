@@ -9,9 +9,11 @@ import { registerAction } from "@/action/auth.action";
 import parentImage from "@/public/-Signup/parentImage.png";
 import studentImage from "@/public/-Signup/studentImage.png";
 import tutorImage from "@/public/-Signup/tutorImage.png";
+import { useSaveUserMutation } from "@/feature/shared/AuthApi";
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [saveUser, {isLoading:registerLoading}] = useSaveUserMutation();
 
   const [formData, setFormData] = useState({
     role: "Tutor",
@@ -81,7 +83,13 @@ export default function RegisterPage() {
     try {
       setIsLoading(true);
 
-      await registerAction(payload);
+    const result =   await saveUser(payload);
+    if(result.error){
+      console.log(result?.error?.data?.message[0], "tomi amar personal error");
+      toast.error(result?.error?.data?.message[0]);
+      return;
+    }
+    console.log(result, "kire vai result");
 
       toast.success("Registration successful!");
     } catch (error) {

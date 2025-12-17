@@ -7,10 +7,11 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { MongoIdDto } from 'src/common/dto/mongoId.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Role, Roles } from '../auth/roles.decorator';
-import { RolesGuard } from '../auth/roles.guard';
+import { MongoIdDto } from 'common/dto/mongoId.dto';
+import { UserRole } from 'src/models/user.model';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/chat.dto';
 
@@ -20,14 +21,14 @@ export class ChatController {
 
   @Get(':bookingId/messages')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Student, Role.Tutor, Role.Parent, Role.Admin)
+  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async getChatHistory(@Param('bookingId') bookingId: MongoIdDto['id']) {
     return this.chatService.getChatHistory(bookingId);
   }
 
   @Post(':bookingId/messages')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Student, Role.Tutor, Role.Parent, Role.Admin)
+  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async sendMessage(
     @Param('bookingId') bookingId: MongoIdDto['id'],
     @Req() req,

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
-import { jwtConfig } from '../common/jwt.config';
+import { jwtConfig } from '../../common/jwt.config';
 import { ChatGroup, ChatGroupSchema } from '../models/chatGroup.model';
 import { Message, MessageSchema } from '../models/message.model';
 import { ChatController } from './chat.controller';

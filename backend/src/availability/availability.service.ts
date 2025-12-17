@@ -4,9 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model } from 'mongoose';
-import { MongoIdDto } from 'src/common/dto/mongoId.dto';
-import { getUserSub } from '../common/helpers';
 import { TimeSlot } from '../models/timeSlot.model';
 import { TutorAvailability } from '../models/tutorAvailability.model';
 import {
@@ -14,11 +13,6 @@ import {
   CreateTimeSlotDto,
   UpdateTimeSlotDto,
 } from './dto/availability.dto';
-
-// Interface for request object to ensure type safety
-interface AuthRequest {
-  user: { sub: string }; // Assuming JWT payload has 'sub' for user ID
-}
 
 @Injectable()
 export class AvailabilityService {
@@ -36,7 +30,7 @@ export class AvailabilityService {
    * @throws BadRequestException if date is invalid
    */
   async addAvailability(
-    req: AuthRequest,
+    user: any,
     dto: CreateAvailabilityDto,
   ): Promise<TutorAvailability> {
     const date = new Date(dto.date);
@@ -64,7 +58,7 @@ export class AvailabilityService {
     );
 
     return this.availabilityModel.create({
-      user: getUserSub(req),
+      user: user.userId,
       date: dateOnly,
     });
   }
@@ -125,77 +119,6 @@ export class AvailabilityService {
   }
 
   /**
-   * Add a timeslot for the authenticated tutor.
-   *
-   * Finds or creates a TutorAvailability for the date derived from startTime.
-   *
-   * @param req - Request object containing authenticated user
-   * @param dto - Timeslot DTO containing start/end times and optional meet link
-   * @throws BadRequestException if time slot is invalid or overlaps
-   */
-  async addTimeSlotForTutor(
-    req: AuthRequest,
-    dto: CreateTimeSlotDto,
-  ): Promise<TimeSlot> {
-    const userId = getUserSub(req);
-    const startTime = new Date(dto.startTime);
-    const endTime = new Date(dto.endTime);
-
-    // Validate times
-    if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
-      throw new BadRequestException('Invalid start or end time');
-    }
-    if (startTime >= endTime) {
-      throw new BadRequestException('Start time must be before end time');
-    }
-
-    // Normalize date to UTC midnight
-    const dateOnly = new Date(
-      Date.UTC(
-        startTime.getUTCFullYear(),
-        startTime.getUTCMonth(),
-        startTime.getUTCDate(),
-      ),
-    );
-
-    // Find or create availability
-    let availability = await this.availabilityModel
-      .findOne({ user: userId, date: dateOnly })
-      .exec();
-
-    if (!availability) {
-      availability = await this.availabilityModel.create({
-        user: userId,
-        date: dateOnly,
-      });
-    }
-
-    // Check for overlapping time slots
-    const overlappingSlots = await this.timeSlotModel
-      .find({
-        tutorAvailability: availability._id,
-        $or: [
-          { startTime: { $lt: endTime }, endTime: { $gt: startTime } },
-          { startTime: { $gte: startTime, $lte: endTime } },
-        ],
-      })
-      .exec();
-
-    if (overlappingSlots.length > 0) {
-      throw new BadRequestException('Time slot overlaps with existing slot');
-    }
-
-    const slot = new this.timeSlotModel({
-      tutorAvailability: availability._id,
-      startTime,
-      endTime,
-      meetLink: dto.meetLink,
-    });
-
-    return slot.save();
-  }
-
-  /**
    * Update a time slot by ID.
    *
    * @req - Request object containing authenticated user
@@ -205,7 +128,7 @@ export class AvailabilityService {
    * @throws BadRequestException if updated times are invalid or overlap
    */
   async updateSlot(
-    req: { user: { sub: string } },
+    user: any,
     slotId: MongoIdDto['id'],
     dto: UpdateTimeSlotDto,
   ): Promise<TimeSlot> {
@@ -214,7 +137,7 @@ export class AvailabilityService {
         _id: slotId,
         tutorAvailability: {
           $in: await this.availabilityModel
-            .find({ user: req.user.sub })
+            .find({ user: user.userId })
             .distinct('_id')
             .exec(),
         },
@@ -278,16 +201,13 @@ export class AvailabilityService {
    * @param slotId - ID of the TimeSlot to delete
    * @throws NotFoundException if time slot not found
    */
-  async deleteSlot(
-    req: { user: { sub: string } },
-    slotId: MongoIdDto['id'],
-  ): Promise<TimeSlot> {
+  async deleteSlot(user: any, slotId: MongoIdDto['id']): Promise<TimeSlot> {
     const deleted = await this.timeSlotModel
       .findOneAndDelete({
         _id: slotId,
         tutorAvailability: {
           $in: await this.availabilityModel
-            .find({ user: req.user.sub })
+            .find({ user: user.userId })
             .distinct('_id')
             .exec(),
         },
@@ -307,9 +227,7 @@ export class AvailabilityService {
    * @param tutorId - ID of the tutor (user)
    * @returns Array of objects with date and corresponding slots
    */
-  async getTutorAvailability(
-    tutorId: MongoIdDto['id'],
-  ): Promise<Array<{ date: string; slots: TimeSlot[] }>> {
+  async getTutorAvailability(tutorId: MongoIdDto['id']) {
     // Only return availability for the running (current) month (UTC)
     const now = new Date();
     const startOfMonth = new Date(
@@ -360,8 +278,11 @@ export class AvailabilityService {
       byDate[key].push(s);
     }
 
-    return Object.keys(byDate)
-      .sort() // Sort dates for consistency
-      .map((date) => ({ date, slots: byDate[date] }));
+    return {
+      message: 'Tutor availability retrieved successfully',
+      availability: Object.keys(byDate)
+        .sort() // Sort dates for consistency
+        .map((date) => ({ date, slots: byDate[date] })),
+    };
   }
 }

@@ -5,13 +5,14 @@ import {
   Param,
   Post,
   Put,
-  Req,
   UseGuards,
 } from '@nestjs/common';
-import { MongoIdDto } from 'src/common/dto/mongoId.dto';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { Role, Roles } from '../auth/roles.decorator';
-import { RolesGuard } from '../auth/roles.guard';
+import { GetUser } from 'common/decorators/get-user.decorator';
+import { MongoIdDto } from 'common/dto/mongoId.dto';
+import { UserRole } from 'src/models/user.model';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
 import { AvailabilityService } from './availability.service';
 import {
   CreateAvailabilityDto,
@@ -38,23 +39,12 @@ export class AvailabilityController {
    */
   @Post('date')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor)
-  async addAvailability(@Req() req, @Body() dto: CreateAvailabilityDto) {
-    return this.availabilityService.addAvailability(req, dto);
-  }
-
-  /**
-   * Add a time slot to an existing availability entry.
-   *
-   * @param req - the request object containing `user` set by the auth guard
-   * @param dto - data containing time slot details to add
-   * @returns the created TimeSlot document
-   */
-  @Post('slot')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor)
-  async addTimeSlotForTutor(@Req() req, @Body() dto: CreateTimeSlotDto) {
-    return this.availabilityService.addTimeSlotForTutor(req, dto);
+  @Roles(UserRole.Tutor)
+  async addAvailability(
+    @GetUser() user: any,
+    @Body() dto: CreateAvailabilityDto,
+  ) {
+    return this.availabilityService.addAvailability(user, dto);
   }
 
   /**
@@ -66,7 +56,7 @@ export class AvailabilityController {
    */
   @Post(':availabilityId/slots')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor)
+  @Roles(UserRole.Tutor)
   async addTimeSlot(
     @Param('availabilityId') availabilityId: MongoIdDto['id'],
     @Body() dto: CreateTimeSlotDto,
@@ -84,13 +74,13 @@ export class AvailabilityController {
    */
   @Put(':slotId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor)
+  @Roles(UserRole.Tutor)
   async updateSlot(
-    @Req() req,
+    @GetUser() user: any,
     @Param('slotId') slotId: MongoIdDto['id'],
     @Body() dto: UpdateTimeSlotDto,
   ) {
-    return this.availabilityService.updateSlot(req, slotId, dto);
+    return this.availabilityService.updateSlot(user, slotId, dto);
   }
 
   /**
@@ -102,8 +92,11 @@ export class AvailabilityController {
    */
   @Delete(':slotId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Tutor)
-  async deleteSlot(@Req() req, @Param('slotId') slotId: MongoIdDto['id']) {
-    return this.availabilityService.deleteSlot(req, slotId);
+  @Roles(UserRole.Tutor)
+  async deleteSlot(
+    @GetUser() user: any,
+    @Param('slotId') slotId: MongoIdDto['id'],
+  ) {
+    return this.availabilityService.deleteSlot(user, slotId);
   }
 }

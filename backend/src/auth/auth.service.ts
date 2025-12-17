@@ -46,7 +46,15 @@ export class AuthService {
       user.email,
       `${user.firstName} ${user.lastName}`,
     );
-    return { message: 'Registration successful' };
+    const token = this.jwtService.sign({
+      sub: user._id,
+      studentId: user.studentId || null,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+    });
+    return { message: 'Registration successful', token };
   }
 
   /**
@@ -62,6 +70,7 @@ export class AuthService {
     }
     const token = this.jwtService.sign({
       sub: user._id,
+      studentId: user.studentId || null,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
@@ -69,12 +78,6 @@ export class AuthService {
     });
     return {
       message: 'Login successful',
-      user: {
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-      },
       token,
     };
   }
@@ -91,14 +94,17 @@ export class AuthService {
       return { message: 'If the email exists, a reset link will be sent' };
 
     // Generate a reset token with 5 min expiry
-    const resetToken = this.jwtService.sign(
-      { sub: user._id },
-      { expiresIn: '5m' },
-    );
+    const resetToken = this.jwtService.sign({ sub: user._id });
 
     const resetLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?email=${encodeURIComponent(
       data,
     )}&token=${resetToken}`;
+
+    // Save the token and its expiry(5 min) to the user record
+    user.token = resetToken;
+    user.tokenExpiry = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes from now
+
+    await user.save();
 
     // Send mail using a mail utility
     await this.mailService.sendResetPasswordEmail(data, resetLink);
@@ -119,10 +125,18 @@ export class AuthService {
       token: data.token,
     });
 
+    // check the token is expired or not
+
     if (!user)
       throw new UnauthorizedException('User not found or session expired');
+
+    if (!user.tokenExpiry || user.tokenExpiry < new Date()) {
+      throw new UnauthorizedException('Reset token has expired');
+    }
+
     user.password = await bcrypt.hash(data.newPassword, 10);
     user.token = '';
+    user.tokenExpiry = undefined;
     await user.save();
     return { message: 'Password reset successful' };
   }
@@ -133,14 +147,14 @@ export class AuthService {
    * @param data - data containing the new password
    * @returns a success message on completion
    */
-  async changePassword(data: ChangePasswordDto) {
-    const user = await this.userModel.findById(data.userId);
-    if (!user) throw new UnauthorizedException('User not found');
-    if (!(await bcrypt.compare(data.oldPassword, user.password))) {
+  async changePassword(user: any, data: ChangePasswordDto) {
+    const existingUser = await this.userModel.findById(user._id);
+    if (!existingUser) throw new UnauthorizedException('User not found');
+    if (!(await bcrypt.compare(data.oldPassword, existingUser.password))) {
       throw new UnauthorizedException('Old password is incorrect');
     }
-    user.password = await bcrypt.hash(data.newPassword, 10);
-    await user.save();
+    existingUser.password = await bcrypt.hash(data.newPassword, 10);
+    await existingUser.save();
     return { message: 'Password changed successfully' };
   }
 }

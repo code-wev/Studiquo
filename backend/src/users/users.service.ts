@@ -1,12 +1,13 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
+import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model } from 'mongoose';
 import { StudentProfile } from 'src/models/studentProfile.model';
 import { TutorProfile } from 'src/models/tutorProfile.model';
-import { BaseService } from '../common/base.service';
-import { getUserSub } from '../common/helpers';
-import { User } from '../models/user.model';
+import { BaseService } from '../../common/base.service';
+import { User, UserRole } from '../models/user.model';
 import { UpdateProfileDto } from './dto/user.dto';
 
 @Injectable()
@@ -27,6 +28,8 @@ export class UsersService extends BaseService<User> {
 
     @InjectModel(StudentProfile.name)
     private readonly studentProfileModel: Model<StudentProfile>,
+
+    private jwtService: JwtService,
   ) {
     super(userModel);
   }
@@ -35,23 +38,22 @@ export class UsersService extends BaseService<User> {
    *
    * @param req - the request object that contains `user` (set by auth guard)
    */
-  async getMe(req: { user: any }) {
-    const userId = getUserSub(req);
-
+  async getMe(userId: MongoIdDto['id']) {
     const user = await this.model.findById(userId).select('-password').lean();
+
     if (!user) throw new UnauthorizedException('User not found');
 
     let profile: any = null;
 
-    if (user.role === 'Tutor') {
+    if (user.role === UserRole.Tutor) {
       profile = await this.tutorProfileModel.findOne({ user: userId }).lean();
     }
 
-    if (user.role === 'Student') {
+    if (user.role === UserRole.Student) {
       profile = await this.studentProfileModel.findOne({ user: userId }).lean();
     }
 
-    return { ...user, profile };
+    return { message: 'User profile retrieved successfully', user, profile };
   }
 
   /**
@@ -60,11 +62,9 @@ export class UsersService extends BaseService<User> {
    * @param req - the request object that contains `user` (set by auth guard)
    * @param data - partial user fields to update
    */
-  async updateMe(req, data: UpdateProfileDto) {
-    const userId = getUserSub(req);
-
+  async updateMe(user: any, data: UpdateProfileDto) {
     // Check user exists
-    const userDoc = await this.model.findById(userId);
+    const userDoc = await this.model.findById(user.userId);
     if (!userDoc) throw new UnauthorizedException('User not found');
 
     const userRole = userDoc.role;
@@ -102,7 +102,7 @@ export class UsersService extends BaseService<User> {
     if (dbsLink !== undefined) userUpdate.dbsLink = dbsLink;
 
     if (Object.keys(userUpdate).length > 0) {
-      await this.model.findByIdAndUpdate(userId, { $set: userUpdate });
+      await this.model.findByIdAndUpdate(user.userId, { $set: userUpdate });
     }
 
     /**
@@ -110,19 +110,19 @@ export class UsersService extends BaseService<User> {
      */
     let profile = null;
 
-    if (userRole === 'Tutor') {
+    if (userRole === UserRole.Tutor) {
       const tutorUpdate: any = {};
       if (subject !== undefined) tutorUpdate.subjects = [subject];
       if (hourlyRate !== undefined) tutorUpdate.hourlyRate = hourlyRate;
 
       profile = await this.tutorProfileModel.findOneAndUpdate(
-        { user: userId },
+        { user: user.userId },
         { $set: tutorUpdate },
         { new: true, upsert: true },
       );
     }
 
-    if (userRole === 'Student') {
+    if (userRole === UserRole.Student) {
       const studentUpdate: any = {};
       if (yearGroup !== undefined) studentUpdate.yearGroup = yearGroup;
       if (confidenceLevel !== undefined)
@@ -131,7 +131,7 @@ export class UsersService extends BaseService<User> {
       if (targetGrade !== undefined) studentUpdate.targetGrade = targetGrade;
 
       profile = await this.studentProfileModel.findOneAndUpdate(
-        { user: userId },
+        { user: user.userId },
         { $set: studentUpdate },
         { new: true, upsert: true },
       );
@@ -141,16 +141,30 @@ export class UsersService extends BaseService<User> {
      * Fetch updated user
      */
     const updatedUser = await this.model
-      .findById(userId)
+      .findById(user.userId)
       .select('-password')
       .lean();
 
     /**
+     * Generate the new access token
+     */
+
+    const token = this.jwtService.sign({
+      sub: user._id,
+      studentId: user.studentId || null,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+    });
+    /**
      * Return merged response
      */
     return {
-      ...updatedUser,
+      message: 'Profile updated successfully',
+      user: updatedUser,
       profile,
+      token,
     };
   }
 
@@ -161,8 +175,8 @@ export class UsersService extends BaseService<User> {
    * @param data - object containing `newPassword` property
    * @returns an object with a message on success
    */
-  async updatePassword(req: { user: any }, data: any) {
-    const userDoc = await this.model.findById(getUserSub(req));
+  async updatePassword(user: any, data: any) {
+    const userDoc = await this.model.findById(user.userId);
     if (!userDoc) throw new UnauthorizedException('User not found');
     userDoc.password = await bcrypt.hash(data.newPassword, 10);
     await userDoc.save();
