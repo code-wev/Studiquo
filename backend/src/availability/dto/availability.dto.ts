@@ -38,6 +38,12 @@ export class CreateTimeSlotDto {
     message: 'Type must be ONE_TO_ONE or GROUP',
   })
   type: string;
+
+  @IsString({ message: 'Subject must be a string' })
+  @IsEnum(['MATH', 'SCIENCE', 'ENGLISH'], {
+    message: 'Subject must be one of MATH|SCIENCE|ENGLISH',
+  })
+  subject: string;
 }
 
 export class UpdateTimeSlotDto {
@@ -66,4 +72,10 @@ export class UpdateTimeSlotDto {
     message: 'Type must be ONE_TO_ONE or GROUP',
   })
   type: string;
+
+  @IsString({ message: 'Subject must be a string' })
+  @IsEnum(['MATH', 'SCIENCE', 'ENGLISH'], {
+    message: 'Subject must be one of MATH|SCIENCE|ENGLISH',
+  })
+  subject: string;
 }

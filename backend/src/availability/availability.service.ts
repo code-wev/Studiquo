@@ -196,6 +196,7 @@ export class AvailabilityService {
       endTime,
       meetLink: dto.meetLink ?? undefined,
       type: dto.type,
+      subject: dto.subject,
       isBooked: false,
     });
   }
@@ -271,6 +272,12 @@ export class AvailabilityService {
     }
     if (dto.isBooked !== undefined) {
       slot.isBooked = dto.isBooked;
+    }
+    if (dto.type) {
+      slot.type = dto.type;
+    }
+    if (dto.subject) {
+      slot.subject = dto.subject;
     }
 
     return slot.save();
