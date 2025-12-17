@@ -65,6 +65,23 @@ export class AvailabilityController {
   }
 
   /**
+   * Delete an availability entry by ID.
+   *
+   * @param req - the request object containing `user` set by the auth guard
+   * @param availabilityId - the ID of the availability entry to delete
+   * @returns a success message on completion
+   */
+  @Delete(':availabilityId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.Tutor)
+  async deleteAvailability(
+    @GetUser() user: any,
+    @Param('availabilityId') availabilityId: MongoIdDto['id'],
+  ) {
+    return this.availabilityService.deleteAvailability(user, availabilityId);
+  }
+
+  /**
    * Update a time slot by ID.
    *
    * @param req - the request object containing `user` set by the auth guard

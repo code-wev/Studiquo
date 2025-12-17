@@ -93,6 +93,32 @@ export class AvailabilityService {
   }
 
   /**
+   * Delete a TutorAvailability document by ID.
+   *
+   * @param user - Authenticated user object
+   * @param availabilityId - ID of the TutorAvailability to delete
+   * @throws NotFoundException if availability not found
+   */
+  async deleteAvailability(user: any, availabilityId: MongoIdDto['id']) {
+    const deleted = await this.availabilityModel
+      .findOneAndDelete({
+        _id: availabilityId,
+        user: new Types.ObjectId(user.userId),
+      })
+      .exec();
+    if (!deleted) {
+      throw new NotFoundException('Availability not found');
+    }
+    // Also delete associated time slots
+    await this.timeSlotModel
+      .deleteMany({ tutorAvailability: deleted._id })
+      .exec();
+    return {
+      message: 'Availability and associated time slots deleted successfully',
+    };
+  }
+
+  /**
    * Add a timeslot under an existing TutorAvailability document.
    *
    * @param availabilityId - ID of the TutorAvailability document
