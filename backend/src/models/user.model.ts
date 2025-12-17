@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Model } from 'mongoose';
+import { Document, Model, Types } from 'mongoose';
 
 export enum UserRole {
   Tutor = 'Tutor',
@@ -19,6 +19,7 @@ export class User extends Document {
   @Prop({ unique: true, sparse: true })
   studentId?: string;
 
+  @Prop()
   @Prop({ required: true })
   firstName: string;
 
@@ -33,6 +34,17 @@ export class User extends Document {
 
   @Prop({ required: true, enum: UserRole })
   role: UserRole;
+
+  /**
+   * Parent → Children mapping
+   * Only for Parent role
+   */
+  @Prop({
+    type: [Types.ObjectId],
+    ref: 'User',
+    default: [],
+  })
+  children?: Types.ObjectId[];
 
   // Optional fields
   @Prop()
