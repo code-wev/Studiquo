@@ -1,4 +1,11 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
@@ -165,6 +172,48 @@ export class UsersService extends BaseService<User> {
       user: updatedUser,
       profile,
       token,
+    };
+  }
+
+  async addChildToParent(parentId: string, studentId: string) {
+    // Find parent
+    const parent = await this.model.findById(parentId);
+    if (!parent) {
+      throw new NotFoundException('Parent not found');
+    }
+
+    if (parent.role !== UserRole.Parent) {
+      throw new ForbiddenException('Only parents can add children');
+    }
+
+    // Find student by studentId
+    const student = await this.model.findOne({
+      studentId,
+      role: UserRole.Student,
+    });
+
+    if (!student) {
+      throw new NotFoundException('Student not found with this ID');
+    }
+
+    // Prevent adding self
+    if (student._id.equals(parent._id)) {
+      throw new BadRequestException('You cannot add yourself as a child');
+    }
+
+    // Add child (no duplicates)
+    await this.model.updateOne(
+      { _id: parent._id },
+      { $addToSet: { children: student._id } },
+    );
+
+    return {
+      message: 'Child added successfully',
+      student: {
+        id: student._id,
+        studentId: student.studentId,
+        name: `${student.firstName} ${student.lastName}`,
+      },
     };
   }
 

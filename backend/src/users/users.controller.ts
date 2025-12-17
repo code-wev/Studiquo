@@ -1,5 +1,6 @@
-import { Body, Controller, Get, Put, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, UseGuards } from '@nestjs/common';
 import { GetUser } from 'common/decorators/get-user.decorator';
+import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { UserRole } from 'src/models/user.model';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -47,6 +48,20 @@ export class UsersController {
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async updateMe(@GetUser() user: any, @Body() body: UpdateProfileDto) {
     return this.usersService.updateMe(user, body);
+  }
+
+  /**
+   * Add a child (student) to the current authenticated parent user's profile.
+   *
+   * @param req - the request object containing `user` set by the auth guard
+   * @param body - object containing the `studentId` of the child to add
+   * @returns the updated parent user document (without password)
+   */
+  @Post('me/children')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.Parent)
+  async addChild(@GetUser() user: any, @Body() studentId: MongoIdDto['id']) {
+    return this.usersService.addChildToParent(user.userId, studentId);
   }
 
   /**
