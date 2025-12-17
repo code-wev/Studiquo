@@ -19,6 +19,11 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       '/api/auth/reset-password',
     ];
 
+    // Allow the bare `/api` root (health check) to be public.
+    if (url === '/api' || url === '/api/') {
+      return true;
+    }
+
     if (publicAuthPaths.some((p) => url.startsWith(p))) {
       return true;
     }
