@@ -30,10 +30,7 @@ export class AvailabilityService {
    * @param dto - DTO containing the date to create availability for
    * @throws BadRequestException if date is invalid
    */
-  async addAvailability(
-    user: any,
-    dto: CreateAvailabilityDto,
-  ): Promise<TutorAvailability> {
+  async addAvailability(user: any, dto: CreateAvailabilityDto) {
     const date = new Date(dto.date);
     if (isNaN(date.getTime())) {
       throw new BadRequestException('Invalid date');
@@ -52,6 +49,21 @@ export class AvailabilityService {
       Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
     );
 
+    // incoming date can't be in the past
+    const todayUtc = new Date(
+      Date.UTC(
+        new Date().getUTCFullYear(),
+        new Date().getUTCMonth(),
+        new Date().getUTCDate(),
+      ),
+    );
+
+    if (dateOnly < todayUtc) {
+      throw new BadRequestException(
+        'Cannot create availability for past dates',
+      );
+    }
+
     const existing = await this.availabilityModel.findOne({
       user: new Types.ObjectId(user.userId),
       date: dateOnly,
@@ -69,10 +81,15 @@ export class AvailabilityService {
       );
     }
 
-    return this.availabilityModel.create({
+    const availability = await this.availabilityModel.create({
       user: new Types.ObjectId(user.userId),
       date: dateOnly,
     });
+
+    return {
+      message: 'Availability added successfully',
+      availability,
+    };
   }
 
   /**
@@ -330,13 +347,6 @@ export class AvailabilityService {
             { $sort: { startTime: 1 } },
           ],
           as: 'slots',
-        },
-      },
-
-      // Remove empty days
-      {
-        $match: {
-          'slots.0': { $exists: true },
         },
       },
 
