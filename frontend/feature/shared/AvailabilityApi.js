@@ -2,11 +2,10 @@ import { base_url } from "@/utils/utils";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import Cookies from "js-cookie";
 
-export const TutorApi = createApi({
-  reducerPath: "TutorApi",
+export const AvailabilityApi = createApi({
+  reducerPath: "AvailabilityApi",
   baseQuery: fetchBaseQuery({
     baseUrl: base_url,
-
     prepareHeaders: (headers) => {
       const token = Cookies.get("token");
       if (token) {
@@ -15,10 +14,13 @@ export const TutorApi = createApi({
       return headers;
     },
   }),
-
   endpoints: (builder) => ({
-    getTutorAvailability: builder.query({
-      query: (tutorId) => `/tutors/${tutorId}/availability`,
+    addAvailabilityDate: builder.mutation({
+      query: (dateData) => ({
+        url: `/availability/date`,
+        method: "POST",
+        body: dateData,
+      }),
     }),
     addTimeSlot: builder.mutation({
       query: ({ availabilityId, slotData }) => ({
@@ -27,18 +29,14 @@ export const TutorApi = createApi({
         body: slotData,
       }),
     }),
-    addAvailabilityDate: builder.mutation({
-      query: (dateData) => ({
-        url: `/availability/date`,
-        method: "POST",
-        body: dateData,
-      }),
+    getTutorAvailability: builder.query({
+      query: (tutorId) => `/tutors/${tutorId}/availability`,
     }),
   }),
 });
 
 export const {
-  useGetTutorAvailabilityQuery,
-  useAddTimeSlotMutation,
   useAddAvailabilityDateMutation,
-} = TutorApi;
+  useAddTimeSlotMutation,
+  useGetTutorAvailabilityQuery,
+} = AvailabilityApi;

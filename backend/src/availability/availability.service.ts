@@ -48,18 +48,29 @@ export class AvailabilityService {
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
     );
 
+    const dateOnly = new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+    );
+
+    const existing = await this.availabilityModel.findOne({
+      user: new Types.ObjectId(user.userId),
+      date: dateOnly,
+    });
+
+    if (existing) {
+      throw new BadRequestException(
+        'Availability for this date already exists',
+      );
+    }
+
     if (date < startOfMonth || date >= startOfNextMonth) {
       throw new BadRequestException(
         'Only current month availability is allowed',
       );
     }
 
-    const dateOnly = new Date(
-      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-    );
-
     return this.availabilityModel.create({
-      user: user.userId,
+      user: new Types.ObjectId(user.userId),
       date: dateOnly,
     });
   }
@@ -81,6 +92,19 @@ export class AvailabilityService {
       .exec();
     if (!availability) {
       throw new NotFoundException('Availability not found');
+    }
+
+    if (availability.date < new Date()) {
+      throw new BadRequestException('Cannot add time slots to past dates');
+    }
+
+    if (
+      availability.date > new Date(dto.startTime) ||
+      availability.date > new Date(dto.endTime)
+    ) {
+      throw new BadRequestException(
+        'Time slots must be on the availability date',
+      );
     }
 
     const startTime = new Date(dto.startTime);
@@ -110,7 +134,7 @@ export class AvailabilityService {
     }
 
     const slot = new this.timeSlotModel({
-      tutorAvailability: availabilityId,
+      tutorAvailability: new Types.ObjectId(availabilityId),
       startTime,
       endTime,
       meetLink: dto.meetLink,
@@ -279,7 +303,7 @@ export class AvailabilityService {
       // Format output
       {
         $project: {
-          _id: 0,
+          _id: 1,
           date: {
             $dateToString: { format: '%Y-%m-%d', date: '$date' },
           },
@@ -295,6 +319,7 @@ export class AvailabilityService {
 
     // Add AM/PM labels
     const formatted = availability.map((day) => ({
+      availabilityId: day._id,
       date: day.date,
       slots: day.slots.map((s) => ({
         id: s._id,

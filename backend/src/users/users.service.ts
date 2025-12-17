@@ -10,7 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { StudentProfile } from 'src/models/studentProfile.model';
 import { TutorProfile } from 'src/models/tutorProfile.model';
 import { BaseService } from '../../common/base.service';
@@ -123,7 +123,7 @@ export class UsersService extends BaseService<User> {
       if (hourlyRate !== undefined) tutorUpdate.hourlyRate = hourlyRate;
 
       profile = await this.tutorProfileModel.findOneAndUpdate(
-        { user: user.userId },
+        { user: new Types.ObjectId(user.userId) },
         { $set: tutorUpdate },
         { new: true, upsert: true },
       );
@@ -138,7 +138,7 @@ export class UsersService extends BaseService<User> {
       if (targetGrade !== undefined) studentUpdate.targetGrade = targetGrade;
 
       profile = await this.studentProfileModel.findOneAndUpdate(
-        { user: user.userId },
+        { user: new Types.ObjectId(user.userId) },
         { $set: studentUpdate },
         { new: true, upsert: true },
       );
