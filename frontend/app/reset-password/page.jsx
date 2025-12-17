@@ -1,7 +1,7 @@
 'use client'
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
-import React from 'react';
+import React, { Suspense } from 'react';
 import Link from "next/link";
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -165,4 +165,16 @@ const ResetPasswordpage = () => {
   );
 };
 
-export default ResetPasswordpage;
+
+
+const PasswordResetpage = () => {
+  return (
+    <div>
+      <Suspense fallback={'loading...'}>
+        <ResetPasswordpage/>
+      </Suspense>
+    </div>
+  );
+};
+
+export default PasswordResetpage;

@@ -2,7 +2,7 @@
 import Cookies from 'js-cookie';
 import { useSearchParams } from 'next/navigation';
 import { useRouter } from 'next/router';
-import React from 'react';
+import React, { Suspense } from 'react';
 
 const GoogleLoginpage = () => {
 
@@ -43,4 +43,20 @@ const GoogleLoginpage = () => {
     );
 };
 
-export default GoogleLoginpage;
+
+
+
+
+const LoginWithGooglepage = () => {
+  return (
+    <div>
+      <Suspense fallback={'Loading...'}>
+        <GoogleLoginpage/>
+      </Suspense>
+      
+    </div>
+  );
+};
+
+export default LoginWithGooglepage;
+
