@@ -4,7 +4,7 @@ import logo from "@/public/dashboardlogo.png";
 import { logOut } from "@/utils/utils";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { BiMessageDetail } from "react-icons/bi";
 import {
@@ -28,6 +28,8 @@ import {
 const Sidebar = () => {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+
+  const router = useRouter();
 
   // Extract role from pathname
   const getRoleFromPath = () => {
@@ -172,9 +174,11 @@ const Sidebar = () => {
           }
         `}>
         {/* Logo & Role Info */}
-        <div className='px-6 py-5 border-b'>
-          <div className='flex items-center justify-between'>
-            <Image alt='logo' src={logo} priority />
+        <div  className='px-6 py-5 border-b'>
+          <div  className='flex items-center justify-between'>
+            <Image alt='logo' src={logo} priority onClick={()=>{
+          router.push('/')
+        }}  className="cursor-pointer" />
             <MdClose
               size={22}
               className='md:hidden cursor-pointer'

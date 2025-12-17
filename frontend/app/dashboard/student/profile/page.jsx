@@ -3,19 +3,23 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import TitleSection from "@/components/dashboard/shared/TitleSection";
+import { useMyProfileQuery, useUpdateProfileMutation } from "@/feature/shared/AuthApi";
 
 export default function ExamBoard() {
   const [isEditing, setIsEditing] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+   const [updateProfile, {isLoading, loading}] = useUpdateProfileMutation()
+    const {data:myPofile} = useMyProfileQuery();
+    console.log(myPofile?.data?.user?.avatar, "my profile is here");
   const [selectedAvatar, setSelectedAvatar] = useState(
-    "https://i.pravatar.cc/150?img=45"
+myPofile?.data?.user?.avatar
   );
   const [formData, setFormData] = useState({
-    firstName: "Aubrey",
-    lastName: "Aubrey",
-    email: "debra.holt@example.com",
-    parentsInfo:
-      "Experienced platform administrator with over 5 years in managing job board platforms and user communities. Passionate about creating seamless user experiences and driving platform growth.",
+    firstName: myPofile?.data?.user?.firstName,
+    lastName: myPofile?.data?.user?.lastName,
+    // email: myPofile?.data?.user?.email,
+    bio:
+      myPofile?.data?.user?.bio,
   });
 
   const avatarOptions = [
@@ -29,8 +33,12 @@ export default function ExamBoard() {
     "https://i.pravatar.cc/150?img=8",
   ];
 
-  const handleAvatarSelect = (avatar) => {
+  const handleAvatarSelect = async(avatar) => {
     setSelectedAvatar(avatar);
+    const result = await updateProfile({
+      avatar
+    });
+    console.log(result, "avatar udpated");
     setShowAvatarSelector(false);
     console.log("Avatar saved:", avatar);
   };
@@ -39,9 +47,25 @@ export default function ExamBoard() {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
-    setIsEditing(false);
-    console.log("Saved:", formData);
+  const handleSave = async() => {
+   try {
+
+     setIsEditing(false);
+ const result = await updateProfile(formData);
+      if(result.error){
+
+              console.log(result, "tomi amar result");
+
+      };
+
+      toast.success("Profile Update Succesfully")
+
+
+    
+    
+   } catch (error) {
+    console.log(error);
+   }
   };
 
   const handleCancel = () => {
@@ -50,6 +74,8 @@ export default function ExamBoard() {
 
   return (
     <div className="">
+
+
       <TitleSection className="bg-[#F7FFF5]" bg={"#F7FFF5"} title={"Profile"} />
 
       <div className="mx-auto p-8">
@@ -71,12 +97,12 @@ export default function ExamBoard() {
           <div className="flex items-start gap-6">
             {/* Left Side - Avatar */}
             <div className="relative shrink-0">
-              {selectedAvatar ? (
+      
                 <div className="relative">
                   <Image
                     width={64}
                     height={64}
-                    src={selectedAvatar}
+                    src={myPofile?.data?.user?.avatar}
                     alt="Profile"
                     className="w-16 h-16 rounded-full object-cover"
                   />
@@ -89,15 +115,7 @@ export default function ExamBoard() {
                     </span>
                   </button>
                 </div>
-              ) : (
-                <button
-                  onClick={() => setShowAvatarSelector(!showAvatarSelector)}
-                  className="w-16 h-16 bg-white border border-gray-300 rounded-full flex items-center justify-center hover:bg-gray-50 transition-colors"
-                >
-                  <span className="text-gray-600 text-2xl leading-none">+</span>
-                </button>
-              )}
-
+          
               {/* Avatar Selector Dropdown */}
               {showAvatarSelector && (
                 <div className="absolute top-full left-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-3 z-10 w-64">
@@ -140,6 +158,7 @@ export default function ExamBoard() {
                   <input
                     type="text"
                     value={formData.firstName}
+                    defaultValue={myPofile?.data?.user?.firstName}
                     onChange={(e) =>
                       handleInputChange("firstName", e.target.value)
                     }
@@ -154,6 +173,7 @@ export default function ExamBoard() {
                   </label>
                   <input
                     type="text"
+                    defaultValue={myPofile?.data?.user?.lastName}
                     value={formData.lastName}
                     onChange={(e) =>
                       handleInputChange("lastName", e.target.value)
@@ -170,6 +190,8 @@ export default function ExamBoard() {
                   <input
                     type="email"
                     value={formData.email}
+                    readOnly
+                    defaultValue={myPofile?.data?.user?.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     disabled={!isEditing}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
@@ -178,20 +200,7 @@ export default function ExamBoard() {
               </div>
 
               {/* Parents Info */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Parents info
-                </label>
-                <textarea
-                  rows={3}
-                  value={formData.parentsInfo}
-                  onChange={(e) =>
-                    handleInputChange("parentsInfo", e.target.value)
-                  }
-                  disabled={!isEditing}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600 resize-none"
-                />
-              </div>
+              
             </div>
           </div>
         </div>
