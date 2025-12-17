@@ -1,11 +1,17 @@
-import RegisterPage from '@/components/authantication/RegisterPage'
-import React from 'react'
+'use client'
+import RegisterPage from '@/components/authantication/RegisterPage';
+import store from '@/store/store';
+import React from 'react';
+import { Provider } from 'react-redux';
 
-export default function () {
+const page = () => {
   return (
     <div>
-
+    <Provider store={store}>
         <RegisterPage/>
+    </Provider>
     </div>
-  )
-}
+  );
+};
+
+export default page;

@@ -1,8 +1,9 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
+import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../common/guards/roles.guard';
+import { ResponseInterceptor } from '../common/response.interceptor';
 import { AppModule } from './app.module';
-import { RolesGuard } from './auth/roles.guard';
-import { ResponseInterceptor } from './common/response.interceptor';
 import { UsersService } from './users/users.service';
 
 /**
@@ -16,11 +17,26 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const reflector = app.get(Reflector);
 
-  // Register the roles guard globally to protect role-restricted routes.
-  app.useGlobalGuards(new RolesGuard(reflector));
+  /* PUBLIC CORS */
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
+
+  // Register `JwtAuthGuard` globally first so `request.user` is populated by
+  // Passport/JWT before `RolesGuard` runs. Then register `RolesGuard`.
+  const jwtGuard = app.get(JwtAuthGuard);
+  app.useGlobalGuards(jwtGuard, new RolesGuard(reflector));
 
   // Set a global API prefix so all routes are prefixed with `/api`.
   app.setGlobalPrefix('api');
+
+  // Enable CORS for the frontend and allow credentials so cookies are sent
+  // across origins (frontend must send requests with `credentials: 'include'`).
+  app.enableCors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true,
+  });
 
   // Enable global validation pipe with strict options:
   // - `whitelist` removes unexpected properties

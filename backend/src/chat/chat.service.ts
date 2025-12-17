@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model } from 'mongoose';
-import { MongoIdDto } from 'src/common/dto/mongoId.dto';
-import { getUserSub } from '../common/helpers';
 import { ChatGroup } from '../models/chatGroup.model';
 import { Message } from '../models/message.model';
 import { SendMessageDto } from './dto/chat.dto';
@@ -23,13 +22,13 @@ export class ChatService {
 
   async sendMessage(
     bookingId: MongoIdDto['id'],
-    req: { user: any },
+    user: any,
     dto: SendMessageDto,
   ) {
     // Find or create chat group (stub: assumes chatGroup._id === bookingId)
     const message = new this.messageModel({
       chatGroup: bookingId,
-      senderId: getUserSub(req),
+      senderId: user.userId,
       content: dto.content,
     });
     await message.save();

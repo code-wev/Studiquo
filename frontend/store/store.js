@@ -1,3 +1,4 @@
+import { AuthApi } from "@/feature/shared/AuthApi";
 import { configureStore } from "@reduxjs/toolkit";
 // import your reducers here (uncomment and add real slices when available)
 // import userReducer from "./slices/userSlice";
@@ -9,9 +10,12 @@ const placeholderReducer = (state = {}, action) => state;
 export const store = configureStore({
   reducer: {
     app: placeholderReducer,
+    [AuthApi.reducerPath]: AuthApi.reducer
   },
 
-  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat([]),
+  middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat([
+    AuthApi.middleware
+  ]),
 });
 
 export default store;

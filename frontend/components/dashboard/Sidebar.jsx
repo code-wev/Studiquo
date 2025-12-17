@@ -1,6 +1,7 @@
 "use client";
 
 import logo from "@/public/dashboardlogo.png";
+import { logOut } from "@/utils/utils";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -216,11 +217,16 @@ const Sidebar = () => {
         </nav>
 
         <div>
-          <Link href={"/"}>
-            <button className='absolute bottom-4 left-0 px-4 btn text-red-500'>
+     
+            <button 
+            
+            onClick={()=>{
+              logOut();
+            }}
+            className='absolute bottom-4 left-0 px-4 btn text-red-500'>
               Log Out
             </button>
-          </Link>
+         
         </div>
         {/* Quick Role Switcher - For development only */}
         {/* <div className="absolute bottom-4 left-0 right-0 px-4">

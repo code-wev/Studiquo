@@ -48,7 +48,7 @@ export class MailService {
       subject: 'Reset Your Password',
       html: `
         <p>Hello,</p>
-        <p>You requested to reset your password.</p>
+        <p>You requested to reset your password. This link will be valid for 5 minutes.</p>
         <p>
           <a href="${resetLink}" target="_blank">
             Reset Password

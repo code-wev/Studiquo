@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
-import { jwtConfig } from 'src/common/jwt.config';
+import { jwtConfig } from 'common/jwt.config';
 import { TimeSlot, TimeSlotSchema } from '../models/timeSlot.model';
 import {
   TutorAvailability,

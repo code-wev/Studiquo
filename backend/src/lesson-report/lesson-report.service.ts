@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model } from 'mongoose';
-import { MongoIdDto } from 'src/common/dto/mongoId.dto';
 import { LessonReport } from '../models/lessonReport.model';
 import {
   CreateLessonReportDto,
