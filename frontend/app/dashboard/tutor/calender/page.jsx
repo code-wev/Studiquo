@@ -5,6 +5,7 @@ import { useMyProfileQuery } from "@/feature/shared/AuthApi";
 import {
   useAddAvailabilityDateMutation,
   useAddTimeSlotMutation,
+  useDeleteTimeSlotMutation,
   useDeleteTutorAvailabilityMutation,
   useGetTutorAvailabilityQuery,
 } from "@/feature/shared/AvailabilityApi";
@@ -81,6 +82,9 @@ export default function Calendar() {
 
   const [deleteTutorAvailability, { isLoading: isDeleting }] =
     useDeleteTutorAvailabilityMutation();
+
+  const [deleteTimeSlot, { isLoading: isDeletingSlot }] =
+    useDeleteTimeSlotMutation();
 
   const subjects = [
     { id: 1, name: "English", color: "text-yellow-600" },
@@ -267,6 +271,27 @@ export default function Calendar() {
       }
     } catch (error) {
       console.error("Error removing availability:", error);
+      toast.error(`${error?.data?.message || error.message}`);
+    }
+  };
+
+  // Delete specific time slot
+  const handleDeleteTimeSlot = async (slotId, slotDetails) => {
+    try {
+      const result = await deleteTimeSlot({ slotId }).unwrap();
+
+      if (result.success) {
+        await refetchAvailabilities();
+        toast.success(
+          `Time slot ${slotDetails.startTimeLabel} - ${slotDetails.endTimeLabel} deleted`
+        );
+      } else {
+        toast.error(
+          `Failed to delete time slot: ${result.message || "Unknown error"}`
+        );
+      }
+    } catch (error) {
+      console.error("Error deleting time slot:", error);
       toast.error(`${error?.data?.message || error.message}`);
     }
   };
@@ -694,7 +719,10 @@ export default function Calendar() {
                 <BiTrash className='text-red-500 mr-1' size={14} />
                 Remove availability
               </span>
-              {(isAddingDate || isAddingSlot || isDeleting) && (
+              {(isAddingDate ||
+                isAddingSlot ||
+                isDeleting ||
+                isDeletingSlot) && (
                 <span className='text-blue-500'>Processing...</span>
               )}
             </p>
@@ -749,7 +777,7 @@ export default function Calendar() {
                           : "bg-red-500 hover:bg-red-600"
                       } text-white flex items-center`}>
                       <BiTrash className='mr-1' size={12} />
-                      {isDeleting ? "Deleting..." : "Delete"}
+                      {isDeleting ? "Deleting..." : "Delete All"}
                     </button>
                   )}
                 </div>
@@ -768,17 +796,29 @@ export default function Calendar() {
                         key={slot.id}
                         className='px-3 py-2 bg-white border border-gray-200 rounded-lg'>
                         <div className='flex justify-between items-center'>
-                          <span className='text-sm font-medium text-gray-700'>
-                            {slot.startTimeLabel} - {slot.endTimeLabel}
-                          </span>
-                          <span
-                            className={`text-xs px-2 py-1 rounded-full ${
-                              slot.type === "ONE_TO_ONE"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-green-100 text-green-700"
-                            }`}>
-                            {slot.type === "ONE_TO_ONE" ? "Single" : "Group"}
-                          </span>
+                          <div>
+                            <span className='text-sm font-medium text-gray-700'>
+                              {slot.startTimeLabel} - {slot.endTimeLabel}
+                            </span>
+                            <span
+                              className={`ml-2 text-xs px-2 py-1 rounded-full ${
+                                slot.type === "ONE_TO_ONE"
+                                  ? "bg-blue-100 text-blue-700"
+                                  : "bg-green-100 text-green-700"
+                              }`}>
+                              {slot.type === "ONE_TO_ONE" ? "Single" : "Group"}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteTimeSlot(slot.id, slot)}
+                            disabled={isDeletingSlot}
+                            className={`text-xs px-2 py-1 rounded-lg ${
+                              isDeletingSlot
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-red-500 hover:bg-red-600"
+                            } text-white`}>
+                            <BiTrash size={12} />
+                          </button>
                         </div>
                       </div>
                     ))
@@ -874,19 +914,31 @@ export default function Calendar() {
                             </div>
                             <div className='flex flex-wrap gap-2'>
                               {availability.slots.map((slot) => (
-                                <span
+                                <div
                                   key={slot.id}
-                                  className={`px-3 py-1 text-xs rounded-full ${
-                                    slot.type === "ONE_TO_ONE"
-                                      ? "bg-blue-100 text-blue-700"
-                                      : "bg-green-100 text-green-700"
-                                  }`}>
-                                  {slot.startTimeLabel} - {slot.endTimeLabel} (
-                                  {slot.type === "ONE_TO_ONE"
-                                    ? "Single"
-                                    : "Group"}
-                                  )
-                                </span>
+                                  className='flex items-center gap-1'>
+                                  <span
+                                    className={`px-3 py-1 text-xs rounded-full ${
+                                      slot.type === "ONE_TO_ONE"
+                                        ? "bg-blue-100 text-blue-700"
+                                        : "bg-green-100 text-green-700"
+                                    }`}>
+                                    {slot.startTimeLabel} - {slot.endTimeLabel}{" "}
+                                    (
+                                    {slot.type === "ONE_TO_ONE"
+                                      ? "Single"
+                                      : "Group"}
+                                    )
+                                  </span>
+                                  <button
+                                    onClick={() =>
+                                      handleDeleteTimeSlot(slot.id, slot)
+                                    }
+                                    disabled={isDeletingSlot}
+                                    className='text-xs text-red-500 hover:text-red-700'>
+                                    <BiTrash size={10} />
+                                  </button>
+                                </div>
                               ))}
                             </div>
                           </div>

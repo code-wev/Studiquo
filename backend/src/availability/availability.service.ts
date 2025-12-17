@@ -410,10 +410,7 @@ export class AvailabilityService {
             {
               $match: {
                 $expr: {
-                  $and: [
-                    { $eq: ['$tutorAvailability', '$$availabilityId'] },
-                    { $ne: ['$isBooked', true] },
-                  ],
+                  $and: [{ $eq: ['$tutorAvailability', '$$availabilityId'] }],
                 },
               },
             },
@@ -449,6 +446,9 @@ export class AvailabilityService {
         type: s.type,
         startTime: s.startTime,
         endTime: s.endTime,
+        isBooked: s.isBooked,
+        meetLink: s.meetLink,
+        subject: s.subject,
         startTimeLabel: formatAmPm(s.startTime, 'Europe/London'),
         endTimeLabel: formatAmPm(s.endTime, 'Europe/London'),
       })),
