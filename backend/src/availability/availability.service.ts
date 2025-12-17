@@ -87,60 +87,99 @@ export class AvailabilityService {
     availabilityId: MongoIdDto['id'],
     dto: CreateTimeSlotDto,
   ): Promise<TimeSlot> {
+    /**
+     * 1️⃣ Check availability exists
+     */
     const availability = await this.availabilityModel
-      .findById(availabilityId)
+      .findById(new Types.ObjectId(availabilityId))
       .exec();
+
     if (!availability) {
       throw new NotFoundException('Availability not found');
     }
 
-    if (availability.date < new Date()) {
+    /**
+     * 2️⃣ Prevent adding slots to past dates
+     * Compare DATE ONLY (UTC)
+     */
+    const todayUtc = new Date(
+      Date.UTC(
+        new Date().getUTCFullYear(),
+        new Date().getUTCMonth(),
+        new Date().getUTCDate(),
+      ),
+    );
+
+    if (availability.date < todayUtc) {
       throw new BadRequestException('Cannot add time slots to past dates');
     }
 
-    if (
-      availability.date > new Date(dto.startTime) ||
-      availability.date > new Date(dto.endTime)
-    ) {
-      throw new BadRequestException(
-        'Time slots must be on the availability date',
-      );
-    }
-
+    /**
+     * 3️⃣ Parse & validate times
+     */
     const startTime = new Date(dto.startTime);
     const endTime = new Date(dto.endTime);
 
-    // Validate times
     if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
       throw new BadRequestException('Invalid start or end time');
     }
+
     if (startTime >= endTime) {
-      throw new BadRequestException('Start time must be before end time');
+      throw new BadRequestException('startTime must be before endTime');
     }
 
-    // Check for overlapping time slots
-    const overlappingSlots = await this.timeSlotModel
-      .find({
-        tutorAvailability: availabilityId,
-        $or: [
-          { startTime: { $lt: endTime }, endTime: { $gt: startTime } },
-          { startTime: { $gte: startTime, $lte: endTime } },
-        ],
-      })
-      .exec();
+    /**
+     * 4️⃣ Ensure slot belongs to the same availability date (UTC)
+     */
+    const availabilityDateOnly = new Date(
+      Date.UTC(
+        availability.date.getUTCFullYear(),
+        availability.date.getUTCMonth(),
+        availability.date.getUTCDate(),
+      ),
+    );
 
-    if (overlappingSlots.length > 0) {
-      throw new BadRequestException('Time slot overlaps with existing slot');
+    const slotDateOnly = new Date(
+      Date.UTC(
+        startTime.getUTCFullYear(),
+        startTime.getUTCMonth(),
+        startTime.getUTCDate(),
+      ),
+    );
+
+    if (availabilityDateOnly.getTime() !== slotDateOnly.getTime()) {
+      throw new BadRequestException(
+        'Time slot must be on the same date as availability',
+      );
     }
 
-    const slot = new this.timeSlotModel({
-      tutorAvailability: new Types.ObjectId(availabilityId),
-      startTime,
-      endTime,
-      meetLink: dto.meetLink,
+    /**
+     * 5️⃣ Overlapping slot check (CRITICAL)
+     *
+     * Overlap condition:
+     * existing.start < new.end && existing.end > new.start
+     */
+    const overlappingSlot = await this.timeSlotModel.findOne({
+      tutorAvailability: availability._id,
+      isBooked: false,
+      startTime: { $lt: endTime },
+      endTime: { $gt: startTime },
     });
 
-    return slot.save();
+    if (overlappingSlot) {
+      throw new BadRequestException('Time slot overlaps with an existing slot');
+    }
+
+    /**
+     * 6️⃣ Create slot
+     */
+    return this.timeSlotModel.create({
+      tutorAvailability: availability._id,
+      startTime,
+      endTime,
+      meetLink: dto.meetLink ?? undefined,
+      isBooked: false,
+    });
   }
 
   /**
