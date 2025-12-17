@@ -88,7 +88,7 @@ export class AvailabilityService {
     dto: CreateTimeSlotDto,
   ): Promise<TimeSlot> {
     /**
-     * 1️⃣ Check availability exists
+     * 1️. Check availability exists
      */
     const availability = await this.availabilityModel
       .findById(new Types.ObjectId(availabilityId))
@@ -99,7 +99,7 @@ export class AvailabilityService {
     }
 
     /**
-     * 2️⃣ Prevent adding slots to past dates
+     * 2️. Prevent adding slots to past dates
      * Compare DATE ONLY (UTC)
      */
     const todayUtc = new Date(
@@ -115,7 +115,7 @@ export class AvailabilityService {
     }
 
     /**
-     * 3️⃣ Parse & validate times
+     * 3️. Parse & validate times
      */
     const startTime = new Date(dto.startTime);
     const endTime = new Date(dto.endTime);
@@ -129,7 +129,7 @@ export class AvailabilityService {
     }
 
     /**
-     * 4️⃣ Ensure slot belongs to the same availability date (UTC)
+     * 4️. Ensure slot belongs to the same availability date (UTC)
      */
     const availabilityDateOnly = new Date(
       Date.UTC(
@@ -154,7 +154,7 @@ export class AvailabilityService {
     }
 
     /**
-     * 5️⃣ Overlapping slot check (CRITICAL)
+     * 5️. Overlapping slot check (CRITICAL)
      *
      * Overlap condition:
      * existing.start < new.end && existing.end > new.start
@@ -171,13 +171,14 @@ export class AvailabilityService {
     }
 
     /**
-     * 6️⃣ Create slot
+     * 6️. Create slot
      */
     return this.timeSlotModel.create({
       tutorAvailability: availability._id,
       startTime,
       endTime,
       meetLink: dto.meetLink ?? undefined,
+      type: dto.type,
       isBooked: false,
     });
   }
@@ -362,6 +363,7 @@ export class AvailabilityService {
       date: day.date,
       slots: day.slots.map((s) => ({
         id: s._id,
+        type: s.type,
         startTime: s.startTime,
         endTime: s.endTime,
         startTimeLabel: formatAmPm(s.startTime, 'Europe/London'),
@@ -371,7 +373,7 @@ export class AvailabilityService {
 
     return {
       message: 'Tutor availability retrieved successfully',
-      availability: formatted,
+      availabilities: formatted,
     };
   }
 }

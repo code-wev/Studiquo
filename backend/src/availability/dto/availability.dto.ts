@@ -2,8 +2,10 @@
 import {
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
+  IsString,
   IsUrl,
 } from 'class-validator';
 
@@ -30,6 +32,12 @@ export class CreateTimeSlotDto {
 
   @IsUrl({}, { message: 'meetLink must be a valid URL' })
   meetLink: string;
+
+  @IsString({ message: 'Type must be a string' })
+  @IsEnum(['ONE_TO_ONE', 'GROUP'], {
+    message: 'Type must be ONE_TO_ONE or GROUP',
+  })
+  type: string;
 }
 
 export class UpdateTimeSlotDto {
@@ -51,4 +59,11 @@ export class UpdateTimeSlotDto {
   @IsOptional()
   @IsBoolean({ message: 'isBooked must be a boolean' })
   isBooked?: boolean;
+
+  @IsOptional()
+  @IsString({ message: 'Type must be a string' })
+  @IsEnum(['ONE_TO_ONE', 'GROUP'], {
+    message: 'Type must be ONE_TO_ONE or GROUP',
+  })
+  type: string;
 }
