@@ -32,6 +32,18 @@ export const AvailabilityApi = createApi({
     getTutorAvailability: builder.query({
       query: (tutorId) => `/tutors/${tutorId}/availability`,
     }),
+    deleteTutorAvailability: builder.mutation({
+      query: (availabilityId) => ({
+        url: `/availability/${availabilityId}`,
+        method: "DELETE",
+      }),
+    }),
+    deleteTimeSlot: builder.mutation({
+      query: ({ slotId }) => ({
+        url: `/availability/${slotId}`,
+        method: "DELETE",
+      }),
+    }),
   }),
 });
 
@@ -39,4 +51,6 @@ export const {
   useAddAvailabilityDateMutation,
   useAddTimeSlotMutation,
   useGetTutorAvailabilityQuery,
+  useDeleteTutorAvailabilityMutation,
+  useDeleteTimeSlotMutation,
 } = AvailabilityApi;

@@ -2,8 +2,14 @@
 
 import TitleSection from "@/components/dashboard/shared/TitleSection";
 import { useMyProfileQuery } from "@/feature/shared/AuthApi";
-import { useGetTutorAvailabilityQuery } from "@/feature/shared/AvailabilityApi";
+import {
+  useAddAvailabilityDateMutation,
+  useAddTimeSlotMutation,
+  useDeleteTutorAvailabilityMutation,
+  useGetTutorAvailabilityQuery,
+} from "@/feature/shared/AvailabilityApi";
 import { useEffect, useMemo, useState } from "react";
+import toast from "react-hot-toast";
 import { BiCheck, BiChevronDown, BiPlus, BiTrash } from "react-icons/bi";
 import { CgChevronDown } from "react-icons/cg";
 
@@ -41,6 +47,7 @@ export default function Calendar() {
   const [showSubjectDropdown, setShowSubjectDropdown] = useState(false);
   const [showSlotsDropdown, setShowSlotsDropdown] = useState(false);
   const [hoveredDate, setHoveredDate] = useState(null);
+  const [deleteConfirmDate, setDeleteConfirmDate] = useState(null);
 
   // Single selection states
   const [selectedSubject, setSelectedSubject] = useState(null);
@@ -51,6 +58,9 @@ export default function Calendar() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
 
+  // Track current availability ID for the selected date
+  const [currentAvailabilityId, setCurrentAvailabilityId] = useState(null);
+
   const { data: profile } = useMyProfileQuery();
   const user = profile?.data?.user;
 
@@ -58,10 +68,19 @@ export default function Calendar() {
   const {
     data: availabilities,
     isLoading,
-    error,
+    refetch: refetchAvailabilities,
   } = useGetTutorAvailabilityQuery(user?._id, {
     skip: !user?._id,
   });
+
+  // Mutations
+  const [addAvailabilityDate, { isLoading: isAddingDate }] =
+    useAddAvailabilityDateMutation();
+
+  const [addTimeSlot, { isLoading: isAddingSlot }] = useAddTimeSlotMutation();
+
+  const [deleteTutorAvailability, { isLoading: isDeleting }] =
+    useDeleteTutorAvailabilityMutation();
 
   const subjects = [
     { id: 1, name: "English", color: "text-yellow-600" },
@@ -79,16 +98,7 @@ export default function Calendar() {
     { id: 4, time: "04:00PM - 06:00 PM" },
   ];
 
-  // Helper function to normalize dates (handle timezone issues)
-  const normalizeDate = (dateString) => {
-    if (dateString.includes("T")) {
-      return new Date(dateString);
-    } else {
-      return new Date(`${dateString}T00:00:00Z`);
-    }
-  };
-
-  // Helper function to get date string in YYYY-MM-DD format (UTC)
+  // Helper: get YYYY-MM-DD string in UTC
   const getDateStringUTC = (date) => {
     const year = date.getUTCFullYear();
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
@@ -96,40 +106,82 @@ export default function Calendar() {
     return `${year}-${month}-${day}`;
   };
 
-  // Create a Map of dates that have available slots with their details
-  const availableDatesMap = useMemo(() => {
-    if (!availabilities?.data?.availabilities) return new Map();
+  // Create maps for different availability states
+  const availabilityMaps = useMemo(() => {
+    const hasSlotsMap = new Map(); // Dates that have slots
+    const noSlotsMap = new Map(); // Dates that exist in availability but have no slots
 
-    const map = new Map();
-    availabilities.data.availabilities.forEach((availability) => {
-      if (availability.date && availability.slots?.length > 0) {
-        const date = normalizeDate(availability.date);
-        const dateStr = getDateStringUTC(date);
-        map.set(dateStr, {
-          date: date,
-          slots: availability.slots,
-        });
-      }
-    });
-    return map;
+    if (availabilities?.data?.availabilities) {
+      availabilities.data.availabilities.forEach((availability) => {
+        if (availability.date) {
+          const date = new Date(availability.date + "T00:00:00Z");
+          const dateStr = getDateStringUTC(date);
+
+          if (availability.slots?.length > 0) {
+            // Has slots
+            hasSlotsMap.set(dateStr, {
+              date,
+              slots: availability.slots,
+              availabilityId: availability.availabilityId,
+              hasSlots: true,
+            });
+          } else {
+            // No slots (just date exists in availability)
+            noSlotsMap.set(dateStr, {
+              date,
+              slots: [],
+              availabilityId: availability.availabilityId,
+              hasSlots: false,
+            });
+          }
+        }
+      });
+    }
+
+    return { hasSlotsMap, noSlotsMap };
   }, [availabilities]);
 
-  // Function to check if a specific date has available slots
-  const isDateAvailable = (year, month, day) => {
+  // Check different availability states
+  const isDateAvailableWithSlots = (year, month, day) => {
     const date = new Date(Date.UTC(year, month, day));
     const dateStr = getDateStringUTC(date);
-    return availableDatesMap.has(dateStr);
+    return availabilityMaps.hasSlotsMap.has(dateStr);
   };
 
-  // Function to get available slots for a specific date
-  const getSlotsForDate = (year, month, day) => {
+  const isDateAvailableWithoutSlots = (year, month, day) => {
     const date = new Date(Date.UTC(year, month, day));
     const dateStr = getDateStringUTC(date);
-    const availability = availableDatesMap.get(dateStr);
+    return availabilityMaps.noSlotsMap.has(dateStr);
+  };
+
+  const isDateInAvailability = (year, month, day) => {
+    const date = new Date(Date.UTC(year, month, day));
+    const dateStr = getDateStringUTC(date);
+    return (
+      availabilityMaps.hasSlotsMap.has(dateStr) ||
+      availabilityMaps.noSlotsMap.has(dateStr)
+    );
+  };
+
+  // Get availability info for a date
+  const getAvailabilityForDate = (year, month, day) => {
+    const date = new Date(Date.UTC(year, month, day));
+    const dateStr = getDateStringUTC(date);
+
+    return (
+      availabilityMaps.hasSlotsMap.get(dateStr) ||
+      availabilityMaps.noSlotsMap.get(dateStr) ||
+      null
+    );
+  };
+
+  // Get slots for a date
+  const getSlotsForDate = (year, month, day) => {
+    const availability = getAvailabilityForDate(year, month, day);
     return availability?.slots || [];
   };
 
-  // Function to format date for display
+  // Format date display
   const formatDateForDisplay = (date) => {
     return date.toLocaleDateString("en-US", {
       weekday: "long",
@@ -140,57 +192,124 @@ export default function Calendar() {
     });
   };
 
-  // Function to handle adding availability to a date
-  const handleAddAvailability = (year, month, day) => {
+  // Add availability date
+  const handleAddAvailability = async (year, month, day) => {
     const date = new Date(Date.UTC(year, month, day));
     const dateStr = getDateStringUTC(date);
 
-    console.log(`Add availability for: ${dateStr}`);
-    // Here you would call your API to add availability for this date
-    // For now, we'll just show an alert
-    alert(`Add availability for ${date.toDateString()}`);
+    try {
+      const result = await addAvailabilityDate({ date: dateStr }).unwrap();
 
-    // You can also automatically select this date
-    setSelectedDate(date);
+      if (result.success) {
+        await refetchAvailabilities();
+        setSelectedDate(date);
+
+        // Assuming response contains the new availabilityId
+        if (result.data?.availability?._id) {
+          setCurrentAvailabilityId(result.data.availability._id);
+        }
+
+        toast.success(`Availability added for ${date.toDateString()}`);
+      } else {
+        toast.error(
+          `Failed to add availability: ${result.message || "Unknown error"}`
+        );
+      }
+    } catch (error) {
+      console.error("Error adding availability:", error);
+      toast.error(`${error?.data?.message || error.message}`);
+    }
   };
 
-  // Function to handle removing availability from a date
-  const handleRemoveAvailability = (year, month, day) => {
+  // Remove availability
+  const handleRemoveAvailability = async (year, month, day) => {
     const date = new Date(Date.UTC(year, month, day));
     const dateStr = getDateStringUTC(date);
 
-    console.log(`Remove availability for: ${dateStr}`);
-    // Here you would call your API to remove availability for this date
-    // For now, we'll just show an alert
-    alert(`Remove availability for ${date.toDateString()}`);
+    // Get availability info for this date
+    const availability = getAvailabilityForDate(year, month, day);
 
-    // You can also automatically select this date
-    setSelectedDate(date);
+    if (!availability?.availabilityId) {
+      toast.error("No availability found for this date");
+      return;
+    }
+
+    // Show confirmation dialog
+    if (deleteConfirmDate !== dateStr) {
+      setDeleteConfirmDate(dateStr);
+      toast(`Click trash icon again to confirm deletion`, {
+        icon: "⚠️",
+        duration: 3000,
+      });
+      return;
+    }
+
+    try {
+      const result = await deleteTutorAvailability(
+        availability.availabilityId
+      ).unwrap();
+
+      if (result.success) {
+        await refetchAvailabilities();
+        setDeleteConfirmDate(null);
+
+        // If we're deleting the currently selected date, clear the selection
+        if (selectedDate && getDateStringUTC(selectedDate) === dateStr) {
+          setSelectedDate(null);
+          setCurrentAvailabilityId(null);
+        }
+
+        toast.success(`Availability removed for ${date.toDateString()}`);
+      } else {
+        toast.error(
+          `Failed to remove availability: ${result.message || "Unknown error"}`
+        );
+      }
+    } catch (error) {
+      console.error("Error removing availability:", error);
+      toast.error(`${error?.data?.message || error.message}`);
+    }
   };
 
-  // Effect to automatically select the first available date from API
+  // Auto-select first available date or today
   useEffect(() => {
-    if (availableDatesMap.size > 0 && !selectedDate) {
-      const firstAvailableDate = Array.from(availableDatesMap.values())[0].date;
-      setCurrentMonth(
-        new Date(
-          firstAvailableDate.getUTCFullYear(),
-          firstAvailableDate.getUTCMonth()
-        )
-      );
-      setSelectedDate(firstAvailableDate);
+    const allDatesMap = new Map([
+      ...availabilityMaps.hasSlotsMap,
+      ...availabilityMaps.noSlotsMap,
+    ]);
+    if (allDatesMap.size > 0 && !selectedDate) {
+      const first = Array.from(allDatesMap.values())[0].date;
+      setCurrentMonth(new Date(first.getUTCFullYear(), first.getUTCMonth()));
+      setSelectedDate(first);
     } else if (!selectedDate) {
       setSelectedDate(new Date());
     }
-  }, [availableDatesMap, selectedDate]);
+  }, [availabilityMaps, selectedDate]);
 
-  // Single subject selection
+  // Update currentAvailabilityId when selected date changes
+  useEffect(() => {
+    if (selectedDate) {
+      const dateStr = getDateStringUTC(selectedDate);
+      const hasSlots = availabilityMaps.hasSlotsMap.get(dateStr);
+      const noSlots = availabilityMaps.noSlotsMap.get(dateStr);
+      const avail = hasSlots || noSlots;
+      setCurrentAvailabilityId(avail?.availabilityId || null);
+    }
+  }, [selectedDate, availabilityMaps]);
+
+  // Reset delete confirmation when hovering away
+  useEffect(() => {
+    if (!hoveredDate && deleteConfirmDate) {
+      setDeleteConfirmDate(null);
+    }
+  }, [hoveredDate, deleteConfirmDate]);
+
+  // Subject & Slot selection
   const selectSubject = (subjectId) => {
     setSelectedSubject(subjectId === selectedSubject ? null : subjectId);
     setShowSubjectDropdown(false);
   };
 
-  // Single slot selection
   const selectSlot = (slotId) => {
     setSelectedSlot(slotId === selectedSlot ? null : slotId);
   };
@@ -204,56 +323,80 @@ export default function Calendar() {
   const daysInMonth = lastDayOfMonth.getDate();
   const startingDayOfWeek = firstDayOfMonth.getDay();
 
-  const prevMonth = () => {
-    setCurrentMonth(new Date(year, month - 1));
-  };
-
-  const nextMonth = () => {
-    setCurrentMonth(new Date(year, month + 1));
-  };
+  const prevMonth = () => setCurrentMonth(new Date(year, month - 1));
+  const nextMonth = () => setCurrentMonth(new Date(year, month + 1));
 
   const handleDateClick = (day) => {
-    const localDate = new Date(year, month, day);
     const utcDate = new Date(Date.UTC(year, month, day));
     setSelectedDate(utcDate);
   };
 
-  // Generate calendar days with highlight
+  // Generate calendar days
   const calendarDays = [];
 
-  // Previous month days
+  // Previous month
   const prevMonthDays = new Date(year, month, 0).getDate();
   for (let i = startingDayOfWeek - 1; i >= 0; i--) {
     const prevDay = prevMonthDays - i;
     const prevMonthYear = month === 0 ? year - 1 : year;
     const prevMonthIndex = month === 0 ? 11 : month - 1;
-    const isAvailable = isDateAvailable(prevMonthYear, prevMonthIndex, prevDay);
+
+    const hasSlots = isDateAvailableWithSlots(
+      prevMonthYear,
+      prevMonthIndex,
+      prevDay
+    );
+    const noSlots = isDateAvailableWithoutSlots(
+      prevMonthYear,
+      prevMonthIndex,
+      prevDay
+    );
+    const isInAvailability = hasSlots || noSlots;
     const isHovered = hoveredDate === `prev-${i}`;
+    const dateStr = getDateStringUTC(
+      new Date(Date.UTC(prevMonthYear, prevMonthIndex, prevDay))
+    );
+    const showDeleteConfirm = deleteConfirmDate === dateStr;
+
+    let bgClass = "text-gray-300 hover:text-gray-400";
+    if (hasSlots) {
+      bgClass = "bg-purple-100 text-purple-700 hover:bg-purple-200";
+    } else if (noSlots) {
+      bgClass = "bg-blue-50 text-blue-400 hover:bg-blue-100";
+    }
 
     calendarDays.push(
       <div
         key={`prev-${i}`}
-        className={`relative py-3 rounded-xl cursor-pointer ${
-          isAvailable
-            ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
-            : "text-gray-300 hover:text-gray-400"
-        }`}
+        className={`relative py-3 rounded-xl cursor-pointer ${bgClass}`}
         onClick={() => {
           setCurrentMonth(new Date(prevMonthYear, prevMonthIndex));
-          const utcDate = new Date(
-            Date.UTC(prevMonthYear, prevMonthIndex, prevDay)
+          setSelectedDate(
+            new Date(Date.UTC(prevMonthYear, prevMonthIndex, prevDay))
           );
-          setSelectedDate(utcDate);
         }}
         onMouseEnter={() => setHoveredDate(`prev-${i}`)}
-        onMouseLeave={() => setHoveredDate(null)}
-        title={isAvailable ? "Remove availability" : "Add availability"}>
+        onMouseLeave={() => {
+          setHoveredDate(null);
+          if (deleteConfirmDate === dateStr) {
+            setDeleteConfirmDate(null);
+          }
+        }}
+        title={
+          hasSlots
+            ? "Remove availability"
+            : noSlots
+            ? "Add slots (availability exists)"
+            : "Add availability"
+        }>
         {prevDay}
         {isHovered && (
           <div className='absolute -top-1 -right-1 z-10'>
-            {isAvailable ? (
+            {isInAvailability ? (
               <div
-                className='bg-red-500 text-white p-1 rounded-full hover:bg-red-600'
+                className={`p-1 rounded-full hover:bg-red-600 ${
+                  showDeleteConfirm ? "bg-red-600 animate-pulse" : "bg-red-500"
+                } text-white`}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleRemoveAvailability(
@@ -280,36 +423,56 @@ export default function Calendar() {
     );
   }
 
-  // Current month days
+  // Current month
   for (let day = 1; day <= daysInMonth; day++) {
-    const isAvailable = isDateAvailable(year, month, day);
+    const hasSlots = isDateAvailableWithSlots(year, month, day);
+    const noSlots = isDateAvailableWithoutSlots(year, month, day);
+    const isInAvailability = hasSlots || noSlots;
     const isSelected =
       selectedDate &&
       selectedDate.getUTCFullYear() === year &&
       selectedDate.getUTCMonth() === month &&
       selectedDate.getUTCDate() === day;
     const isHovered = hoveredDate === `current-${day}`;
+    const dateStr = getDateStringUTC(new Date(Date.UTC(year, month, day)));
+    const showDeleteConfirm = deleteConfirmDate === dateStr;
+
+    let bgClass = "hover:bg-gray-100";
+    if (isSelected) {
+      bgClass = "bg-purple-500 text-white hover:bg-purple-600";
+    } else if (hasSlots) {
+      bgClass = "bg-purple-100 text-purple-700 hover:bg-purple-200";
+    } else if (noSlots) {
+      bgClass = "bg-blue-50 text-blue-400 hover:bg-blue-100";
+    }
 
     calendarDays.push(
       <div
         key={day}
         onClick={() => handleDateClick(day)}
         onMouseEnter={() => setHoveredDate(`current-${day}`)}
-        onMouseLeave={() => setHoveredDate(null)}
-        className={`relative py-3 rounded-xl cursor-pointer transition-all ${
-          isSelected
-            ? "bg-purple-500 text-white hover:bg-purple-600"
-            : isAvailable
-            ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
-            : "hover:bg-gray-100"
-        }`}
-        title={isAvailable ? "Remove availability" : "Add availability"}>
+        onMouseLeave={() => {
+          setHoveredDate(null);
+          if (deleteConfirmDate === dateStr) {
+            setDeleteConfirmDate(null);
+          }
+        }}
+        className={`relative py-3 rounded-xl cursor-pointer transition-all ${bgClass}`}
+        title={
+          hasSlots
+            ? "Remove availability"
+            : noSlots
+            ? "Add slots (availability exists)"
+            : "Add availability"
+        }>
         {day}
         {isHovered && (
           <div className='absolute -top-1 -right-1 z-10'>
-            {isAvailable ? (
+            {isInAvailability ? (
               <div
-                className='bg-red-500 text-white p-1 rounded-full hover:bg-red-600'
+                className={`p-1 rounded-full hover:bg-red-600 ${
+                  showDeleteConfirm ? "bg-red-600 animate-pulse" : "bg-red-500"
+                } text-white`}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleRemoveAvailability(year, month, day);
@@ -328,44 +491,73 @@ export default function Calendar() {
             )}
           </div>
         )}
-        {isAvailable && !isSelected && !isHovered && (
+        {hasSlots && !isSelected && !isHovered && (
           <div className='w-1 h-1 bg-purple-500 rounded-full mx-auto mt-1'></div>
+        )}
+        {noSlots && !isSelected && !isHovered && (
+          <div className='w-1 h-1 bg-blue-300 rounded-full mx-auto mt-1'></div>
         )}
       </div>
     );
   }
 
-  // Next month days
+  // Next month
   const totalCells = calendarDays.length;
   const remainingCells = 42 - totalCells;
   for (let i = 1; i <= remainingCells; i++) {
     const nextMonthYear = month === 11 ? year + 1 : year;
     const nextMonthIndex = month === 11 ? 0 : month + 1;
-    const isAvailable = isDateAvailable(nextMonthYear, nextMonthIndex, i);
+
+    const hasSlots = isDateAvailableWithSlots(nextMonthYear, nextMonthIndex, i);
+    const noSlots = isDateAvailableWithoutSlots(
+      nextMonthYear,
+      nextMonthIndex,
+      i
+    );
+    const isInAvailability = hasSlots || noSlots;
     const isHovered = hoveredDate === `next-${i}`;
+    const dateStr = getDateStringUTC(
+      new Date(Date.UTC(nextMonthYear, nextMonthIndex, i))
+    );
+    const showDeleteConfirm = deleteConfirmDate === dateStr;
+
+    let bgClass = "text-gray-300 hover:text-gray-400";
+    if (hasSlots) {
+      bgClass = "bg-purple-100 text-purple-700 hover:bg-purple-200";
+    } else if (noSlots) {
+      bgClass = "bg-blue-50 text-blue-400 hover:bg-blue-100";
+    }
 
     calendarDays.push(
       <div
         key={`next-${i}`}
-        className={`relative py-3 rounded-xl cursor-pointer ${
-          isAvailable
-            ? "bg-purple-100 text-purple-700 hover:bg-purple-200"
-            : "text-gray-300 hover:text-gray-400"
-        }`}
+        className={`relative py-3 rounded-xl cursor-pointer ${bgClass}`}
         onClick={() => {
           setCurrentMonth(new Date(nextMonthYear, nextMonthIndex));
-          const utcDate = new Date(Date.UTC(nextMonthYear, nextMonthIndex, i));
-          setSelectedDate(utcDate);
+          setSelectedDate(new Date(Date.UTC(nextMonthYear, nextMonthIndex, i)));
         }}
         onMouseEnter={() => setHoveredDate(`next-${i}`)}
-        onMouseLeave={() => setHoveredDate(null)}
-        title={isAvailable ? "Remove availability" : "Add availability"}>
+        onMouseLeave={() => {
+          setHoveredDate(null);
+          if (deleteConfirmDate === dateStr) {
+            setDeleteConfirmDate(null);
+          }
+        }}
+        title={
+          hasSlots
+            ? "Remove availability"
+            : noSlots
+            ? "Add slots (availability exists)"
+            : "Add availability"
+        }>
         {i}
         {isHovered && (
           <div className='absolute -top-1 -right-1 z-10'>
-            {isAvailable ? (
+            {isInAvailability ? (
               <div
-                className='bg-red-500 text-white p-1 rounded-full hover:bg-red-600'
+                className={`p-1 rounded-full hover:bg-red-600 ${
+                  showDeleteConfirm ? "bg-red-600 animate-pulse" : "bg-red-500"
+                } text-white`}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleRemoveAvailability(nextMonthYear, nextMonthIndex, i);
@@ -404,6 +596,78 @@ export default function Calendar() {
 
   const [zoomLink, setZoomLink] = useState("");
 
+  // Create Slot handler
+  const handleCreateSlot = async () => {
+    if (!selectedDate) {
+      toast.error("Please select a date");
+      return;
+    }
+    if (!currentAvailabilityId) {
+      toast.error("Please add availability for this date first");
+      return;
+    }
+    if (!selectedSlot) {
+      toast.error("Please select a time slot");
+      return;
+    }
+
+    const slotObj = [...slots, ...additionalSlots].find(
+      (s) => s.id === selectedSlot
+    );
+    const [startTimeLabel, endTimeLabel] = slotObj.time.split(" - ");
+
+    const payload = {
+      startTimeLabel,
+      endTimeLabel,
+      type: classType === "Single" ? "ONE_TO_ONE" : "GROUP",
+    };
+
+    try {
+      await addTimeSlot({
+        availabilityId: currentAvailabilityId,
+        slotData: payload,
+      }).unwrap();
+
+      await refetchAvailabilities();
+      setShowSlotsDropdown(false);
+      setSelectedSlot(null);
+      toast.success("Slot created successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to create slot");
+    }
+  };
+
+  // Delete availability for selected date
+  const handleDeleteSelectedAvailability = async () => {
+    if (!selectedDate || !currentAvailabilityId) {
+      toast.error("No availability to delete");
+      return;
+    }
+
+    try {
+      const result = await deleteTutorAvailability(
+        currentAvailabilityId
+      ).unwrap();
+
+      if (result.success) {
+        await refetchAvailabilities();
+        setSelectedDate(null);
+        setCurrentAvailabilityId(null);
+        toast.success(
+          `Availability removed for ${selectedDate.toDateString()}`
+        );
+      } else {
+        toast.error(
+          `Failed to remove availability: ${result.message || "Unknown error"}`
+        );
+      }
+    } catch (error) {
+      console.error("Error removing availability:", error);
+      toast.error(`${error?.data?.message || error.message}`);
+    }
+  };
+
   return (
     <div className='w-full min-h-screen bg-gray-50 py-10 px-4'>
       <TitleSection bg={"#F5FFF9"} title={"Calendar"} />
@@ -413,17 +677,26 @@ export default function Calendar() {
         <div className='lg:col-span-2'>
           <div className='mb-6'>
             <p className='text-xl font-semibold text-gray-900'>Calendar</p>
-            <p className='text-sm text-gray-500 mt-1 flex items-center gap-2'>
-              <span className='inline-block w-1 h-1 bg-purple-500 rounded-full'></span>
-              Dates with availability
-              <span className='ml-4 flex items-center gap-1'>
-                <BiPlus className='text-green-500' size={14} />
+            <p className='text-sm text-gray-500 mt-1 flex flex-wrap items-center gap-2'>
+              <span className='inline-flex items-center'>
+                <span className='inline-block w-1 h-1 bg-purple-500 rounded-full mr-1'></span>
+                Dates with slots
+              </span>
+              <span className='inline-flex items-center'>
+                <span className='inline-block w-1 h-1 bg-blue-300 rounded-full mr-1'></span>
+                Dates without slots
+              </span>
+              <span className='inline-flex items-center'>
+                <BiPlus className='text-green-500 mr-1' size={14} />
                 Add availability
               </span>
-              <span className='ml-4 flex items-center gap-1'>
-                <BiTrash className='text-red-500' size={14} />
+              <span className='inline-flex items-center'>
+                <BiTrash className='text-red-500 mr-1' size={14} />
                 Remove availability
               </span>
+              {(isAddingDate || isAddingSlot || isDeleting) && (
+                <span className='text-blue-500'>Processing...</span>
+              )}
             </p>
           </div>
 
@@ -462,9 +735,24 @@ export default function Calendar() {
             {/* Selected Date Details */}
             {selectedDate && (
               <div className='mt-6 p-4 bg-gray-50 rounded-lg'>
-                <p className='text-sm font-medium text-gray-900 mb-2'>
-                  Available Slots for {formatDateForDisplay(selectedDate)}:
-                </p>
+                <div className='flex justify-between items-center mb-2'>
+                  <p className='text-sm font-medium text-gray-900'>
+                    Availability for {formatDateForDisplay(selectedDate)}:
+                  </p>
+                  {currentAvailabilityId && (
+                    <button
+                      onClick={handleDeleteSelectedAvailability}
+                      disabled={isDeleting}
+                      className={`text-xs px-2 py-1 rounded-lg ${
+                        isDeleting
+                          ? "bg-gray-400 cursor-not-allowed"
+                          : "bg-red-500 hover:bg-red-600"
+                      } text-white flex items-center`}>
+                      <BiTrash className='mr-1' size={12} />
+                      {isDeleting ? "Deleting..." : "Delete"}
+                    </button>
+                  )}
+                </div>
                 <div className='space-y-2'>
                   {getSlotsForDate(
                     selectedDate.getUTCFullYear(),
@@ -495,22 +783,44 @@ export default function Calendar() {
                       </div>
                     ))
                   ) : (
-                    <div className='flex items-center justify-between'>
-                      <p className='text-sm text-gray-500'>
-                        No available slots for this date
+                    <div>
+                      <p className='text-sm text-gray-500 mb-3'>
+                        {currentAvailabilityId
+                          ? "This date is marked as available but has no time slots yet."
+                          : "This date is not marked as available."}
                       </p>
-                      <button
-                        onClick={() =>
-                          handleAddAvailability(
-                            selectedDate.getUTCFullYear(),
-                            selectedDate.getUTCMonth(),
-                            selectedDate.getUTCDate()
-                          )
-                        }
-                        className='text-sm bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600'>
-                        <BiPlus className='inline mr-1' size={14} />
-                        Add Slots
-                      </button>
+                      {currentAvailabilityId ? (
+                        <button
+                          onClick={() => setShowSlotsDropdown(true)}
+                          className='text-sm bg-blue-500 text-white px-3 py-1 rounded-lg hover:bg-blue-600'>
+                          <BiPlus className='inline mr-1' size={14} />
+                          Add Time Slots
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() =>
+                            handleAddAvailability(
+                              selectedDate.getUTCFullYear(),
+                              selectedDate.getUTCMonth(),
+                              selectedDate.getUTCDate()
+                            )
+                          }
+                          disabled={isAddingDate}
+                          className={`text-sm px-3 py-1 rounded-lg ${
+                            isAddingDate
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-green-500 hover:bg-green-600"
+                          } text-white`}>
+                          {isAddingDate ? (
+                            "Adding..."
+                          ) : (
+                            <>
+                              <BiPlus className='inline mr-1' size={14} />
+                              Mark as Available
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -523,80 +833,161 @@ export default function Calendar() {
                 <p className='text-sm font-medium text-gray-900'>
                   All Available Dates
                 </p>
-                <button
-                  onClick={() => {
-                    const today = new Date();
-                    handleAddAvailability(
-                      today.getUTCFullYear(),
-                      today.getUTCMonth(),
-                      today.getUTCDate()
-                    );
-                  }}
-                  className='text-xs bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600'>
-                  <BiPlus className='inline mr-1' size={12} />
-                  Add Today
-                </button>
               </div>
               {isLoading ? (
                 <p className='text-sm text-gray-500'>Loading availability...</p>
-              ) : availableDatesMap.size > 0 ? (
-                Array.from(availableDatesMap.values()).map(
-                  (availability, index) => (
-                    <div
-                      key={index}
-                      className='space-y-2 bg-white p-3 rounded-lg'>
-                      <div className='flex justify-between items-center'>
-                        <p className='text-sm font-medium text-gray-700'>
-                          {formatDateForDisplay(availability.date)}
+              ) : (
+                <>
+                  {/* Dates with slots */}
+                  {availabilityMaps.hasSlotsMap.size > 0 && (
+                    <div className='space-y-3'>
+                      <p className='text-xs font-medium text-gray-600'>
+                        With Slots:
+                      </p>
+                      {Array.from(availabilityMaps.hasSlotsMap.values()).map(
+                        (availability, index) => (
+                          <div
+                            key={`with-slots-${index}`}
+                            className='space-y-2 bg-white p-3 rounded-lg border-l-4 border-l-purple-500'>
+                            <div className='flex justify-between items-center'>
+                              <p className='text-sm font-medium text-gray-700'>
+                                {formatDateForDisplay(availability.date)}
+                              </p>
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await deleteTutorAvailability(
+                                      availability.availabilityId
+                                    ).unwrap();
+                                    await refetchAvailabilities();
+                                    toast.success(`Availability removed`);
+                                  } catch (error) {
+                                    toast.error(
+                                      "Failed to delete availability"
+                                    );
+                                  }
+                                }}
+                                disabled={isDeleting}
+                                className='text-xs bg-red-500 text-white px-2 py-1 rounded-lg hover:bg-red-600'>
+                                <BiTrash size={12} />
+                              </button>
+                            </div>
+                            <div className='flex flex-wrap gap-2'>
+                              {availability.slots.map((slot) => (
+                                <span
+                                  key={slot.id}
+                                  className={`px-3 py-1 text-xs rounded-full ${
+                                    slot.type === "ONE_TO_ONE"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : "bg-green-100 text-green-700"
+                                  }`}>
+                                  {slot.startTimeLabel} - {slot.endTimeLabel} (
+                                  {slot.type === "ONE_TO_ONE"
+                                    ? "Single"
+                                    : "Group"}
+                                  )
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+
+                  {/* Dates without slots */}
+                  {availabilityMaps.noSlotsMap.size > 0 && (
+                    <div className='space-y-3'>
+                      <p className='text-xs font-medium text-gray-600'>
+                        Without Slots:
+                      </p>
+                      {Array.from(availabilityMaps.noSlotsMap.values()).map(
+                        (availability, index) => (
+                          <div
+                            key={`no-slots-${index}`}
+                            className='space-y-2 bg-white p-3 rounded-lg border-l-4 border-l-blue-300'>
+                            <div className='flex justify-between items-center'>
+                              <p className='text-sm font-medium text-gray-700'>
+                                {formatDateForDisplay(availability.date)}
+                              </p>
+                              <div className='flex gap-1'>
+                                <button
+                                  onClick={() => {
+                                    setSelectedDate(availability.date);
+                                    setCurrentMonth(
+                                      new Date(
+                                        availability.date.getUTCFullYear(),
+                                        availability.date.getUTCMonth()
+                                      )
+                                    );
+                                    setShowSlotsDropdown(true);
+                                  }}
+                                  className='text-xs bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-600'>
+                                  <BiPlus size={12} />
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await deleteTutorAvailability(
+                                        availability.availabilityId
+                                      ).unwrap();
+                                      await refetchAvailabilities();
+                                      toast.success(`Availability removed`);
+                                    } catch (error) {
+                                      toast.error(
+                                        "Failed to delete availability"
+                                      );
+                                    }
+                                  }}
+                                  disabled={isDeleting}
+                                  className='text-xs bg-red-500 text-white px-2 py-1 rounded-lg hover:bg-red-600'>
+                                  <BiTrash size={12} />
+                                </button>
+                              </div>
+                            </div>
+                            <p className='text-xs text-gray-500'>
+                              No time slots added yet
+                            </p>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  )}
+
+                  {/* No availability at all */}
+                  {availabilityMaps.hasSlotsMap.size === 0 &&
+                    availabilityMaps.noSlotsMap.size === 0 && (
+                      <div className='text-center p-4 bg-gray-50 rounded-lg'>
+                        <p className='text-sm text-gray-500 mb-2'>
+                          No availability set yet
                         </p>
                         <button
-                          onClick={() =>
-                            handleRemoveAvailability(
-                              availability.date.getUTCFullYear(),
-                              availability.date.getUTCMonth(),
-                              availability.date.getUTCDate()
-                            )
-                          }
-                          className='text-xs bg-red-500 text-white px-2 py-1 rounded-lg hover:bg-red-600'>
-                          <BiTrash size={12} />
+                          onClick={() => {
+                            const today = new Date();
+                            handleAddAvailability(
+                              today.getUTCFullYear(),
+                              today.getUTCMonth(),
+                              today.getUTCDate()
+                            );
+                          }}
+                          disabled={isAddingDate}
+                          className={`text-sm px-4 py-2 rounded-lg ${
+                            isAddingDate
+                              ? "bg-gray-400 cursor-not-allowed"
+                              : "bg-green-500 hover:bg-green-600"
+                          } text-white`}>
+                          {isAddingDate ? (
+                            "Adding..."
+                          ) : (
+                            <>
+                              <BiPlus className='inline mr-1' size={16} />
+                              Add Your First Availability
+                            </>
+                          )}
                         </button>
                       </div>
-                      <div className='flex flex-wrap gap-2'>
-                        {availability.slots.map((slot) => (
-                          <span
-                            key={slot.id}
-                            className={`px-3 py-1 text-xs rounded-full ${
-                              slot.type === "ONE_TO_ONE"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-green-100 text-green-700"
-                            }`}>
-                            {slot.startTimeLabel} - {slot.endTimeLabel} (
-                            {slot.type === "ONE_TO_ONE" ? "Single" : "Group"})
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )
-                )
-              ) : (
-                <div className='text-center p-4 bg-gray-50 rounded-lg'>
-                  <p className='text-sm text-gray-500 mb-2'>
-                    No availability set yet
-                  </p>
-                  <button
-                    onClick={() => {
-                      const today = new Date();
-                      handleAddAvailability(
-                        today.getUTCFullYear(),
-                        today.getUTCMonth(),
-                        today.getUTCDate()
-                      );
-                    }}
-                    className='text-sm bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600'>
-                    <BiPlus className='inline mr-1' size={16} />
-                    Add Your First Availability
-                  </button>
-                </div>
+                    )}
+                </>
               )}
             </div>
           </div>
@@ -652,7 +1043,7 @@ export default function Calendar() {
                 />
               </div>
 
-              {/* Subject Dropdown - Single Selection */}
+              {/* Subject Dropdown */}
               <div className='mb-6 relative'>
                 <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Subject
@@ -689,7 +1080,7 @@ export default function Calendar() {
                 )}
               </div>
 
-              {/* Slots Dropdown - Single Selection */}
+              {/* Slots Dropdown */}
               <div className='mb-6 relative'>
                 <label className='block text-sm font-medium text-gray-700 mb-2'>
                   Slots
@@ -755,8 +1146,17 @@ export default function Calendar() {
                       </button>
                     </div>
 
-                    <button className='w-full bg-purple-400 text-white py-2 rounded-lg hover:bg-purple-500 transition-colors'>
-                      Create Slot
+                    <button
+                      onClick={handleCreateSlot}
+                      disabled={
+                        isAddingSlot || !currentAvailabilityId || !selectedSlot
+                      }
+                      className={`w-full py-2 rounded-lg transition-colors ${
+                        isAddingSlot || !currentAvailabilityId || !selectedSlot
+                          ? "bg-gray-300 cursor-not-allowed text-gray-600"
+                          : "bg-purple-400 hover:bg-purple-500 text-white"
+                      }`}>
+                      {isAddingSlot ? "Creating..." : "Create Slot"}
                     </button>
                   </div>
                 )}
@@ -777,21 +1177,7 @@ export default function Calendar() {
               </div>
 
               {/* Action Buttons */}
-              <div className='flex items-center justify-between gap-4'>
-                <button
-                  onClick={() => {
-                    if (selectedDate) {
-                      handleAddAvailability(
-                        selectedDate.getUTCFullYear(),
-                        selectedDate.getUTCMonth(),
-                        selectedDate.getUTCDate()
-                      );
-                    }
-                  }}
-                  className='px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors'>
-                  <BiPlus className='inline mr-1' size={16} />
-                  Add Availability
-                </button>
+              <div className='flex items-center justify-end gap-4'>
                 <button className='px-6 py-2 bg-purple-400 text-white rounded-lg hover:bg-purple-500 transition-colors'>
                   Create Class
                 </button>
