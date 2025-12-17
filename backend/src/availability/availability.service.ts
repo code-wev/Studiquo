@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
+import { formatAmPm } from 'common/utils/time.util';
 import { Model, Types } from 'mongoose';
 import { TimeSlot } from '../models/timeSlot.model';
 import { TutorAvailability } from '../models/tutorAvailability.model';
@@ -292,9 +293,21 @@ export class AvailabilityService {
       },
     ]);
 
+    // Add AM/PM labels
+    const formatted = availability.map((day) => ({
+      date: day.date,
+      slots: day.slots.map((s) => ({
+        id: s._id,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        startTimeLabel: formatAmPm(s.startTime, 'Europe/London'),
+        endTimeLabel: formatAmPm(s.endTime, 'Europe/London'),
+      })),
+    }));
+
     return {
       message: 'Tutor availability retrieved successfully',
-      availability,
+      availability: formatted,
     };
   }
 }
