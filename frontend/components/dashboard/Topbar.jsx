@@ -8,7 +8,7 @@ import { useMyProfileQuery } from '@/feature/shared/AuthApi';
 const Topbar = () => {
     const { data: profile } = useMyProfileQuery();
     const user = profile?.data?.user;
-    console.log(user, "User data");
+
 
       const getUserInitials = () => {
     if (user?.firstName && user?.lastName) {
@@ -33,9 +33,12 @@ const Topbar = () => {
 
         {/* Avatar */}
         <div className="w-8 h-8 rounded-full bg-gray-300 overflow-hidden">
-       <div className='w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold'>
+
+
+             {    user?.avatar ?     <Image src={user?.avatar} alt="profile" width={64} height={64} className="rounded-full "/> :        <div className='w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold'>
                   {getUserInitials()}
-                </div>
+                </div>}
+
         </div>
       </div>
 

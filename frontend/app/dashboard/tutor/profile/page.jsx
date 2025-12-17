@@ -4,30 +4,50 @@ import React, { useState } from "react";
 import Image from "next/image";
 import { BiChevronDown, BiCreditCard } from "react-icons/bi";
 import TitleSection from "@/components/dashboard/shared/TitleSection";
+import {
+  useMyProfileQuery,
+  useUpdateProfileMutation,
+} from "@/feature/shared/AuthApi";
+import toast from "react-hot-toast";
 
 const TutorProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
+  const [updateProfile, { isLoading, loading }] = useUpdateProfileMutation();
+  const { data: myPofile } = useMyProfileQuery();
+
   const [profileData, setProfileData] = useState({
-    firstName: "Aubrey",
-    lastName: "Colleen",
-    email: "debra.holt@example.com",
-    subject: "Math",
-    bio: "Experienced platform administrator with over 5 years in managing job board platforms and user communities. Passionate about creating seamless user experiences and driving platform growth.",
-    paymentName: "Aubrey Aubrey",
-    cardNumber: "",
-    expiresMonth: "March",
-    expiresYear: "2027",
-    cvc: "CVC",
+    firstName: myPofile?.data?.user?.firstName,
+    lastName: myPofile?.data?.user?.lastName,
+    // email: myPofile?.data?.user?.email,
+    subject: myPofile?.data?.user?.subject,
+    bio: myPofile?.data?.user?.bio,
+    // paymentName: "Aubrey Aubrey",
+    // cardNumber: "",
+    // expiresMonth: "March",
+    // expiresYear: "2027",
+    // cvc: "CVC",
   });
+
+  console.log(myPofile, "khela hobe");
 
   const handleInputChange = (field, value) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsEditing(false);
+    console.log(profileData, "toi profile data");
     // Add your save logic here
-    console.log("Saved profile data:", profileData);
+    try {
+      const result = await updateProfile(profileData);
+      if (result.error) {
+        console.log(result, "tomi amar result");
+      }
+
+      toast.success("Profile Update Succesfully");
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   const handleCancel = () => {
@@ -90,6 +110,7 @@ const TutorProfilePage = () => {
               </label>
               <input
                 type="text"
+                defaultValue={myPofile?.data?.user?.firstName}
                 value={profileData.firstName}
                 onChange={(e) => handleInputChange("firstName", e.target.value)}
                 disabled={!isEditing}
@@ -104,6 +125,7 @@ const TutorProfilePage = () => {
               </label>
               <input
                 type="text"
+                defaultValue={myPofile?.data?.user?.lastName}
                 value={profileData.lastName}
                 onChange={(e) => handleInputChange("lastName", e.target.value)}
                 disabled={!isEditing}
@@ -118,6 +140,8 @@ const TutorProfilePage = () => {
               </label>
               <input
                 type="email"
+                readOnly
+                defaultValue={myPofile?.data?.user?.email}
                 value={profileData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
                 disabled={!isEditing}
@@ -133,14 +157,15 @@ const TutorProfilePage = () => {
               <div className="relative">
                 <select
                   value={profileData.subject}
+                  defaultValue={myPofile?.data?.profile?.subjects[0]}
                   onChange={(e) => handleInputChange("subject", e.target.value)}
                   disabled={!isEditing}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
                 >
-                  <option value="Math">Math</option>
-                  <option value="English">English</option>
-                  <option value="Science">Science</option>
-                  <option value="History">History</option>
+                  <option value="MATH">Math</option>
+                  <option value="ENGLISH">English</option>
+                  <option value="SCIENCE">Science</option>
+                  {/* <option value="History">History</option> */}
                 </select>
                 <BiChevronDown
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
@@ -157,6 +182,7 @@ const TutorProfilePage = () => {
             </label>
             <textarea
               value={profileData.bio}
+              defaultValue={myPofile?.data?.user?.bio}
               onChange={(e) => handleInputChange("bio", e.target.value)}
               disabled={!isEditing}
               rows={3}
@@ -167,18 +193,17 @@ const TutorProfilePage = () => {
 
         {/* Payment Information */}
         <div>
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">
+          {/* <h2 className="text-2xl font-semibold text-gray-800 mb-6">
             Payment Information
-          </h2>
+          </h2> */}
 
           {/* Stripe Button */}
-          <div className="flex items-center justify-center gap-2 py-6 mb-6 border border-gray-200 rounded-lg bg-gray-50">
+          {/* <div className="flex items-center justify-center gap-2 py-6 mb-6 border border-gray-200 rounded-lg bg-gray-50">
             <BiCreditCard size={20} className="text-gray-600" />
             <span className="text-sm font-medium text-gray-700">Stripe</span>
-          </div>
+          </div> */}
 
-          {/* Name */}
-          <div className="mb-6">
+          {/* <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Name
             </label>
@@ -189,10 +214,9 @@ const TutorProfilePage = () => {
               disabled={!isEditing}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
             />
-          </div>
+          </div> */}
 
-          {/* Card Number */}
-          <div className="mb-6">
+          {/* <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Card number
             </label>
@@ -204,10 +228,9 @@ const TutorProfilePage = () => {
               placeholder="1234 5678 9012 3456"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
             />
-          </div>
+          </div> */}
 
-          {/* Expires, Year, CVC */}
-          <div className="grid grid-cols-3 gap-4">
+          {/* <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Expires
@@ -282,7 +305,7 @@ const TutorProfilePage = () => {
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
               />
             </div>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
