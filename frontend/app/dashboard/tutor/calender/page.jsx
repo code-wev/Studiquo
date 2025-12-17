@@ -225,6 +225,25 @@ export default function Calendar() {
     }
   };
 
+  // Delete specific time slot
+  const handleDeleteTimeSlot = async (slotId, slotLabel) => {
+    try {
+      const result = await deleteTimeSlot({ slotId }).unwrap();
+
+      if (result.success) {
+        await refetchAvailabilities();
+        toast.success(`Time slot ${slotLabel} deleted successfully`);
+      } else {
+        toast.error(
+          `Failed to delete time slot: ${result.message || "Unknown error"}`
+        );
+      }
+    } catch (error) {
+      console.error("Error deleting time slot:", error);
+      toast.error(`${error?.data?.message || error.message}`);
+    }
+  };
+
   // Remove availability
   const handleRemoveAvailability = async (year, month, day) => {
     const date = new Date(Date.UTC(year, month, day));
@@ -271,27 +290,6 @@ export default function Calendar() {
       }
     } catch (error) {
       console.error("Error removing availability:", error);
-      toast.error(`${error?.data?.message || error.message}`);
-    }
-  };
-
-  // Delete specific time slot
-  const handleDeleteTimeSlot = async (slotId, slotDetails) => {
-    try {
-      const result = await deleteTimeSlot({ slotId }).unwrap();
-
-      if (result.success) {
-        await refetchAvailabilities();
-        toast.success(
-          `Time slot ${slotDetails.startTimeLabel} - ${slotDetails.endTimeLabel} deleted`
-        );
-      } else {
-        toast.error(
-          `Failed to delete time slot: ${result.message || "Unknown error"}`
-        );
-      }
-    } catch (error) {
-      console.error("Error deleting time slot:", error);
       toast.error(`${error?.data?.message || error.message}`);
     }
   };
@@ -777,7 +775,7 @@ export default function Calendar() {
                           : "bg-red-500 hover:bg-red-600"
                       } text-white flex items-center`}>
                       <BiTrash className='mr-1' size={12} />
-                      {isDeleting ? "Deleting..." : "Delete All"}
+                      {isDeleting ? "Deleting..." : "Delete"}
                     </button>
                   )}
                 </div>
@@ -794,32 +792,31 @@ export default function Calendar() {
                     ).map((slot) => (
                       <div
                         key={slot.id}
-                        className='px-3 py-2 bg-white border border-gray-200 rounded-lg'>
-                        <div className='flex justify-between items-center'>
-                          <div>
-                            <span className='text-sm font-medium text-gray-700'>
-                              {slot.startTimeLabel} - {slot.endTimeLabel}
-                            </span>
-                            <span
-                              className={`ml-2 text-xs px-2 py-1 rounded-full ${
-                                slot.type === "ONE_TO_ONE"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-green-100 text-green-700"
-                              }`}>
-                              {slot.type === "ONE_TO_ONE" ? "Single" : "Group"}
-                            </span>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteTimeSlot(slot.id, slot)}
-                            disabled={isDeletingSlot}
-                            className={`text-xs px-2 py-1 rounded-lg ${
-                              isDeletingSlot
-                                ? "bg-gray-400 cursor-not-allowed"
-                                : "bg-red-500 hover:bg-red-600"
-                            } text-white`}>
-                            <BiTrash size={12} />
-                          </button>
+                        className='px-3 py-2 bg-white border border-gray-200 rounded-lg flex justify-between items-center'>
+                        <div>
+                          <span className='text-sm font-medium text-gray-700'>
+                            {slot.startTimeLabel} - {slot.endTimeLabel}
+                          </span>
+                          <span
+                            className={`ml-2 text-xs px-2 py-1 rounded-full ${
+                              slot.type === "ONE_TO_ONE"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-green-100 text-green-700"
+                            }`}>
+                            {slot.type === "ONE_TO_ONE" ? "Single" : "Group"}
+                          </span>
                         </div>
+                        <button
+                          onClick={() =>
+                            handleDeleteTimeSlot(
+                              slot.id,
+                              `${slot.startTimeLabel} - ${slot.endTimeLabel}`
+                            )
+                          }
+                          disabled={isDeletingSlot}
+                          className='text-xs bg-red-500 text-white p-1 rounded-full hover:bg-red-600 ml-2'>
+                          <BiTrash size={10} />
+                        </button>
                       </div>
                     ))
                   ) : (
@@ -932,10 +929,13 @@ export default function Calendar() {
                                   </span>
                                   <button
                                     onClick={() =>
-                                      handleDeleteTimeSlot(slot.id, slot)
+                                      handleDeleteTimeSlot(
+                                        slot.id,
+                                        `${slot.startTimeLabel} - ${slot.endTimeLabel}`
+                                      )
                                     }
                                     disabled={isDeletingSlot}
-                                    className='text-xs text-red-500 hover:text-red-700'>
+                                    className='text-xs bg-red-500 text-white p-1 rounded-full hover:bg-red-600'>
                                     <BiTrash size={10} />
                                   </button>
                                 </div>
