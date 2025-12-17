@@ -39,12 +39,14 @@
 //     </html>
 //   );
 // }
+
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Provider from "@/provider/Provider";
+
 import { Toaster } from "react-hot-toast";
 import Navbar from "@/components/Navbar";
 import SiteFooter from "@/components/SiteFooter";
+import AllProvider from "@/provider/AllProvider";
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -60,12 +62,15 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={inter.variable}>
       <body>
-        <Provider>
-          <Toaster />
+    
+      <AllProvider>
+
+            <Toaster />
           <Navbar />
           {children}
           <SiteFooter />
-        </Provider>
+
+      </AllProvider>
       </body>
     </html>
   );

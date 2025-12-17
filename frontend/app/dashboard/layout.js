@@ -1,6 +1,6 @@
 import Sidebar from "@/components/dashboard/Sidebar";
 import Topbar from "@/components/dashboard/Topbar";
-import Provider from "@/provider/Provider";
+import Provider from "@/provider/AllProvider";
 import { Toaster } from "react-hot-toast";
 
 export const metadata = {

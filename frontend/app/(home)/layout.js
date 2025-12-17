@@ -1,6 +1,8 @@
 // import { Geist, Geist_Mono } from "next/font/google";
 // import "../globals.css";
 
+import AllProvider from "@/provider/AllProvider";
+
 // const geistSans = Geist({
 //   variable: "--font-geist-sans",
 //   subsets: ["latin"],
@@ -33,7 +35,9 @@
 export default function HomeLayout({ children }) {
   return (
     <div className="home-layout">
-      {children}
+<AllProvider>
+        {children}
+</AllProvider>
     </div>
   );
 }
