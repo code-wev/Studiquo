@@ -19,7 +19,7 @@ export default function Navbar() {
 
   const { data: profile } = useMyProfileQuery();
   const user = profile?.data?.user;
-  console.log(user, "User data");
+
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -52,7 +52,7 @@ export default function Navbar() {
     } else if (user?.role === "Tutor") {
       dashboardUrl = "/dashboard/tutor/";
     } else if (user?.role === "Student") {
-      dashboardUrl = "/student/dashboard";
+      dashboardUrl = "/dashboard/student/upcoming-class";
     } else if (user?.role === "Parent"){
            dashboardUrl = "/dashboard/parent/payment-history";
     }
@@ -136,9 +136,9 @@ export default function Navbar() {
                 className='flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200'
               >
                 {/* Avatar */}
-                <div className='w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold'>
+    {    user?.avatar ?     <Image src={user?.avatar} alt="profile" width={30} height={30} className="rounded-full "/> :        <div className='w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold'>
                   {getUserInitials()}
-                </div>
+                </div>}
                 
                 {/* User Name and Arrow */}
                 <div className='flex flex-col items-start'>
@@ -262,7 +262,9 @@ export default function Navbar() {
                   {/* User Info */}
                   <div className='flex items-center space-x-3 p-3 bg-gray-50 rounded-lg'>
                     <div className='w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold'>
-                      {getUserInitials()}
+    {    user?.avatar ?     <Image src={user?.avatar} alt="profile" width={64} height={64} className="rounded-full "/> :        <div className='w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold'>
+                  {getUserInitials()}
+                </div>}
                     </div>
                     <div>
                       <p className='font-medium text-gray-700'>
