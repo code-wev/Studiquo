@@ -18,9 +18,6 @@ export class TimeSlot extends Document {
   @Prop({ required: true, enum: ['ONE_TO_ONE', 'GROUP'], default: 'GROUP' })
   type: string;
 
-  @Prop({ default: false })
-  isBooked: boolean;
-
   @Prop()
   meetLink: string;
 }

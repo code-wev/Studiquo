@@ -16,11 +16,55 @@ export class PaymentsService {
     currency: string = 'usd',
     metadata?: Record<string, string>,
   ) {
+    // eru payment intent
     return await this.stripe.paymentIntents.create({
-      amount: amount * 100, // Stripe expects amount in cents
+      amount: Math.round(amount * 100), // amount in cents
       currency,
       metadata,
     });
+  }
+
+  async createCheckoutSession(options: {
+    amount: number;
+    currency?: string;
+    successUrl: string;
+    cancelUrl: string;
+    metadata?: Record<string, string>;
+    customerEmail?: string;
+    description?: string;
+  }) {
+    const {
+      amount,
+      currency = 'eur',
+      successUrl,
+      cancelUrl,
+      metadata,
+      customerEmail,
+      description,
+    } = options;
+
+    const session = await this.stripe.checkout.sessions.create({
+      payment_method_types: ['card'],
+      mode: 'payment',
+      line_items: [
+        {
+          price_data: {
+            currency,
+            product_data: {
+              name: description || 'Lesson booking',
+            },
+            unit_amount: Math.round(amount * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata,
+      customer_email: customerEmail,
+    });
+
+    return session;
   }
 
   async constructEvent(

@@ -106,6 +106,29 @@ export class PaymentsController {
         }
         break;
       }
+      case 'checkout.session.completed': {
+        // Handle Checkout Session completion
+        this.logger.log('Checkout session completed:', event.data.object.id);
+        const bookingId = event.data.object.metadata?.bookingId;
+        if (bookingId) {
+          try {
+            await this.bookingModel.findByIdAndUpdate(
+              bookingId,
+              { status: 'SCHEDULED' },
+              { new: true },
+            );
+            this.logger.log(
+              `Booking ${bookingId} updated to SCHEDULED via Checkout`,
+            );
+          } catch (e: any) {
+            this.logger.error(
+              'Failed to update booking status from checkout',
+              e.message,
+            );
+          }
+        }
+        break;
+      }
       default:
         this.logger.log(`Unhandled event type ${event.type}`);
     }

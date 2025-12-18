@@ -2,6 +2,16 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { jwtConfig } from 'common/jwt.config';
+import { TimeSlot, TimeSlotSchema } from 'src/models/timeSlot.model';
+import {
+  TutorAvailability,
+  TutorAvailabilitySchema,
+} from 'src/models/tutorAvailability.model';
+import {
+  TutorProfile,
+  TutorProfileSchema,
+} from 'src/models/tutorProfile.model';
+import { PaymentsModule } from 'src/payments/payments.module';
 import { Booking, BookingSchema } from '../models/booking.model';
 import {
   BookingStudents,
@@ -17,8 +27,13 @@ import { BookingsService } from './bookings.service';
       { name: Booking.name, schema: BookingSchema },
       { name: BookingStudents.name, schema: BookingStudentsSchema },
       { name: LessonReport.name, schema: LessonReportSchema },
+      { name: TimeSlot.name, schema: TimeSlotSchema },
+      { name: TutorAvailability.name, schema: TutorAvailabilitySchema },
+      { name: TutorProfile.name, schema: TutorProfileSchema },
     ]),
     JwtModule.register(jwtConfig),
+    // PaymentsModule provides PaymentsService used during booking creation
+    PaymentsModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService],
