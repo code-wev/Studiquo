@@ -2,6 +2,10 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { jwtConfig } from 'common/jwt.config';
+import {
+  TutorProfile,
+  TutorProfileSchema,
+} from 'src/models/tutorProfile.model';
 import { TimeSlot, TimeSlotSchema } from '../models/timeSlot.model';
 import {
   TutorAvailability,
@@ -22,6 +26,7 @@ import { AvailabilityService } from './availability.service';
     MongooseModule.forFeature([
       { name: TutorAvailability.name, schema: TutorAvailabilitySchema },
       { name: TimeSlot.name, schema: TimeSlotSchema },
+      { name: TutorProfile.name, schema: TutorProfileSchema },
     ]),
     JwtModule.register(jwtConfig),
   ],
