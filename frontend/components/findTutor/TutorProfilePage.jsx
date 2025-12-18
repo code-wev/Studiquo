@@ -4,7 +4,7 @@ import React from "react";
 import { FaStar, FaRegStar, FaHeart, FaRegComment } from "react-icons/fa";
 import teacherImg from "@/public/hiw/teacher.png";
 import profile from "@/public/hiw/proflie.png";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { FiSend } from "react-icons/fi";
 
 const TutorProfilePage = () => {
@@ -40,6 +40,9 @@ const TutorProfilePage = () => {
   ];
 
   const router = useRouter();
+  const params = useParams();
+  const id = params.id;
+
 
   return (
     <section className="bg-[#F5F5F7]">
@@ -81,7 +84,7 @@ const TutorProfilePage = () => {
               <div className="flex gap-2 mt-4">
                 <button
                   onClick={() => {
-                    router.push("/book-now/34");
+                    router.push(`/book-now/${id}`);
                   }}
                   className="flex-1 cursor-pointer bg-purple-200 hover:bg-purple-300 text-purple-800 py-2 rounded-md font-medium transition"
                 >
