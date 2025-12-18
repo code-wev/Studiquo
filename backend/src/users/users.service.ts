@@ -53,11 +53,15 @@ export class UsersService extends BaseService<User> {
     let profile: any = null;
 
     if (user.role === UserRole.Tutor) {
-      profile = await this.tutorProfileModel.findOne({ user: userId }).lean();
+      profile = await this.tutorProfileModel
+        .findOne({ user: new Types.ObjectId(userId) })
+        .lean();
     }
 
     if (user.role === UserRole.Student) {
-      profile = await this.studentProfileModel.findOne({ user: userId }).lean();
+      profile = await this.studentProfileModel
+        .findOne({ user: new Types.ObjectId(userId) })
+        .lean();
     }
 
     return { message: 'User profile retrieved successfully', user, profile };
