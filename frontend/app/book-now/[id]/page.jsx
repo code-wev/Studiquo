@@ -34,6 +34,14 @@ export default function Page() {
   // Time slots state
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
 
+  const tutorData = availabilityData?.data?.tutor;
+
+  // Pricing - Fixed for all sessions
+  const PRICE = tutorData?.hourlyRate;
+  const PLATFORM_FEE_PERCENTAGE = 20;
+  const platformFee = (PRICE * PLATFORM_FEE_PERCENTAGE) / 100;
+  const totalPrice = PRICE + platformFee;
+
   // Initialize with today's date
   useEffect(() => {
     if (availabilityData?.data?.availabilities) {
@@ -315,7 +323,7 @@ export default function Page() {
         selectedDate
       )}\nTime: ${formatTimeDisplay(selectedTimeSlot)}\nType: ${
         selectedTimeSlot.type === "ONE_TO_ONE" ? "One-to-One" : "Group"
-      }`
+      }\nTotal: $${totalPrice.toFixed(2)}`
     );
   };
 
@@ -583,16 +591,18 @@ export default function Page() {
             <div className='flex items-center gap-3 mb-6'>
               <Image
                 src={tutorInfo?.avatar || prfImage}
-                alt={tutorInfo?.id?.[0]?.firstName || "Tutor"}
+                alt={tutorInfo?.name || "Tutor"}
                 width={48}
                 height={48}
                 className='w-12 h-12 rounded-full object-cover'
               />
               <div className='flex-1'>
                 <p className='font-semibold text-gray-900 text-sm'>
-                  {tutorInfo?.id?.[0]?.firstName} {tutorInfo?.id?.[0]?.lastName}
+                  {tutorInfo?.name}
                 </p>
-                <p className='text-xs text-gray-500'>Mathematics Expert</p>
+                <p className='text-xs text-gray-500'>
+                  {tutorInfo?.subjects?.join(", ")}
+                </p>
                 <div className='flex items-center gap-1 mt-1'>
                   <span className='text-yellow-400 text-xs'>★★★★★</span>
                   <span className='text-xs text-gray-500'>
@@ -690,38 +700,20 @@ export default function Page() {
               </div>
             )}
 
-            {/* Pricing - You might want to adjust this based on your pricing logic */}
+            {/* Pricing - Fixed for all session types */}
             <div className='py-4 space-y-2'>
               <div className='flex justify-between text-sm text-gray-700'>
-                <p>Price</p>
-                <p>
-                  {selectedTimeSlot?.type === "ONE_TO_ONE"
-                    ? "$120.00"
-                    : selectedTimeSlot?.type === "GROUP"
-                    ? "$80.00"
-                    : "$0.00"}
-                </p>
+                <p>Session Price</p>
+                <p>${PRICE.toFixed(2)}</p>
               </div>
               <div className='flex justify-between text-sm text-gray-700'>
-                <p>Platform fee(20%)</p>
-                <p>
-                  {selectedTimeSlot?.type === "ONE_TO_ONE"
-                    ? "$24.00"
-                    : selectedTimeSlot?.type === "GROUP"
-                    ? "$16.00"
-                    : "$0.00"}
-                </p>
+                <p>Platform fee ({PLATFORM_FEE_PERCENTAGE}%)</p>
+                <p>${platformFee.toFixed(2)}</p>
               </div>
 
               <div className='flex justify-between font-semibold text-lg mt-3 pt-3 border-t border-gray-100'>
                 <p className='text-gray-900'>Total</p>
-                <p className='text-orange-500'>
-                  {selectedTimeSlot?.type === "ONE_TO_ONE"
-                    ? "$144.00"
-                    : selectedTimeSlot?.type === "GROUP"
-                    ? "$96.00"
-                    : "$0.00"}
-                </p>
+                <p className='text-orange-500'>${totalPrice.toFixed(2)}</p>
               </div>
             </div>
 

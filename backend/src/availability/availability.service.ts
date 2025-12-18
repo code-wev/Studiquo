@@ -416,20 +416,21 @@ export class AvailabilityService {
    * Return all available time slots for a given tutor, grouped by date.
    *
    * @param tutorId - ID of the tutor (user)
-   * @returns Array of objects with date and corresponding slots
+   * @returns Tutor availability with profile + rating
    */
   async getTutorAvailability(tutorId: MongoIdDto['id']) {
-    // Only return availability for the running (current) month (UTC)
     const now = new Date();
+
     const startOfMonth = new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
     );
+
     const startOfNextMonth = new Date(
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
     );
 
     const result = await this.availabilityModel.aggregate([
-      // Match tutor + month
+      /* ---------------- Match tutor & month ---------------- */
       {
         $match: {
           user: new Types.ObjectId(tutorId),
@@ -437,7 +438,7 @@ export class AvailabilityService {
         },
       },
 
-      // Lookup user info
+      /* ---------------- User lookup ---------------- */
       {
         $lookup: {
           from: 'users',
@@ -446,24 +447,40 @@ export class AvailabilityService {
           as: 'user',
         },
       },
+      {
+        $unwind: {
+          path: '$user',
+          preserveNullAndEmptyArrays: false,
+        },
+      },
 
-      // Lookup tutor profile
+      /* ---------------- Tutor profile lookup ---------------- */
       {
         $lookup: {
-          from: 'tutorprofiles',
-          localField: 'user',
+          from: 'tutorprofiles', // ✅ correct collection name
+          localField: 'user._id',
           foreignField: 'user',
           as: 'tutorProfile',
         },
       },
+      {
+        $unwind: {
+          path: '$tutorProfile',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
 
-      // Lookup reviews for rating stats
+      /* ---------------- Rating aggregation ---------------- */
       {
         $lookup: {
           from: 'reviews',
-          let: { tutorId: '$user' },
+          let: { tutorId: '$user._id' },
           pipeline: [
-            { $match: { $expr: { $eq: ['$tutor', '$$tutorId'] } } },
+            {
+              $match: {
+                $expr: { $eq: ['$tutor', '$$tutorId'] },
+              },
+            },
             {
               $group: {
                 _id: null,
@@ -476,16 +493,22 @@ export class AvailabilityService {
         },
       },
 
-      // Join time slots
+      /* ---------------- Time slots ---------------- */
       {
         $lookup: {
           from: 'timeslots',
-          let: { availabilityId: '$_id' },
+          let: {
+            availabilityId: '$_id',
+            subjects: '$tutorProfile.subjects',
+          },
           pipeline: [
             {
               $match: {
                 $expr: {
-                  $and: [{ $eq: ['$tutorAvailability', '$$availabilityId'] }],
+                  $and: [
+                    { $eq: ['$tutorAvailability', '$$availabilityId'] },
+                    { $in: ['$subject', '$$subjects'] },
+                  ],
                 },
               },
             },
@@ -495,18 +518,23 @@ export class AvailabilityService {
         },
       },
 
-      // Group by tutor to get single tutor info
+      /* ---------------- Group by tutor ---------------- */
       {
         $group: {
-          _id: '$user',
-          user: { $first: { $arrayElemAt: ['$user', 0] } },
-          tutorProfile: { $first: { $arrayElemAt: ['$tutorProfile', 0] } },
-          ratingStats: { $first: { $arrayElemAt: ['$ratingStats', 0] } },
+          _id: '$user._id',
+          user: { $first: '$user' },
+          tutorProfile: { $first: '$tutorProfile' },
+          ratingStats: {
+            $first: { $arrayElemAt: ['$ratingStats', 0] },
+          },
           availabilities: {
             $push: {
               availabilityId: '$_id',
               date: {
-                $dateToString: { format: '%Y-%m-%d', date: '$date' },
+                $dateToString: {
+                  format: '%Y-%m-%d',
+                  date: '$date',
+                },
               },
               slots: '$slots',
             },
@@ -514,24 +542,31 @@ export class AvailabilityService {
         },
       },
 
-      // Format output
+      /* ---------------- Final shape ---------------- */
       {
         $project: {
           _id: 0,
           tutor: {
-            id: '$_id',
-            name: '$user.firstName $user.lastName',
+            id: '$user._id',
+            name: {
+              $concat: ['$user.firstName', ' ', '$user.lastName'],
+            },
             avatar: '$user.avatar',
             subjects: '$tutorProfile.subjects',
-            averageRating: { $ifNull: ['$ratingStats.averageRating', 0] },
-            totalRatings: { $ifNull: ['$ratingStats.totalRatings', 0] },
+            hourlyRate: '$tutorProfile.hourlyRate',
+            averageRating: {
+              $ifNull: ['$ratingStats.averageRating', 0],
+            },
+            totalRatings: {
+              $ifNull: ['$ratingStats.totalRatings', 0],
+            },
           },
           availabilities: 1,
         },
       },
     ]);
 
-    if (result.length === 0) {
+    if (!result.length) {
       return {
         message: 'Tutor availability retrieved successfully',
         tutor: null,
@@ -541,7 +576,7 @@ export class AvailabilityService {
 
     const data = result[0];
 
-    // Add AM/PM labels to slots
+    /* ---------------- Format time labels ---------------- */
     data.availabilities = data.availabilities.map((day) => ({
       ...day,
       slots: day.slots.map((s) => ({

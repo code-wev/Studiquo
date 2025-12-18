@@ -12,11 +12,7 @@ export class Booking extends Document {
   @Prop({ required: true, enum: ['ONE_TO_ONE', 'GROUP'], default: 'GROUP' })
   type: string;
 
-  @Prop({
-    required: true,
-    enum: ['SCHEDULED', 'CANCELLED', 'COMPLETED'],
-    default: 'SCHEDULED',
-  })
+  @Prop({ required: true, enum: ['SCHEDULED', 'CANCELLED', 'COMPLETED'] })
   status: string;
 }
 

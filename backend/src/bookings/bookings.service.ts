@@ -34,27 +34,27 @@ export class BookingsService {
     return booking;
   }
 
-  async updateBookingStatus(bookingId: string, status: string) {
-    return this.bookingModel.findByIdAndUpdate(
-      bookingId,
-      { status },
-      { new: true },
-    );
-  }
+  // async updateBookingStatus(bookingId: string, status: string) {
+  //   return this.bookingModel.findByIdAndUpdate(
+  //     bookingId,
+  //     { status },
+  //     { new: true },
+  //   );
+  // }
 
-  async getMyBookings(user: any) {
-    const bookings = await this.bookingStudentsModel
-      .find({ student: user.userId })
-      .populate('booking');
-    return bookings.map((b) => b.booking);
-  }
+  // async getMyBookings(user: any) {
+  //   const bookings = await this.bookingStudentsModel
+  //     .find({ student: user.userId })
+  //     .populate('booking');
+  //   return bookings.map((b) => b.booking);
+  // }
 
-  async getMySchedule(user: any) {
-    // Find bookings where user is tutor (stub)
-    return [];
-  }
+  // async getMySchedule(user: any) {
+  //   // Find bookings where user is tutor (stub)
+  //   return [];
+  // }
 
-  async getBookingDetails(bookingId: string) {
-    return this.bookingModel.findById(bookingId);
-  }
+  // async getBookingDetails(bookingId: string) {
+  //   return this.bookingModel.findById(bookingId);
+  // }
 }

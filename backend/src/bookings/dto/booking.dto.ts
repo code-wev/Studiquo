@@ -1,7 +1,7 @@
-import { IsDateString, IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { IsEnum, IsMongoId, IsNotEmpty, IsString } from 'class-validator';
 
 export class CreateBookingDto {
-  @IsString({ message: 'Time slot id must be a string' })
+  @IsMongoId({ message: 'Tutor ID must be a valid Mongo ID' })
   @IsNotEmpty({ message: 'Time slot is required' })
   timeSlot: string;
 
@@ -10,10 +10,6 @@ export class CreateBookingDto {
     message: 'Subject must be one of MATH|SCIENCE|ENGLISH',
   })
   subject: string;
-
-  @IsDateString()
-  @IsNotEmpty({ message: 'Date is required and must be a valid date string' })
-  date: string;
 
   @IsString({ message: 'Type must be a string' })
   @IsEnum(['ONE_TO_ONE', 'GROUP'], {

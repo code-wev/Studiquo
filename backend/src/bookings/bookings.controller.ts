@@ -1,14 +1,10 @@
 import {
   Body,
   Controller,
-  Get,
-  Param,
   Post,
-  Put,
-  UseGuards,
+  UseGuards
 } from '@nestjs/common';
 import { GetUser } from 'common/decorators/get-user.decorator';
-import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { UserRole } from 'src/models/user.model';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -27,32 +23,33 @@ export class BookingsController {
     return this.bookingsService.createBooking(user, dto);
   }
 
-  @Put(':bookingId/cancel')
-  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Admin)
-  async cancelBooking(@Param('bookingId') bookingId: MongoIdDto['id']) {
-    return this.bookingsService.updateBookingStatus(bookingId, 'CANCELLED');
-  }
-  @Put(':bookingId/complete')
-  @Roles(UserRole.Tutor, UserRole.Admin)
-  async completeBooking(@Param('bookingId') bookingId: MongoIdDto['id']) {
-    return this.bookingsService.updateBookingStatus(bookingId, 'COMPLETED');
-  }
+  // @Put(':bookingId/cancel')
+  // @Roles(UserRole.Student, UserRole.Tutor, UserRole.Admin)
+  // async cancelBooking(@Param('bookingId') bookingId: MongoIdDto['id']) {
+  //   return this.bookingsService.updateBookingStatus(bookingId, 'CANCELLED');
+  // }
 
-  @Get('my-bookings')
-  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
-  async myBookings(@GetUser() user: any) {
-    return this.bookingsService.getMyBookings(user);
-  }
+  // @Put(':bookingId/complete')
+  // @Roles(UserRole.Tutor, UserRole.Admin)
+  // async completeBooking(@Param('bookingId') bookingId: MongoIdDto['id']) {
+  //   return this.bookingsService.updateBookingStatus(bookingId, 'COMPLETED');
+  // }
 
-  @Get('my-schedule')
-  @Roles(UserRole.Tutor, UserRole.Admin)
-  async mySchedule(@GetUser() user: any) {
-    return this.bookingsService.getMySchedule(user);
-  }
+  // @Get('my-bookings')
+  // @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent)
+  // async myBookings(@GetUser() user: any) {
+  //   return this.bookingsService.getMyBookings(user);
+  // }
 
-  @Get(':bookingId')
-  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
-  async bookingDetails(@Param('bookingId') bookingId: MongoIdDto['id']) {
-    return this.bookingsService.getBookingDetails(bookingId);
-  }
+  // @Get('my-schedule')
+  // @Roles(UserRole.Tutor)
+  // async mySchedule(@GetUser() user: any) {
+  //   return this.bookingsService.getMySchedule(user);
+  // }
+
+  // @Get(':bookingId')
+  // @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent)
+  // async bookingDetails(@Param('bookingId') bookingId: MongoIdDto['id']) {
+  //   return this.bookingsService.getBookingDetails(bookingId);
+  // }
 }
