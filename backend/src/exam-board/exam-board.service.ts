@@ -22,7 +22,9 @@ export class ExamBoardService {
    * @returns the updated student profile
    */
   async addOrUpdateExamBoard(userId: string, dto: CreateExamBoardDto) {
-    let profile = await this.studentProfileModel.findOne({ user: userId });
+    let profile = await this.studentProfileModel.findOne({
+      user: new Types.ObjectId(userId),
+    });
     if (!profile) {
       profile = new this.studentProfileModel({
         user: new Types.ObjectId(userId),
@@ -57,7 +59,9 @@ export class ExamBoardService {
    * @returns the list of exam boards
    */
   async getExamBoards(userId: string) {
-    const profile = await this.studentProfileModel.findOne({ user: userId });
+    const profile = await this.studentProfileModel.findOne({
+      user: new Types.ObjectId(userId),
+    });
     if (!profile) {
       throw new NotFoundException('Student profile not found');
     }

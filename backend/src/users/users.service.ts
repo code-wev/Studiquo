@@ -196,7 +196,7 @@ export class UsersService extends BaseService<User> {
     // Add child (no duplicates)
     await this.model.updateOne(
       { _id: parent._id },
-      { $addToSet: { children: student._id } },
+      { $addToSet: { children: new Types.ObjectId(student._id) } },
     );
 
     return {
