@@ -428,12 +428,51 @@ export class AvailabilityService {
       Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
     );
 
-    const availability = await this.availabilityModel.aggregate([
+    const result = await this.availabilityModel.aggregate([
       // Match tutor + month
       {
         $match: {
           user: new Types.ObjectId(tutorId),
           date: { $gte: startOfMonth, $lt: startOfNextMonth },
+        },
+      },
+
+      // Lookup user info
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+
+      // Lookup tutor profile
+      {
+        $lookup: {
+          from: 'tutorprofiles',
+          localField: 'user',
+          foreignField: 'user',
+          as: 'tutorProfile',
+        },
+      },
+
+      // Lookup reviews for rating stats
+      {
+        $lookup: {
+          from: 'reviews',
+          let: { tutorId: '$user' },
+          pipeline: [
+            { $match: { $expr: { $eq: ['$tutor', '$$tutorId'] } } },
+            {
+              $group: {
+                _id: null,
+                averageRating: { $avg: '$rating' },
+                totalRatings: { $sum: 1 },
+              },
+            },
+          ],
+          as: 'ratingStats',
         },
       },
 
@@ -456,27 +495,55 @@ export class AvailabilityService {
         },
       },
 
-      // Format output
+      // Group by tutor to get single tutor info
       {
-        $project: {
-          _id: 1,
-          date: {
-            $dateToString: { format: '%Y-%m-%d', date: '$date' },
+        $group: {
+          _id: '$user',
+          user: { $first: { $arrayElemAt: ['$user', 0] } },
+          tutorProfile: { $first: { $arrayElemAt: ['$tutorProfile', 0] } },
+          ratingStats: { $first: { $arrayElemAt: ['$ratingStats', 0] } },
+          availabilities: {
+            $push: {
+              availabilityId: '$_id',
+              date: {
+                $dateToString: { format: '%Y-%m-%d', date: '$date' },
+              },
+              slots: '$slots',
+            },
           },
-          slots: 1,
         },
       },
 
-      // Sort by date
+      // Format output
       {
-        $sort: { date: 1 },
+        $project: {
+          _id: 0,
+          tutor: {
+            id: '$_id',
+            name: '$user.firstName $user.lastName',
+            avatar: '$user.avatar',
+            subjects: '$tutorProfile.subjects',
+            averageRating: { $ifNull: ['$ratingStats.averageRating', 0] },
+            totalRatings: { $ifNull: ['$ratingStats.totalRatings', 0] },
+          },
+          availabilities: 1,
+        },
       },
     ]);
 
-    // Add AM/PM labels
-    const formatted = availability.map((day) => ({
-      availabilityId: day._id,
-      date: day.date,
+    if (result.length === 0) {
+      return {
+        message: 'Tutor availability retrieved successfully',
+        tutor: null,
+        availabilities: [],
+      };
+    }
+
+    const data = result[0];
+
+    // Add AM/PM labels to slots
+    data.availabilities = data.availabilities.map((day) => ({
+      ...day,
       slots: day.slots.map((s) => ({
         id: s._id,
         type: s.type,
@@ -492,7 +559,8 @@ export class AvailabilityService {
 
     return {
       message: 'Tutor availability retrieved successfully',
-      availabilities: formatted,
+      tutor: data.tutor,
+      availabilities: data.availabilities,
     };
   }
 }
