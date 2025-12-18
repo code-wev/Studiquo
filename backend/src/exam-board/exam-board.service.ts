@@ -22,32 +22,44 @@ export class ExamBoardService {
    * @returns the updated student profile
    */
   async addOrUpdateExamBoard(userId: string, dto: CreateExamBoardDto) {
-    let profile = await this.studentProfileModel.findOne({
-      user: new Types.ObjectId(userId),
-    });
-    if (!profile) {
-      profile = new this.studentProfileModel({
+    // Try updating existing subject
+    const updated = await this.studentProfileModel.findOneAndUpdate(
+      {
         user: new Types.ObjectId(userId),
-      });
-    }
-    const existingEntryIndex = profile.examBoards.findIndex(
-      (entry) => entry.subject === dto.subject,
+        'examBoards.subject': dto.subject,
+      },
+      {
+        $set: {
+          'examBoards.$.board': dto.board,
+        },
+      },
+      { new: true },
     );
-    if (existingEntryIndex >= 0) {
-      // Update existing entry
-      profile.examBoards[existingEntryIndex].board = dto.board;
-    } else {
-      // Add new entry
-      profile.examBoards.push(
-        new this.examBoardEntryModel({
-          subject: dto.subject,
-          board: dto.board,
-        }),
-      );
+
+    if (updated) {
+      return updated; // subject existed → board updated
     }
-    await profile.save();
+
+    //  Subject does not exist → push new entry
+    const profile = await this.studentProfileModel.findOneAndUpdate(
+      { user: new Types.ObjectId(userId) },
+      {
+        $push: {
+          examBoards: {
+            subject: dto.subject,
+            board: dto.board,
+          },
+        },
+      },
+      { new: true },
+    );
+
+    if (!profile) {
+      throw new NotFoundException('Student profile not found');
+    }
+
     return {
-      message: 'Exam board entry added/updated successfully',
+      message: 'Exam board entry added successfully',
       boards: profile.examBoards,
     };
   }
@@ -59,9 +71,11 @@ export class ExamBoardService {
    * @returns the list of exam boards
    */
   async getExamBoards(userId: string) {
-    const profile = await this.studentProfileModel.findOne({
-      user: new Types.ObjectId(userId),
-    });
+    const profile = await this.studentProfileModel
+      .findOne({
+        user: new Types.ObjectId(userId),
+      })
+      .select('examBoards');
     if (!profile) {
       throw new NotFoundException('Student profile not found');
     }
