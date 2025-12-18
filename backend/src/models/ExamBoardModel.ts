@@ -5,12 +5,16 @@ import { Document } from 'mongoose';
 export class ExamBoardEntry extends Document {
   @Prop({
     type: String,
-    enum: ['AQA', 'Pearson Edexcel', 'OCR', 'WJEC (Eduqas)', 'CCEA'],
+    enum: ['MATH', 'SCIENCE', 'ENGLISH'],
     required: true,
   })
   subject: string;
 
-  @Prop({ type: String, enum: ['MATH', 'SCIENCE', 'ENGLISH'], required: true })
+  @Prop({
+    type: String,
+    enum: ['AQA', 'Pearson Edexcel', 'OCR', 'WJEC (Eduqas)', 'CCEA'],
+    required: true,
+  })
   board: string;
 }
 
