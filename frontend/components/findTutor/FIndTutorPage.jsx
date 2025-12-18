@@ -1,5 +1,6 @@
 "use client";
 
+import { useGetTutorQuery } from "@/feature/shared/TutorApi";
 import image from "@/public/hiw/Logo.png";
 import Image from "next/image";
 import Link from "next/link";
@@ -36,6 +37,11 @@ const FIndTutorPage = () => {
   const [sort, setSort] = useState("");
   const [priceRange, setPriceRange] = useState([0, 100]);
   const [ratingFilter, setRatingFilter] = useState(0);
+  const {data:tutor} = useGetTutorQuery();
+    console.log(tutor?.data?.data, "You are my personal tutor");
+  
+    const tutors = tutor?.data?.data;
+  
 
   const filteredTutors = tutorsData
     .filter(
