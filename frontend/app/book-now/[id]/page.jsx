@@ -1,11 +1,17 @@
+'use client'
 import React from "react";
 import prfImage from "@/public/hiw/prf.png";
 import Image from "next/image";
 import { CiCalendar } from "react-icons/ci";
 import { MdAccessTime } from "react-icons/md";
 import { CgSandClock } from "react-icons/cg";
+import { useParams } from "next/navigation";
 
 export default function Page() {
+const params = useParams();
+const id = params?.id;
+console.log('Tutor Id --->', id);
+  
   return (
     <div className="w-full min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
       {/* Progress Steps */}

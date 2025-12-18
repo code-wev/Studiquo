@@ -72,7 +72,7 @@ export default function TutorsSection() {
                 {/* Image */}
                 <div className='w-full h-44 relative'>
                   <Image
-                    src={tutor.img}
+                    src={tutor?.user?.avatar}
                     alt={tutor.name}
                     fill
                     className='rounded-t-xl object-cover'

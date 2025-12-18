@@ -25,8 +25,8 @@ export const StudentApi = createApi({
         }),
         updateBoard: builder.mutation({
             query:(data)=>({
-                url:`/exam-board`,
-                method:"PUT",
+                url:'/exam-board',
+                method:"POST",
                 body:data
 
 

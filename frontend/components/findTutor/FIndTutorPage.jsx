@@ -8,29 +8,29 @@ import { useState } from "react";
 import { AiOutlineSearch } from "react-icons/ai";
 import { FaArrowRight, FaStar } from "react-icons/fa";
 
-const tutorsData = [
-  {
-    id: 1,
-    name: "Jenny Wilson",
-    subject: "Mathematics, English Expert",
-    description:
-      "Hello, I'm Abdullah. I'm a friendly and patient GCSE Maths tutor who loves helping students feel more confident with maths. I explain topics in a clear, simple way and make sure my students really understand before moving on. One of my students went from a grade 3 to a grade 6 in just two months, an...",
-    price: 24,
-    rating: 5,
-    image: image,
-  },
-  {
-    id: 2,
-    name: "Wade Warren",
-    subject: "Mathematics, English Expert",
-    description:
-      "Hello, I'm Abdullah. I'm a friendly and patient GCSE Maths tutor who loves helping students feel more confident with maths. I explain topics in a clear, simple way and make sure my students really understand before moving on. One of my students went from a grade 3 to a grade 6 in just two months, an...",
-    price: 24,
-    rating: 5,
-    image: image,
-  },
-  // add more tutors as needed
-];
+// const tutorsData = [
+//   {
+//     id: 1,
+//     name: "Jenny Wilson",
+//     subject: "Mathematics, English Expert",
+//     description:
+//       "Hello, I'm Abdullah. I'm a friendly and patient GCSE Maths tutor who loves helping students feel more confident with maths. I explain topics in a clear, simple way and make sure my students really understand before moving on. One of my students went from a grade 3 to a grade 6 in just two months, an...",
+//     price: 24,
+//     rating: 5,
+//     image: image,
+//   },
+//   {
+//     id: 2,
+//     name: "Wade Warren",
+//     subject: "Mathematics, English Expert",
+//     description:
+//       "Hello, I'm Abdullah. I'm a friendly and patient GCSE Maths tutor who loves helping students feel more confident with maths. I explain topics in a clear, simple way and make sure my students really understand before moving on. One of my students went from a grade 3 to a grade 6 in just two months, an...",
+//     price: 24,
+//     rating: 5,
+//     image: image,
+//   },
+//   // add more tutors as needed
+// ];
 
 const FIndTutorPage = () => {
   const [search, setSearch] = useState("");
@@ -38,24 +38,27 @@ const FIndTutorPage = () => {
   const [priceRange, setPriceRange] = useState([0, 100]);
   const [ratingFilter, setRatingFilter] = useState(0);
   const {data:tutor} = useGetTutorQuery();
-    console.log(tutor?.data?.data, "You are my personal tutor");
+
   
     const tutors = tutor?.data?.data;
+
+
+    console.log(tutors, "tutors is here, ");
   
 
-  const filteredTutors = tutorsData
-    .filter(
-      (tutor) =>
-        tutor.name.toLowerCase().includes(search.toLowerCase()) &&
-        tutor.price >= priceRange[0] &&
-        tutor.price <= priceRange[1] &&
-        tutor.rating >= ratingFilter
-    )
-    .sort((a, b) => {
-      if (sort === "price-asc") return a.price - b.price;
-      if (sort === "price-desc") return b.price - a.price;
-      return 0;
-    });
+  // const filteredTutors = tutorsData
+  //   .filter(
+  //     (tutor) =>
+  //       tutor.name.toLowerCase().includes(search.toLowerCase()) &&
+  //       tutor.price >= priceRange[0] &&
+  //       tutor.price <= priceRange[1] &&
+  //       tutor.rating >= ratingFilter
+  //   )
+  //   .sort((a, b) => {
+  //     if (sort === "price-asc") return a.price - b.price;
+  //     if (sort === "price-desc") return b.price - a.price;
+  //     return 0;
+  //   });
 
   const ratingsOptions = [
     { value: 5, label: "5 stars" },
@@ -208,31 +211,38 @@ const FIndTutorPage = () => {
 
             {/* Tutor Cards */}
             <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-              {filteredTutors.map((tutor) => (
+              {tutors?.map((tutor) => (
                 <div
                   key={tutor.id}
                   className='bg-white rounded-lg p-4 flex flex-col'>
-                  <div className='flex items-center gap-3 mb-2'>
+                  <div className='flex justify-between gap-3 mb-2'>
                     <div>
-                      <h4 className='font-semibold'>{tutor.name}</h4>
-                      <p className='text-gray-500 text-sm'>{tutor.subject}</p>
+                      <h4 className='font-semibold'>{tutor?.user?.firstName}</h4>
+                           <p className="text-gray-500 text-sm mb-2">
+  {tutor.subjects.map((s, index) => (
+    <span key={index}>
+      {s}
+      {index !== tutor.subjects.length - 1 && ", "}
+    </span>
+  ))}
+</p>
                     </div>
 
                     <Image
-                      src={tutor.image}
-                      alt={tutor.name}
+                      src={tutor.user?.avatar}
+                      alt={tutor?.user?.name}
                       width={300}
                       height={300}
                       className='w-12 h-12 rounded-full object-cover'
                     />
                   </div>
                   <p className='text-[#666666] leading-loose  mb-2 mt-4 line-clamp-4'>
-                    {tutor.description}
+                    {tutor?.user?.bio}
                   </p>
                   <p className='font-semibold text-[20px] mb-2 pt-6 pb-4'>
-                    ${tutor.price}
+                    ${tutor?.hourlyRate}
                   </p>
-                  <Link href={"/find-tutor/845"}>
+                  <Link href={`/find-tutor/${tutor?.user?._id}`}>
                     <button className='mt-auto max-w-35 cursor-pointer flex items-center gap-4  bg-[#CCB7F8]  py-2 whitespace-nowrap px-6 rounded text-[#3A0E95]'>
                       <span>Book Now</span>
                       <span>
