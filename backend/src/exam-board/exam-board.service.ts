@@ -86,11 +86,9 @@ export class ExamBoardService {
    * @returns the list of exam boards
    */
   async getExamBoards(userId: string) {
-    const profile = await this.studentProfileModel
-      .findOne({
-        user: new Types.ObjectId(userId),
-      })
-      .select('examBoards -_id');
+    const profile = await this.studentProfileModel.findOne({
+      user: new Types.ObjectId(userId),
+    });
 
     return {
       message: 'Exam board entries retrieved successfully',

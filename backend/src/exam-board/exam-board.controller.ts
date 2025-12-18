@@ -39,6 +39,6 @@ export class ExamBoardController {
    */
   @Get()
   async getExamBoards(@GetUser() user: any) {
-    return this.examBoardService.getExamBoards(user.sub);
+    return this.examBoardService.getExamBoards(user.userId);
   }
 }
