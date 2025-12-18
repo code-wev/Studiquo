@@ -63,57 +63,115 @@ export class TutorsService {
       limit = 10,
     } = query;
 
-    const tutorFilter: any = {};
+    const skip = (page - 1) * limit;
+
+    /** --------------------
+     * Tutor base filter
+     * -------------------*/
+    const tutorMatch: any = {};
 
     if (subject) {
-      tutorFilter.subjects = subject;
+      tutorMatch.subjects = subject;
     }
 
     if (maxHourlyRate !== undefined) {
-      tutorFilter.hourlyRate = { $lte: maxHourlyRate };
+      tutorMatch.hourlyRate = { $lte: maxHourlyRate };
     }
 
-    if (minRating !== undefined) {
-      tutorFilter.rating = { $gte: minRating };
-    }
+    /** --------------------
+     * User search filter
+     * -------------------*/
+    let userMatchStage: any = {};
 
     if (search) {
       const regex = new RegExp(search, 'i');
-
-      const users = await this.userModel
-        .find({
-          $or: [{ firstName: regex }, { lastName: regex }, { bio: regex }],
-        })
-        .select('_id')
-        .lean();
-
-      if (users.length === 0) {
-        return {
-          data: [],
-          meta: { total: 0, page, limit, totalPages: 0 },
-        };
-      }
-
-      tutorFilter.user = { $in: users.map((u) => u._id) };
+      userMatchStage = {
+        $or: [
+          { 'user.firstName': regex },
+          { 'user.lastName': regex },
+          { 'user.bio': regex },
+        ],
+      };
     }
 
-    const skip = (page - 1) * limit;
+    /** --------------------
+     * Aggregation Pipeline
+     * -------------------*/
+    const pipeline: any[] = [
+      { $match: tutorMatch },
 
-    const [data, total] = await Promise.all([
+      // Join user
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: '$user' },
+
+      // Apply search on user fields
+      ...(search ? [{ $match: userMatchStage }] : []),
+
+      // Join reviews
+      {
+        $lookup: {
+          from: 'reviews',
+          localField: 'user._id',
+          foreignField: 'tutor',
+          as: 'reviews',
+        },
+      },
+
+      // Calculate average rating
+      {
+        $addFields: {
+          averageRating: {
+            $cond: [
+              { $gt: [{ $size: '$reviews' }, 0] },
+              { $avg: '$reviews.rating' },
+              null,
+            ],
+          },
+          ratingCount: { $size: '$reviews' },
+        },
+      },
+
+      // Filter by minRating (after calculation)
+      ...(minRating !== undefined
+        ? [{ $match: { averageRating: { $gte: minRating } } }]
+        : []),
+
+      // Clean output
+      {
+        $project: {
+          reviews: 0,
+          'user.dbsLink': 0,
+          'user.referralSource': 0,
+          'user.password': 0,
+          'user.email': 0,
+        },
+      },
+    ];
+
+    /** --------------------
+     * Pagination + Count
+     * -------------------*/
+    const [data, totalResult] = await Promise.all([
       this.tutorProfileModel
-        .find(tutorFilter)
-        .populate({
-          path: 'user',
-          select: 'firstName lastName avatar bio',
-        })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+        .aggregate([...pipeline, { $skip: skip }, { $limit: limit }])
+        .exec(),
 
-      this.tutorProfileModel.countDocuments(tutorFilter),
+      this.tutorProfileModel
+        .aggregate([...pipeline, { $count: 'total' }])
+        .exec(),
     ]);
 
+    const total = totalResult[0]?.total || 0;
+
     return {
+      message: 'Tutors fetched successfully',
       data,
       meta: {
         total,
