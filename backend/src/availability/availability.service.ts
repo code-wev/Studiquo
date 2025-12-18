@@ -131,6 +131,7 @@ export class AvailabilityService {
     });
 
     await availability.deleteOne();
+
     return {
       message: 'Availability and associated time slots deleted successfully',
     };
