@@ -11,10 +11,15 @@ export class PaymentsService {
     });
   }
 
-  async createPaymentIntent(amount: number, currency: string = 'usd') {
+  async createPaymentIntent(
+    amount: number,
+    currency: string = 'usd',
+    metadata?: Record<string, string>,
+  ) {
     return await this.stripe.paymentIntents.create({
       amount: amount * 100, // Stripe expects amount in cents
       currency,
+      metadata,
     });
   }
 

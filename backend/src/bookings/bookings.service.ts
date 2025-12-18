@@ -17,7 +17,7 @@ export class BookingsService {
   ) {}
 
   async createBooking(user: any, dto: CreateBookingDto) {
-    const booking = new this.bookingModel({ ...dto, status: 'SCHEDULED' });
+    const booking = new this.bookingModel({ ...dto, status: 'PENDING' });
     await booking.save();
     const bookingStudent = new this.bookingStudentsModel({
       booking: booking._id,
