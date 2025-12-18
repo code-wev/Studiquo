@@ -1,4 +1,6 @@
 "use client";
+
+import { useGetTutorAvailabilityQuery } from "@/feature/shared/AvailabilityApi";
 import prfImage from "@/public/hiw/prf.png";
 import Image from "next/image";
 import { useParams } from "next/navigation";
@@ -12,48 +14,67 @@ export default function Page() {
   const id = params?.id;
   console.log("Tutor Id --->", id);
 
+  // Booking type state - "single" or "group"
+  const [bookingType, setBookingType] = useState("single");
+
+  // Fetch tutor availability data
+  const {
+    data: availabilityData,
+    isLoading,
+    isError,
+  } = useGetTutorAvailabilityQuery(id);
+
   // Calendar state
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
   const [calendarDays, setCalendarDays] = useState([]);
-  const [randomAvailability, setRandomAvailability] = useState({});
+  const [availabilityMap, setAvailabilityMap] = useState({});
 
   // Time slots state
-  const [selectedTimeSlots, setSelectedTimeSlots] = useState([
-    "12:00pm – 02:00pm",
-  ]);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
 
   // Initialize with today's date
   useEffect(() => {
-    setSelectedDate(new Date());
-    generateCalendarDays(currentDate);
-  }, [currentDate]);
-
-  // Generate random availability for the days in the current month (for demo)
-  useEffect(() => {
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startDay = new Date(firstDay);
-    startDay.setDate(startDay.getDate() - firstDay.getDay());
-    const endDay = new Date(lastDay);
-    endDay.setDate(endDay.getDate() + (6 - lastDay.getDay()));
-
-    const availability = {};
-    const currentDay = new Date(startDay);
-
-    while (currentDay <= endDay) {
-      const key = currentDay.toDateString();
-      // Only generate once per month view
-      availability[key] = Math.random() > 0.3;
-      currentDay.setDate(currentDay.getDate() + 1);
+    if (availabilityData?.data?.availabilities) {
+      processAvailabilityData();
+      setSelectedDate(new Date());
+      generateCalendarDays(currentDate);
     }
-    setRandomAvailability(availability);
-  }, [currentDate]);
+  }, [availabilityData, currentDate]);
+
+  // Process availability data from API
+  const processAvailabilityData = () => {
+    if (!availabilityData?.data?.availabilities) return;
+
+    const map = {};
+
+    availabilityData.data.availabilities.forEach((availability) => {
+      const dateKey = availability.date; // "2025-12-20"
+
+      // Filter available slots (isBooked: false) and by type
+      const availableSlots = availability.slots.filter(
+        (slot) =>
+          !slot.isBooked &&
+          (bookingType === "single"
+            ? slot.type === "ONE_TO_ONE"
+            : slot.type === "GROUP")
+      );
+
+      if (availableSlots.length > 0) {
+        map[dateKey] = {
+          hasSlots: true,
+          slots: availableSlots,
+        };
+      }
+    });
+
+    setAvailabilityMap(map);
+  };
 
   // Generate calendar days for the current month
   const generateCalendarDays = (date) => {
+    if (!availabilityData?.data?.availabilities) return;
+
     const year = date.getFullYear();
     const month = date.getMonth();
 
@@ -78,11 +99,13 @@ export default function Page() {
       const isToday = isSameDay(day, new Date());
       const isSelected = selectedDate && isSameDay(day, selectedDate);
 
-      // Use pre-generated random availability for demo
-      const hasAvailableSlots = randomAvailability[day.toDateString()] ?? false;
+      // Format date as YYYY-MM-DD to match API response
+      const dateKey = formatDateKey(day);
+      const hasAvailableSlots = availabilityMap[dateKey]?.hasSlots || false;
 
       days.push({
         date: day,
+        dateKey: dateKey,
         dayNumber: day.getDate(),
         isCurrentMonth,
         isToday,
@@ -95,6 +118,14 @@ export default function Page() {
     }
 
     setCalendarDays(days);
+  };
+
+  // Format date as YYYY-MM-DD for API matching
+  const formatDateKey = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
   };
 
   // Check if two dates are the same day
@@ -124,18 +155,25 @@ export default function Page() {
   const handleDateSelect = (day) => {
     if (day.isCurrentMonth && day.hasAvailableSlots) {
       setSelectedDate(day.date);
+      // Clear selected time slot when changing date
+      setSelectedTimeSlot(null);
+    }
+  };
+
+  // Handle booking type change
+  const handleBookingTypeChange = (type) => {
+    setBookingType(type);
+    setSelectedTimeSlot(null);
+    // Reprocess availability data with new type
+    if (availabilityData?.data?.availabilities) {
+      processAvailabilityData();
+      generateCalendarDays(currentDate);
     }
   };
 
   // Handle time slot selection
-  const handleTimeSlotToggle = (timeSlot) => {
-    setSelectedTimeSlots((prev) => {
-      if (prev.includes(timeSlot)) {
-        return prev.filter((slot) => slot !== timeSlot);
-      } else {
-        return [...prev, timeSlot];
-      }
-    });
+  const handleTimeSlotSelect = (slot) => {
+    setSelectedTimeSlot(slot);
   };
 
   // Format date for display
@@ -156,21 +194,91 @@ export default function Page() {
     return date.toLocaleDateString("en-US", options);
   };
 
-  // Available time slots (could be fetched from API)
-  const availableTimeSlots = [
-    "08:00am – 10:00am",
-    "10:00am – 12:00pm",
-    "12:00pm – 02:00pm",
-    "02:00pm – 04:00pm",
-    "04:00pm – 06:00pm",
-    "06:00pm – 08:00pm",
-  ];
-
   // Get day name abbreviation
   const getDayAbbreviation = (index) => {
     const days = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
     return days[index];
   };
+
+  // Calculate duration from time slot
+  const calculateDuration = (startTime, endTime) => {
+    if (!startTime || !endTime) return "0 hours";
+
+    try {
+      const start = new Date(startTime);
+      const end = new Date(endTime);
+      const durationMs = end - start;
+      const durationHours = durationMs / (1000 * 60 * 60);
+
+      return `${durationHours} hour${durationHours !== 1 ? "s" : ""}`;
+    } catch (error) {
+      console.error("Error calculating duration:", error);
+      return "0 hours";
+    }
+  };
+
+  // Format time for display
+  const formatTimeDisplay = (slot) => {
+    if (!slot) return "";
+    return `${slot.startTimeLabel} - ${slot.endTimeLabel}`;
+  };
+
+  // Get available slots for selected date
+  const getAvailableSlotsForSelectedDate = () => {
+    if (!selectedDate) return [];
+
+    const dateKey = formatDateKey(selectedDate);
+    return availabilityMap[dateKey]?.slots || [];
+  };
+
+  // Handle confirm booking
+  const handleConfirmBooking = () => {
+    if (!selectedDate || !selectedTimeSlot) return;
+
+    console.log("Booking details:", {
+      tutorId: id,
+      date: selectedDate,
+      slot: selectedTimeSlot,
+      bookingType: bookingType,
+    });
+
+    // Here you would typically:
+    // 1. Make API call to book the slot
+    // 2. Redirect to payment page
+    // 3. Show confirmation
+    alert(
+      `Booking confirmed!\nDate: ${formatDate(
+        selectedDate
+      )}\nTime: ${formatTimeDisplay(selectedTimeSlot)}\nType: ${
+        selectedTimeSlot.type
+      }`
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className='w-full min-h-screen bg-gray-50 flex items-center justify-center'>
+        <div className='text-center'>
+          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto'></div>
+          <p className='mt-4 text-gray-600'>Loading tutor availability...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className='w-full min-h-screen bg-gray-50 flex items-center justify-center'>
+        <div className='text-center text-red-600'>
+          <p className='text-lg font-semibold'>Error loading availability</p>
+          <p className='text-sm mt-2'>Please try again later</p>
+        </div>
+      </div>
+    );
+  }
+
+  const tutorInfo = availabilityData?.data?.tutor;
+  const selectedDateSlots = getAvailableSlotsForSelectedDate();
 
   return (
     <div className='w-full min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4'>
@@ -202,10 +310,22 @@ export default function Page() {
           <div className='flex items-center justify-between mb-6'>
             <p className='text-xl font-semibold text-gray-900'>Calendar</p>
             <div className='flex gap-2'>
-              <button className='px-6 py-2 rounded-lg text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200'>
+              <button
+                onClick={() => handleBookingTypeChange("group")}
+                className={`px-6 py-2 rounded-lg text-sm font-medium ${
+                  bookingType === "group"
+                    ? "text-purple-700 bg-purple-100"
+                    : "text-gray-600 bg-gray-100 hover:bg-gray-200"
+                }`}>
                 Group
               </button>
-              <button className='px-6 py-2 rounded-lg text-sm font-medium text-purple-700 bg-purple-100'>
+              <button
+                onClick={() => handleBookingTypeChange("single")}
+                className={`px-6 py-2 rounded-lg text-sm font-medium ${
+                  bookingType === "single"
+                    ? "text-purple-700 bg-purple-100"
+                    : "text-gray-600 bg-gray-100 hover:bg-gray-200"
+                }`}>
                 Single
               </button>
             </div>
@@ -249,7 +369,7 @@ export default function Page() {
                     key={index}
                     onClick={() => handleDateSelect(day)}
                     className={`
-                      py-3 rounded-xl cursor-pointer transition-all duration-200
+                      py-3 rounded-xl cursor-pointer transition-all duration-200 relative
                       ${!day.isCurrentMonth ? "text-orange-300 opacity-50" : ""}
                       ${
                         day.isCurrentMonth && !day.hasAvailableSlots
@@ -291,51 +411,61 @@ export default function Page() {
               })}
             </div>
 
-            {/* Time Slot Checkboxes */}
-            <div className='mt-6 space-y-2'>
-              <p className='text-sm font-medium text-gray-700 mb-3'>
-                Available Time Slots:
-              </p>
-              {availableTimeSlots.map((timeSlot, index) => (
-                <label
-                  key={index}
-                  className='flex items-center gap-2 cursor-pointer'>
-                  <input
-                    type='checkbox'
-                    checked={selectedTimeSlots.includes(timeSlot)}
-                    onChange={() => handleTimeSlotToggle(timeSlot)}
-                    className='w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500'
-                  />
-                  <span className='text-sm text-gray-700'>{timeSlot}</span>
-                </label>
-              ))}
-            </div>
-
-            {/* Selected Date Info */}
-            {selectedDate && (
-              <div className='mt-6 p-4 bg-purple-50 rounded-lg'>
-                <p className='text-sm font-medium text-purple-700 mb-1'>
-                  Selected Date:
+            {/* Time Slot Selection */}
+            {selectedDate && selectedDateSlots.length > 0 && (
+              <div className='mt-6'>
+                <p className='text-sm font-medium text-gray-700 mb-3'>
+                  Available {bookingType === "single" ? "One-to-One" : "Group"}{" "}
+                  Slots for {formatDate(selectedDate)}:
                 </p>
-                <p className='text-sm text-gray-900'>
-                  {formatDate(selectedDate)}
-                </p>
-                {selectedTimeSlots.length > 0 && (
-                  <>
-                    <p className='text-sm font-medium text-purple-700 mt-3 mb-1'>
-                      Selected Time Slots:
-                    </p>
-                    <div className='flex flex-wrap gap-2'>
-                      {selectedTimeSlots.map((slot, index) => (
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
+                  {selectedDateSlots.map((slot, index) => (
+                    <div
+                      key={slot.id}
+                      onClick={() => handleTimeSlotSelect(slot)}
+                      className={`p-4 border rounded-xl cursor-pointer transition-all duration-200 ${
+                        selectedTimeSlot?.id === slot.id
+                          ? "border-purple-600 bg-purple-50"
+                          : "border-gray-200 hover:border-purple-400 hover:bg-gray-50"
+                      }`}>
+                      <div className='flex justify-between items-start'>
+                        <div>
+                          <p className='font-medium text-gray-900'>
+                            {slot.startTimeLabel} - {slot.endTimeLabel}
+                          </p>
+                          <p className='text-sm text-gray-600 mt-1'>
+                            {slot.subject} •{" "}
+                            {slot.type === "ONE_TO_ONE"
+                              ? "One-to-One"
+                              : "Group"}
+                          </p>
+                        </div>
                         <span
-                          key={index}
-                          className='px-3 py-1 bg-white border border-purple-200 rounded-full text-xs text-purple-700'>
-                          {slot}
+                          className={`px-2 py-1 rounded text-xs font-medium ${
+                            slot.type === "ONE_TO_ONE"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-green-100 text-green-700"
+                          }`}>
+                          {slot.type === "ONE_TO_ONE" ? "1:1" : "Group"}
                         </span>
-                      ))}
+                      </div>
                     </div>
-                  </>
-                )}
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* No slots available message */}
+            {selectedDate && selectedDateSlots.length === 0 && (
+              <div className='mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg'>
+                <p className='text-sm text-yellow-700'>
+                  No available{" "}
+                  {bookingType === "single" ? "one-to-one" : "group"} slots for
+                  this date.
+                  {bookingType === "single"
+                    ? " Try selecting 'Group' booking or choose a different date."
+                    : " Try selecting 'Single' booking or choose a different date."}
+                </p>
               </div>
             )}
           </div>
@@ -351,18 +481,23 @@ export default function Page() {
 
             <div className='flex items-center gap-3 mb-6'>
               <Image
-                src={prfImage}
-                alt='Jerome Bell'
+                src={tutorInfo?.avatar || prfImage}
+                alt={tutorInfo?.id?.[0]?.firstName || "Tutor"}
+                width={48}
+                height={48}
                 className='w-12 h-12 rounded-full object-cover'
               />
               <div className='flex-1'>
                 <p className='font-semibold text-gray-900 text-sm'>
-                  Jerome Bell
+                  {tutorInfo?.id?.[0]?.firstName} {tutorInfo?.id?.[0]?.lastName}
                 </p>
                 <p className='text-xs text-gray-500'>Mathematics Expert</p>
                 <div className='flex items-center gap-1 mt-1'>
                   <span className='text-yellow-400 text-xs'>★★★★★</span>
-                  <span className='text-xs text-gray-500'>44 (58)</span>
+                  <span className='text-xs text-gray-500'>
+                    {tutorInfo?.averageRating || 0} (
+                    {tutorInfo?.totalRatings || 0})
+                  </span>
                 </div>
               </div>
               <button className='px-3 py-2 rounded-lg text-xs font-medium bg-purple-200 text-purple-700 hover:bg-purple-300'>
@@ -395,9 +530,9 @@ export default function Page() {
                   <p className='text-xs text-gray-500 ml-2'>Time</p>
                 </div>
                 <p className='text-sm font-medium text-gray-900'>
-                  {selectedTimeSlots.length > 0
-                    ? selectedTimeSlots[0].split(" – ")[0]
-                    : "Select time"}
+                  {selectedTimeSlot
+                    ? `${selectedTimeSlot.startTimeLabel} - ${selectedTimeSlot.endTimeLabel}`
+                    : "Select time slot"}
                 </p>
               </div>
             </div>
@@ -412,48 +547,85 @@ export default function Page() {
                   <p className='text-xs text-gray-500 ml-2'>Duration</p>
                 </div>
                 <p className='text-sm font-medium text-gray-900'>
-                  {selectedTimeSlots.length > 0
-                    ? selectedTimeSlots.map((slot) => {
-                        const [start, end] = slot.split(" – ");
-                        const startTime = start
-                          .replace("am", "")
-                          .replace("pm", "");
-                        const endTime = end.replace("am", "").replace("pm", "");
-                        const duration =
-                          parseInt(endTime) - parseInt(startTime);
-                        return `${duration} hours`;
-                      })[0]
+                  {selectedTimeSlot
+                    ? calculateDuration(
+                        selectedTimeSlot.startTime,
+                        selectedTimeSlot.endTime
+                      )
                     : "0 hours"}
                 </p>
               </div>
             </div>
 
-            {/* Pricing */}
+            {/* Class Type */}
+            <div className='flex items-center gap-2 py-3 border-b border-gray-100'>
+              <div className='flex-1'>
+                <div className='flex items-center'>
+                  <span className='text-purple-500'>👥</span>
+                  <p className='text-xs text-gray-500 ml-2'>Class Type</p>
+                </div>
+                <p className='text-sm font-medium text-gray-900'>
+                  {selectedTimeSlot?.type === "ONE_TO_ONE"
+                    ? "One-to-One Session"
+                    : "Group Session"}
+                </p>
+              </div>
+            </div>
+
+            {/* Subject */}
+            {selectedTimeSlot?.subject && (
+              <div className='flex items-center gap-2 py-3 border-b border-gray-100'>
+                <div className='flex-1'>
+                  <div className='flex items-center'>
+                    <span className='text-purple-500'>📚</span>
+                    <p className='text-xs text-gray-500 ml-2'>Subject</p>
+                  </div>
+                  <p className='text-sm font-medium text-gray-900'>
+                    {selectedTimeSlot.subject}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Pricing - You might want to adjust this based on your pricing logic */}
             <div className='py-4 space-y-2'>
               <div className='flex justify-between text-sm text-gray-700'>
                 <p>Price</p>
-                <p>$110.00</p>
+                <p>
+                  {selectedTimeSlot?.type === "ONE_TO_ONE"
+                    ? "$120.00"
+                    : "$80.00"}
+                </p>
               </div>
               <div className='flex justify-between text-sm text-gray-700'>
                 <p>Platform fee(20%)</p>
-                <p>$6.00</p>
+                <p>
+                  {selectedTimeSlot?.type === "ONE_TO_ONE"
+                    ? "$24.00"
+                    : "$16.00"}
+                </p>
               </div>
 
               <div className='flex justify-between font-semibold text-lg mt-3 pt-3 border-t border-gray-100'>
                 <p className='text-gray-900'>Total</p>
-                <p className='text-orange-500'>$121.00</p>
+                <p className='text-orange-500'>
+                  {selectedTimeSlot?.type === "ONE_TO_ONE"
+                    ? "$144.00"
+                    : "$96.00"}
+                </p>
               </div>
             </div>
 
             {/* Confirm Button */}
             <button
+              onClick={handleConfirmBooking}
               className={`w-full py-3 rounded-xl font-semibold mt-2 transition-colors ${
-                selectedDate && selectedTimeSlots.length > 0
+                selectedDate && selectedTimeSlot
                   ? "bg-purple-600 hover:bg-purple-700 text-white"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
               }`}
-              disabled={!selectedDate || selectedTimeSlots.length === 0}>
-              {selectedDate && selectedTimeSlots.length > 0
+              disabled={!selectedDate || !selectedTimeSlot}>
+              {selectedDate && selectedTimeSlot
                 ? "Confirm Slot"
                 : "Select Date & Time First"}
             </button>
