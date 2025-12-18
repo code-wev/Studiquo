@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { formatAmPm } from 'common/utils/time.util';
 import { Model, Types } from 'mongoose';
+import { TutorProfile } from 'src/models/tutorProfile.model';
 import { TimeSlot } from '../models/timeSlot.model';
 import { TutorAvailability } from '../models/tutorAvailability.model';
 import {
@@ -21,6 +22,8 @@ export class AvailabilityService {
     @InjectModel(TutorAvailability.name)
     private availabilityModel: Model<TutorAvailability>,
     @InjectModel(TimeSlot.name) private timeSlotModel: Model<TimeSlot>,
+    @InjectModel(TutorProfile.name)
+    private tutorProfileModel: Model<TutorProfile>,
   ) {}
 
   /**
@@ -136,17 +139,35 @@ export class AvailabilityService {
   /**
    * Add a timeslot under an existing TutorAvailability document.
    *
+   * @param user - Authenticated user object
    * @param availabilityId - ID of the TutorAvailability document
    * @param dto - Timeslot DTO containing start/end times and optional meet link
    * @throws NotFoundException if availabilityId is invalid
    * @throws BadRequestException if time slot is invalid or overlaps
    */
   async addTimeSlot(
+    user: any,
     availabilityId: MongoIdDto['id'],
     dto: CreateTimeSlotDto,
   ): Promise<TimeSlot> {
+    /*
+     * 1. Check the tutor's subject exists
+     */
+    const subjectsExists = await this.tutorProfileModel.findOne({
+      user: new Types.ObjectId(user.userId),
+      subjects: {
+        $in: [dto.subject],
+      },
+    });
+
+    if (!subjectsExists) {
+      throw new BadRequestException(
+        'Tutor does not teach the specified subject',
+      );
+    }
+
     /**
-     * 1️. Check availability exists
+     * 2. Check availability exists
      */
     const availability = await this.availabilityModel
       .findById(new Types.ObjectId(availabilityId))
@@ -157,7 +178,7 @@ export class AvailabilityService {
     }
 
     /**
-     * 2️. Prevent adding slots to past dates
+     * 3. Prevent adding slots to past dates
      * Compare DATE ONLY (UTC)
      */
     const todayUtc = new Date(
@@ -173,7 +194,7 @@ export class AvailabilityService {
     }
 
     /**
-     * 3️. Parse & validate times
+     * 4. Parse & validate times
      */
     const startTime = new Date(dto.startTime);
     const endTime = new Date(dto.endTime);
@@ -187,7 +208,7 @@ export class AvailabilityService {
     }
 
     /**
-     * 4️. Ensure slot belongs to the same availability date (UTC)
+     * 5. Ensure slot belongs to the same availability date (UTC)
      */
     const availabilityDateOnly = new Date(
       Date.UTC(
@@ -212,7 +233,7 @@ export class AvailabilityService {
     }
 
     /**
-     * 5️. Overlapping slot check (CRITICAL)
+     * 6. Overlapping slot check (CRITICAL)
      *
      * Overlap condition:
      * existing.start < new.end && existing.end > new.start
@@ -229,7 +250,7 @@ export class AvailabilityService {
     }
 
     /**
-     * 6️. Create slot
+     * 7. Create slot
      */
     return this.timeSlotModel.create({
       tutorAvailability: availability._id,
@@ -256,6 +277,20 @@ export class AvailabilityService {
     slotId: MongoIdDto['id'],
     dto: UpdateTimeSlotDto,
   ): Promise<TimeSlot> {
+    // Check the tutor's subject exists
+    const subjectsExists = await this.tutorProfileModel.findOne({
+      user: new Types.ObjectId(user.userId),
+      subjects: {
+        $in: [dto.subject],
+      },
+    });
+
+    if (dto.subject && !subjectsExists) {
+      throw new BadRequestException(
+        'Tutor does not teach the specified subject',
+      );
+    }
+
     const slot = await this.timeSlotModel
       .findOne({
         _id: slotId,

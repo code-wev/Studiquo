@@ -75,10 +75,11 @@ export class AvailabilityController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
   async addTimeSlot(
+    @GetUser() user: any,
     @Param('availabilityId') availabilityId: MongoIdDto['id'],
     @Body() dto: CreateTimeSlotDto,
   ) {
-    return this.availabilityService.addTimeSlot(availabilityId, dto);
+    return this.availabilityService.addTimeSlot(user, availabilityId, dto);
   }
 
   /**
