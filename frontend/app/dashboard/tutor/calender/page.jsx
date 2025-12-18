@@ -87,19 +87,23 @@ export default function Calendar() {
     useDeleteTimeSlotMutation();
 
   const subjects = [
-    { id: 1, name: "English", color: "text-yellow-600" },
-    { id: 2, name: "Science", color: "text-green-600" },
-    { id: 3, name: "Math", color: "text-pink-500" },
+    { id: 1, name: "English", value: "ENGLISH", color: "text-yellow-600" },
+    { id: 2, name: "Science", value: "SCIENCE", color: "text-green-600" },
+    { id: 3, name: "Math", value: "MATH", color: "text-pink-500" },
   ];
 
   const slots = [
-    { id: 1, time: "12:00PM - 02:00 PM" },
-    { id: 2, time: "04:00PM - 06:00 PM" },
+    { id: 1, time: "12:00 PM", hours: 12, minutes: 0, duration: 2 },
+    { id: 2, time: "02:00 PM", hours: 14, minutes: 0, duration: 2 },
+    { id: 3, time: "04:00 PM", hours: 16, minutes: 0, duration: 2 },
+    { id: 4, time: "06:00 PM", hours: 18, minutes: 0, duration: 2 },
   ];
 
   const additionalSlots = [
-    { id: 3, time: "12:00PM - 02:00 PM" },
-    { id: 4, time: "04:00PM - 06:00 PM" },
+    { id: 5, time: "08:00 AM", hours: 8, minutes: 0, duration: 1 },
+    { id: 6, time: "09:00 AM", hours: 9, minutes: 0, duration: 1 },
+    { id: 7, time: "10:00 AM", hours: 10, minutes: 0, duration: 1 },
+    { id: 8, time: "11:00 AM", hours: 11, minutes: 0, duration: 1 },
   ];
 
   // Helper: get YYYY-MM-DD string in UTC
@@ -108,6 +112,13 @@ export default function Calendar() {
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
     const day = String(date.getUTCDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
+  };
+
+  // Helper: create ISO datetime string for a specific time on a date
+  const createDateTimeISO = (date, hours, minutes) => {
+    const newDate = new Date(date);
+    newDate.setUTCHours(hours, minutes, 0, 0);
+    return newDate.toISOString();
   };
 
   // Create maps for different availability states
@@ -613,13 +624,16 @@ export default function Calendar() {
   const selectedSubjectName =
     subjects.find((s) => s.id === selectedSubject)?.name || "select subject";
 
+  const selectedSubjectValue =
+    subjects.find((s) => s.id === selectedSubject)?.value || null;
+
   const selectedSlotTime =
     [...slots, ...additionalSlots].find((s) => s.id === selectedSlot)?.time ||
     "select";
 
   const [zoomLink, setZoomLink] = useState("");
 
-  // Create Slot handler
+  // Create Slot handler - Updated to match API requirements
   const handleCreateSlot = async () => {
     if (!selectedDate) {
       toast.error("Please select a date");
@@ -633,31 +647,74 @@ export default function Calendar() {
       toast.error("Please select a time slot");
       return;
     }
+    if (!selectedSubjectValue) {
+      toast.error("Please select a subject");
+      return;
+    }
+    if (!zoomLink) {
+      toast.error("Please enter a Zoom link");
+      return;
+    }
 
+    // Get selected slot details
     const slotObj = [...slots, ...additionalSlots].find(
       (s) => s.id === selectedSlot
     );
-    const [startTimeLabel, endTimeLabel] = slotObj.time.split(" - ");
 
+    // Create ISO datetime strings for the selected date and time
+    const startTimeISO = createDateTimeISO(
+      selectedDate,
+      slotObj.hours,
+      slotObj.minutes
+    );
+
+    // Calculate end time based on duration (in hours)
+    const endTime = new Date(selectedDate);
+    endTime.setUTCHours(
+      slotObj.hours + slotObj.duration,
+      slotObj.minutes,
+      0,
+      0
+    );
+    const endTimeISO = endTime.toISOString();
+
+    // Create payload matching CreateTimeSlotDto
     const payload = {
-      startTimeLabel,
-      endTimeLabel,
+      startTime: startTimeISO,
+      endTime: endTimeISO,
       type: classType === "Single" ? "ONE_TO_ONE" : "GROUP",
+      subject: selectedSubjectValue,
+      meetLink: zoomLink,
     };
 
+    console.log("Creating slot with payload:", payload);
+
     try {
-      await addTimeSlot({
+      const result = await addTimeSlot({
         availabilityId: currentAvailabilityId,
         slotData: payload,
       }).unwrap();
 
-      await refetchAvailabilities();
-      setShowSlotsDropdown(false);
-      setSelectedSlot(null);
-      toast.success("Slot created successfully!");
+      console.log("Slot creation result:", result);
+
+      if (result) {
+        await refetchAvailabilities();
+        setShowSlotsDropdown(false);
+        setSelectedSlot(null);
+        setZoomLink(""); // Clear zoom link after successful creation
+        toast.success("Time slot created successfully!");
+      }
     } catch (err) {
-      console.error(err);
-      toast.error("Failed to create slot");
+      console.error("Failed to create slot:", err);
+      if (err.data?.message) {
+        if (Array.isArray(err.data.message)) {
+          toast.error(err.data.message.join(", "));
+        } else {
+          toast.error(err.data.message);
+        }
+      } else {
+        toast.error("Failed to create slot");
+      }
     }
   };
 
@@ -805,6 +862,11 @@ export default function Calendar() {
                             }`}>
                             {slot.type === "ONE_TO_ONE" ? "Single" : "Group"}
                           </span>
+                          {slot.subject && (
+                            <span className='ml-2 text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700'>
+                              {slot.subject}
+                            </span>
+                          )}
                         </div>
                         <button
                           onClick={() =>
@@ -925,7 +987,7 @@ export default function Calendar() {
                                     {slot.type === "ONE_TO_ONE"
                                       ? "Single"
                                       : "Group"}
-                                    )
+                                    ) - {slot.subject || "No Subject"}
                                   </span>
                                   <button
                                     onClick={() =>
@@ -1150,32 +1212,7 @@ export default function Calendar() {
                       Slot
                     </div>
                     <div className='bg-white rounded-lg p-3 mb-4'>
-                      {slots.map((slot) => (
-                        <button
-                          key={slot.id}
-                          onClick={() => selectSlot(slot.id)}
-                          className={`w-full text-left px-3 py-3 rounded-lg flex items-center justify-between mb-2 last:mb-0 ${
-                            selectedSlot === slot.id
-                              ? "bg-purple-100"
-                              : "hover:bg-gray-50"
-                          }`}>
-                          <span className='text-sm text-gray-700'>
-                            {slot.time}
-                          </span>
-                          {selectedSlot === slot.id && (
-                            <BiCheck size={18} className='text-purple-600' />
-                          )}
-                        </button>
-                      ))}
-                      <button className='text-sm text-gray-400 px-3 py-2'>
-                        + Add slot
-                      </button>
-                    </div>
-
-                    <div className='text-sm font-medium text-gray-500 mb-3'>
-                      Add slot
-                    </div>
-                    <div className='bg-white rounded-lg p-3 mb-4'>
+                      <p className='text-xs text-gray-500 mb-2'>Morning</p>
                       {additionalSlots.map((slot) => (
                         <button
                           key={slot.id}
@@ -1186,25 +1223,54 @@ export default function Calendar() {
                               : "hover:bg-gray-50"
                           }`}>
                           <span className='text-sm text-gray-700'>
-                            {slot.time}
+                            {slot.time} ({slot.duration} hour
+                            {slot.duration > 1 ? "s" : ""})
                           </span>
                           {selectedSlot === slot.id && (
                             <BiCheck size={18} className='text-purple-600' />
                           )}
                         </button>
                       ))}
-                      <button className='text-sm text-gray-400 px-3 py-2'>
-                        + Add slot
-                      </button>
+                    </div>
+
+                    <div className='text-sm font-medium text-gray-500 mb-3'>
+                      Afternoon/Evening
+                    </div>
+                    <div className='bg-white rounded-lg p-3 mb-4'>
+                      {slots.map((slot) => (
+                        <button
+                          key={slot.id}
+                          onClick={() => selectSlot(slot.id)}
+                          className={`w-full text-left px-3 py-3 rounded-lg flex items-center justify-between mb-2 last:mb-0 ${
+                            selectedSlot === slot.id
+                              ? "bg-purple-100"
+                              : "hover:bg-gray-50"
+                          }`}>
+                          <span className='text-sm text-gray-700'>
+                            {slot.time} ({slot.duration} hours)
+                          </span>
+                          {selectedSlot === slot.id && (
+                            <BiCheck size={18} className='text-purple-600' />
+                          )}
+                        </button>
+                      ))}
                     </div>
 
                     <button
                       onClick={handleCreateSlot}
                       disabled={
-                        isAddingSlot || !currentAvailabilityId || !selectedSlot
+                        isAddingSlot ||
+                        !currentAvailabilityId ||
+                        !selectedSlot ||
+                        !selectedSubjectValue ||
+                        !zoomLink
                       }
                       className={`w-full py-2 rounded-lg transition-colors ${
-                        isAddingSlot || !currentAvailabilityId || !selectedSlot
+                        isAddingSlot ||
+                        !currentAvailabilityId ||
+                        !selectedSlot ||
+                        !selectedSubjectValue ||
+                        !zoomLink
                           ? "bg-gray-300 cursor-not-allowed text-gray-600"
                           : "bg-purple-400 hover:bg-purple-500 text-white"
                       }`}>
@@ -1223,15 +1289,27 @@ export default function Calendar() {
                   type='text'
                   value={zoomLink}
                   onChange={(e) => setZoomLink(e.target.value)}
-                  placeholder='Zoom Link'
+                  placeholder='https://zoom.us/j/123456789'
                   className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm text-gray-600'
                 />
+                <p className='text-xs text-gray-500 mt-1'>
+                  Enter a valid Zoom meeting URL
+                </p>
               </div>
 
               {/* Action Buttons */}
               <div className='flex items-center justify-end gap-4'>
-                <button className='px-6 py-2 bg-purple-400 text-white rounded-lg hover:bg-purple-500 transition-colors'>
-                  Create Class
+                <button
+                  onClick={handleCreateSlot}
+                  disabled={
+                    isAddingSlot ||
+                    !currentAvailabilityId ||
+                    !selectedSlot ||
+                    !selectedSubjectValue ||
+                    !zoomLink
+                  }
+                  className='px-6 py-2 bg-purple-400 text-white rounded-lg hover:bg-purple-500 transition-colors'>
+                  {isAddingSlot ? "Creating..." : "Create Slot"}
                 </button>
               </div>
             </div>
