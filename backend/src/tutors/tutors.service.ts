@@ -200,7 +200,7 @@ export class TutorsService {
     const userId = user.userId;
 
     const tutorProfile = await this.tutorProfileModel
-      .findOne({ user: userId })
+      .findOne({ user: new Types.ObjectId(userId) })
       .lean();
 
     if (!tutorProfile) {

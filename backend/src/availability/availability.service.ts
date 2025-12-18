@@ -240,7 +240,7 @@ export class AvailabilityService {
      * existing.start < new.end && existing.end > new.start
      */
     const overlappingSlot = await this.timeSlotModel.findOne({
-      tutorAvailability: availability._id,
+      tutorAvailability: new Types.ObjectId(availability._id),
       isBooked: false,
       startTime: { $lt: endTime },
       endTime: { $gt: startTime },
@@ -294,10 +294,10 @@ export class AvailabilityService {
 
     const slot = await this.timeSlotModel
       .findOne({
-        _id: slotId,
+        _id: new Types.ObjectId(slotId),
         tutorAvailability: {
           $in: await this.availabilityModel
-            .find({ user: user.userId })
+            .find({ user: new Types.ObjectId(user.userId) })
             .distinct('_id')
             .exec(),
         },
@@ -376,7 +376,7 @@ export class AvailabilityService {
    */
   async deleteSlot(user: any, slotId: MongoIdDto['id']): Promise<TimeSlot> {
     const slot = await this.timeSlotModel.findOne({
-      _id: slotId,
+      _id: new Types.ObjectId(slotId),
       tutorAvailability: {
         $in: await this.availabilityModel
           .find({ user: new Types.ObjectId(user.userId) })
@@ -395,7 +395,7 @@ export class AvailabilityService {
 
     const deleted = await this.timeSlotModel
       .findOneAndDelete({
-        _id: slotId,
+        _id: new Types.ObjectId(slotId),
         tutorAvailability: {
           $in: await this.availabilityModel
             .find({ user: new Types.ObjectId(user.userId) })

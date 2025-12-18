@@ -6,11 +6,11 @@ import { RolesGuard } from '../../common/guards/roles.guard';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
+@UseGuards(RolesGuard)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get('users')
-  @UseGuards(RolesGuard)
   @Roles(UserRole.Admin)
   async getUsers() {
     return this.adminService.getUsers();
