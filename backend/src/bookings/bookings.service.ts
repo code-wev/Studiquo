@@ -100,11 +100,12 @@ export class BookingsService {
     const tutorAvailability = await this.availabilityModel.findById(
       new Types.ObjectId(slot.tutorAvailability),
     );
+
     if (!tutorAvailability) {
       throw new BadRequestException('Tutor availability not found');
     }
     const tutorProfile = await this.tutorProfileModel.findOne({
-      userId: new Types.ObjectId(tutorAvailability.user),
+      user: new Types.ObjectId(tutorAvailability.user),
     });
 
     if (!tutorProfile) {
