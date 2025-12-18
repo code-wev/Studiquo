@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { ExamBoardEntry } from 'src/models/ExamBoardModel';
 import { StudentProfile } from 'src/models/studentProfile.model';
 import { CreateExamBoardDto } from './dto/exam-board.dto';
 
@@ -10,8 +9,6 @@ export class ExamBoardService {
   constructor(
     @InjectModel(StudentProfile.name)
     private studentProfileModel: Model<StudentProfile>,
-    @InjectModel(ExamBoardEntry.name)
-    private examBoardEntryModel: Model<ExamBoardEntry>,
   ) {}
 
   /**
@@ -37,7 +34,10 @@ export class ExamBoardService {
     );
 
     if (updated) {
-      return updated; // subject existed → board updated
+      return {
+        message: 'Exam board entry updated successfully',
+        boards: updated.examBoards,
+      }; // subject existed → board updated
     }
 
     // Check if profile exists
@@ -90,7 +90,7 @@ export class ExamBoardService {
       .findOne({
         user: new Types.ObjectId(userId),
       })
-      .select('examBoards');
+      .select('examBoards -_id');
 
     return {
       message: 'Exam board entries retrieved successfully',
