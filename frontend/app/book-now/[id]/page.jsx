@@ -14,8 +14,8 @@ export default function Page() {
   const id = params?.id;
   console.log("Tutor Id --->", id);
 
-  // Booking type state - "single" or "group"
-  const [bookingType, setBookingType] = useState("single");
+  // Booking type state - "all", "single", or "group"
+  const [bookingType, setBookingType] = useState("all");
 
   // Fetch tutor availability data
   const {
@@ -40,7 +40,7 @@ export default function Page() {
       setSelectedDate(new Date());
       generateCalendarDays(currentDate);
     }
-  }, [availabilityData, currentDate]);
+  }, [availabilityData, currentDate, bookingType]);
 
   // Process availability data from API
   const processAvailabilityData = () => {
@@ -51,14 +51,18 @@ export default function Page() {
     availabilityData.data.availabilities.forEach((availability) => {
       const dateKey = availability.date; // "2025-12-20"
 
-      // Filter available slots (isBooked: false) and by type
-      const availableSlots = availability.slots.filter(
-        (slot) =>
-          !slot.isBooked &&
-          (bookingType === "single"
-            ? slot.type === "ONE_TO_ONE"
-            : slot.type === "GROUP")
-      );
+      // Filter available slots (isBooked: false)
+      let availableSlots = availability.slots.filter((slot) => !slot.isBooked);
+
+      // Filter by booking type if not "all"
+      if (bookingType === "single") {
+        availableSlots = availableSlots.filter(
+          (slot) => slot.type === "ONE_TO_ONE"
+        );
+      } else if (bookingType === "group") {
+        availableSlots = availableSlots.filter((slot) => slot.type === "GROUP");
+      }
+      // If bookingType is "all", show all available slots
 
       if (availableSlots.length > 0) {
         map[dateKey] = {
@@ -164,11 +168,6 @@ export default function Page() {
   const handleBookingTypeChange = (type) => {
     setBookingType(type);
     setSelectedTimeSlot(null);
-    // Reprocess availability data with new type
-    if (availabilityData?.data?.availabilities) {
-      processAvailabilityData();
-      generateCalendarDays(currentDate);
-    }
   };
 
   // Handle time slot selection
@@ -250,9 +249,23 @@ export default function Page() {
       `Booking confirmed!\nDate: ${formatDate(
         selectedDate
       )}\nTime: ${formatTimeDisplay(selectedTimeSlot)}\nType: ${
-        selectedTimeSlot.type
+        selectedTimeSlot.type === "ONE_TO_ONE" ? "One-to-One" : "Group"
       }`
     );
+  };
+
+  // Get booking type display text
+  const getBookingTypeDisplay = () => {
+    switch (bookingType) {
+      case "all":
+        return "All Available Slots";
+      case "single":
+        return "One-to-One Slots";
+      case "group":
+        return "Group Slots";
+      default:
+        return "Slots";
+    }
   };
 
   if (isLoading) {
@@ -311,22 +324,31 @@ export default function Page() {
             <p className='text-xl font-semibold text-gray-900'>Calendar</p>
             <div className='flex gap-2'>
               <button
-                onClick={() => handleBookingTypeChange("group")}
-                className={`px-6 py-2 rounded-lg text-sm font-medium ${
-                  bookingType === "group"
+                onClick={() => handleBookingTypeChange("all")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  bookingType === "all"
                     ? "text-purple-700 bg-purple-100"
                     : "text-gray-600 bg-gray-100 hover:bg-gray-200"
                 }`}>
-                Group
+                All
               </button>
               <button
                 onClick={() => handleBookingTypeChange("single")}
-                className={`px-6 py-2 rounded-lg text-sm font-medium ${
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
                   bookingType === "single"
                     ? "text-purple-700 bg-purple-100"
                     : "text-gray-600 bg-gray-100 hover:bg-gray-200"
                 }`}>
                 Single
+              </button>
+              <button
+                onClick={() => handleBookingTypeChange("group")}
+                className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                  bookingType === "group"
+                    ? "text-purple-700 bg-purple-100"
+                    : "text-gray-600 bg-gray-100 hover:bg-gray-200"
+                }`}>
+                Group
               </button>
             </div>
           </div>
@@ -415,11 +437,10 @@ export default function Page() {
             {selectedDate && selectedDateSlots.length > 0 && (
               <div className='mt-6'>
                 <p className='text-sm font-medium text-gray-700 mb-3'>
-                  Available {bookingType === "single" ? "One-to-One" : "Group"}{" "}
-                  Slots for {formatDate(selectedDate)}:
+                  {getBookingTypeDisplay()} for {formatDate(selectedDate)}:
                 </p>
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
-                  {selectedDateSlots.map((slot, index) => (
+                  {selectedDateSlots.map((slot) => (
                     <div
                       key={slot.id}
                       onClick={() => handleTimeSlotSelect(slot)}
@@ -459,12 +480,10 @@ export default function Page() {
             {selectedDate && selectedDateSlots.length === 0 && (
               <div className='mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg'>
                 <p className='text-sm text-yellow-700'>
-                  No available{" "}
-                  {bookingType === "single" ? "one-to-one" : "group"} slots for
-                  this date.
-                  {bookingType === "single"
-                    ? " Try selecting 'Group' booking or choose a different date."
-                    : " Try selecting 'Single' booking or choose a different date."}
+                  No available {getBookingTypeDisplay().toLowerCase()} for this
+                  date.
+                  {bookingType !== "all" &&
+                    " Try selecting 'All' booking type or choose a different date."}
                 </p>
               </div>
             )}
@@ -567,7 +586,9 @@ export default function Page() {
                 <p className='text-sm font-medium text-gray-900'>
                   {selectedTimeSlot?.type === "ONE_TO_ONE"
                     ? "One-to-One Session"
-                    : "Group Session"}
+                    : selectedTimeSlot?.type === "GROUP"
+                    ? "Group Session"
+                    : "Select slot"}
                 </p>
               </div>
             </div>
@@ -594,7 +615,9 @@ export default function Page() {
                 <p>
                   {selectedTimeSlot?.type === "ONE_TO_ONE"
                     ? "$120.00"
-                    : "$80.00"}
+                    : selectedTimeSlot?.type === "GROUP"
+                    ? "$80.00"
+                    : "$0.00"}
                 </p>
               </div>
               <div className='flex justify-between text-sm text-gray-700'>
@@ -602,7 +625,9 @@ export default function Page() {
                 <p>
                   {selectedTimeSlot?.type === "ONE_TO_ONE"
                     ? "$24.00"
-                    : "$16.00"}
+                    : selectedTimeSlot?.type === "GROUP"
+                    ? "$16.00"
+                    : "$0.00"}
                 </p>
               </div>
 
@@ -611,7 +636,9 @@ export default function Page() {
                 <p className='text-orange-500'>
                   {selectedTimeSlot?.type === "ONE_TO_ONE"
                     ? "$144.00"
-                    : "$96.00"}
+                    : selectedTimeSlot?.type === "GROUP"
+                    ? "$96.00"
+                    : "$0.00"}
                 </p>
               </div>
             </div>

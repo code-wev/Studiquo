@@ -92,7 +92,7 @@ export class UsersService extends BaseService<User> {
       dbsLink,
 
       // tutor fields
-      subject,
+      subjects,
       hourlyRate,
     } = data;
 
@@ -117,7 +117,7 @@ export class UsersService extends BaseService<User> {
 
     if (userRole === UserRole.Tutor) {
       const tutorUpdate: any = {};
-      if (subject !== undefined) tutorUpdate.subjects = [subject];
+      if (subjects !== undefined) tutorUpdate.subjects = subjects;
       if (hourlyRate !== undefined) tutorUpdate.hourlyRate = hourlyRate;
 
       profile = await this.tutorProfileModel.findOneAndUpdate(

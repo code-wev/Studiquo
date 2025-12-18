@@ -37,7 +37,7 @@ export class UpdateProfileDto {
   @IsEnum(['MATH', 'SCIENCE', 'ENGLISH'], {
     message: 'Subject must be one of MATH|SCIENCE|ENGLISH',
   })
-  subject?: string[];
+  subjects?: string[];
 
   @IsOptional()
   @IsNumber({}, { message: 'Hourly rate must be a number' })
