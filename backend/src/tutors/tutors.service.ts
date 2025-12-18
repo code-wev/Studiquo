@@ -11,7 +11,7 @@ import { TutorAvailability } from 'src/models/tutorAvailability.model';
 import { ReviewQueryDto } from 'src/reviews/dto/review.dto';
 import { TutorProfile } from '../models/tutorProfile.model';
 import { User } from '../models/user.model';
-import { TutorSearchQueryDto } from './dto/tutor.dto';
+import { TutorSearchPaginationDto } from './dto/tutor.dto';
 
 @Injectable()
 export class TutorsService {
@@ -50,45 +50,78 @@ export class TutorsService {
    * `firstName`, `lastName`, and `bio`.
    *
    * @param query - validated search query DTO
+   * @param pagination - pagination options
+   * @returns paginated list of tutor profiles
    */
-  async searchTutors(query: TutorSearchQueryDto) {
+  async searchTutors(query: TutorSearchPaginationDto) {
+    const {
+      subject,
+      maxHourlyRate,
+      minRating,
+      search,
+      page = 1,
+      limit = 10,
+    } = query;
+
     const tutorFilter: any = {};
-    const userFilter: any = {};
 
-    // TutorProfile filters
-    if (query.subject) {
-      tutorFilter.subjects = query.subject;
+    if (subject) {
+      tutorFilter.subjects = subject;
     }
 
-    if (query.maxHourlyRate !== undefined) {
-      tutorFilter.hourlyRate = { $lte: query.maxHourlyRate };
+    if (maxHourlyRate !== undefined) {
+      tutorFilter.hourlyRate = { $lte: maxHourlyRate };
     }
 
-    if (query.minRating !== undefined) {
-      tutorFilter.rating = { $gte: query.minRating };
+    if (minRating !== undefined) {
+      tutorFilter.rating = { $gte: minRating };
     }
 
-    // User filters
-    if (query.firstName) {
-      userFilter.firstName = { $regex: query.firstName, $options: 'i' };
+    if (search) {
+      const regex = new RegExp(search, 'i');
+
+      const users = await this.userModel
+        .find({
+          $or: [{ firstName: regex }, { lastName: regex }, { bio: regex }],
+        })
+        .select('_id')
+        .lean();
+
+      if (users.length === 0) {
+        return {
+          data: [],
+          meta: { total: 0, page, limit, totalPages: 0 },
+        };
+      }
+
+      tutorFilter.user = { $in: users.map((u) => u._id) };
     }
 
-    if (query.lastName) {
-      userFilter.lastName = { $regex: query.lastName, $options: 'i' };
-    }
+    const skip = (page - 1) * limit;
 
-    if (query.bio) {
-      userFilter.bio = { $regex: query.bio, $options: 'i' };
-    }
+    const [data, total] = await Promise.all([
+      this.tutorProfileModel
+        .find(tutorFilter)
+        .populate({
+          path: 'user',
+          select: 'firstName lastName avatar bio',
+        })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
 
-    return this.tutorProfileModel
-      .find(tutorFilter)
-      .populate({
-        path: 'user',
-        match: userFilter,
-        select: 'firstName lastName avatar bio',
-      })
-      .exec();
+      this.tutorProfileModel.countDocuments(tutorFilter),
+    ]);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   /**

@@ -90,12 +90,6 @@ export class UsersService extends BaseService<User> {
       // tutor fields
       subject,
       hourlyRate,
-
-      // student fields
-      yearGroup,
-      confidenceLevel,
-      currentGrade,
-      targetGrade,
     } = data;
 
     /**
@@ -131,12 +125,6 @@ export class UsersService extends BaseService<User> {
 
     if (userRole === UserRole.Student) {
       const studentUpdate: any = {};
-      if (yearGroup !== undefined) studentUpdate.yearGroup = yearGroup;
-      if (confidenceLevel !== undefined)
-        studentUpdate.confidenceLevel = confidenceLevel;
-      if (currentGrade !== undefined) studentUpdate.currentGrade = currentGrade;
-      if (targetGrade !== undefined) studentUpdate.targetGrade = targetGrade;
-
       profile = await this.studentProfileModel.findOneAndUpdate(
         { user: new Types.ObjectId(user.userId) },
         { $set: studentUpdate },

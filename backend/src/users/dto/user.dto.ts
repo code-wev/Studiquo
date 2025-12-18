@@ -42,21 +42,4 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsNumber({}, { message: 'Hourly rate must be a number' })
   hourlyRate?: number;
-
-  // Student fields
-  @IsOptional()
-  @IsString({ message: 'Year group must be a string' })
-  yearGroup?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Confidence level must be a string' })
-  confidenceLevel?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Current grade must be a string' })
-  currentGrade?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Target grade must be a string' })
-  targetGrade?: string;
 }
