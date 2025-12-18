@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ExamBoardEntry } from 'src/models/ExamBoardModel';
@@ -40,27 +40,42 @@ export class ExamBoardService {
       return updated; // subject existed → board updated
     }
 
-    //  Subject does not exist → push new entry
-    const profile = await this.studentProfileModel.findOneAndUpdate(
-      { user: new Types.ObjectId(userId) },
-      {
-        $push: {
-          examBoards: {
+    // Check if profile exists
+    let profile = await this.studentProfileModel.findOne({
+      user: new Types.ObjectId(userId),
+    });
+
+    if (!profile) {
+      // Create new profile with the exam board
+      profile = new this.studentProfileModel({
+        user: new Types.ObjectId(userId),
+        examBoards: [
+          {
             subject: dto.subject,
             board: dto.board,
           },
+        ],
+      });
+      await profile.save();
+    } else {
+      // Push new entry to existing profile
+      profile = await this.studentProfileModel.findOneAndUpdate(
+        { user: new Types.ObjectId(userId) },
+        {
+          $push: {
+            examBoards: {
+              subject: dto.subject,
+              board: dto.board,
+            },
+          },
         },
-      },
-      { new: true },
-    );
-
-    if (!profile) {
-      throw new NotFoundException('Student profile not found');
+        { new: true },
+      );
     }
 
     return {
       message: 'Exam board entry added successfully',
-      boards: profile.examBoards,
+      boards: profile?.examBoards || [],
     };
   }
 
