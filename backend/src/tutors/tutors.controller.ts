@@ -7,7 +7,7 @@ import { RolesGuard } from 'common/guards/roles.guard';
 import { AvailabilityService } from 'src/availability/availability.service';
 import { UserRole } from 'src/models/user.model';
 import { ReviewQueryDto } from 'src/reviews/dto/review.dto';
-import { TutorSearchQueryDto } from './dto/tutor.dto';
+import { TutorSearchPaginationDto } from './dto/tutor.dto';
 import { TutorsService } from './tutors.service';
 
 /**
@@ -31,7 +31,7 @@ export class TutorsController {
    * @returns list of tutor profiles matching the search criteria
    */
   @Get()
-  async searchTutors(@Query() query: TutorSearchQueryDto) {
+  async searchTutors(@Query() query: TutorSearchPaginationDto) {
     return this.tutorsService.searchTutors(query);
   }
 

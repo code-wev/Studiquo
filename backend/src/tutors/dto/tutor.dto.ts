@@ -1,25 +1,46 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 
-export class TutorSearchQueryDto {
-  @IsOptional()
-  @IsString({ message: 'Subject must be a string' })
-  @IsEnum(['MATH', 'SCIENCE', 'ENGLISH'], {
-    message: 'Subject must be one of MATH | SCIENCE | ENGLISH',
-  })
-  subject?: string;
+export enum TutorSubject {
+  MATH = 'MATH',
+  SCIENCE = 'SCIENCE',
+  ENGLISH = 'ENGLISH',
+}
+
+export class TutorSearchPaginationDto {
+  /* ---------- Search filters ---------- */
 
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsEnum(TutorSubject)
+  subject?: TutorSubject;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @Type(() => Number)
-  @IsNumber({}, { message: 'Maximum hourly rate must be a number' })
+  @IsNumber()
   maxHourlyRate?: number;
 
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @Type(() => Number)
-  @IsNumber({}, { message: 'Minimum tutor rating must be a number' })
+  @IsNumber()
   minRating?: number;
 
   @IsOptional()
-  @IsString({ message: 'Search must be a string' })
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsString()
   search?: string;
+
+  /* ---------- Pagination ---------- */
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  page: number = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  limit: number = 10;
 }
