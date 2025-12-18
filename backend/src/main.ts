@@ -1,7 +1,5 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory, Reflector } from '@nestjs/core';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { RolesGuard } from '../common/guards/roles.guard';
 import { ResponseInterceptor } from '../common/response.interceptor';
 import { AppModule } from './app.module';
 import { UsersService } from './users/users.service';
@@ -22,11 +20,6 @@ async function bootstrap() {
     origin: true,
     credentials: true,
   });
-
-  // Register `JwtAuthGuard` globally first so `request.user` is populated by
-  // Passport/JWT before `RolesGuard` runs. Then register `RolesGuard`.
-  const jwtGuard = app.get(JwtAuthGuard);
-  app.useGlobalGuards(jwtGuard, new RolesGuard(reflector));
 
   // Set a global API prefix so all routes are prefixed with `/api`.
   app.setGlobalPrefix('api');

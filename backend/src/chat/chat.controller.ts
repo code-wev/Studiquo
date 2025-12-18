@@ -16,11 +16,11 @@ import { ChatService } from './chat.service';
 import { SendMessageDto } from './dto/chat.dto';
 
 @Controller('chat')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Get(':bookingId/messages')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async getChatHistory(@Param('bookingId') bookingId: MongoIdDto['id']) {
     return this.chatService.getChatHistory(bookingId);

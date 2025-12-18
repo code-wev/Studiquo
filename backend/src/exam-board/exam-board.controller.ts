@@ -14,6 +14,7 @@ import { ExamBoardService } from './exam-board.service';
  * role-based guards.
  */
 @Controller('exam-board')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class ExamBoardController {
   constructor(private readonly examBoardService: ExamBoardService) {}
 
@@ -25,7 +26,6 @@ export class ExamBoardController {
    * @returns the updated student profile
    */
   @Post('')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student)
   async addExamBoard(@GetUser() user: any, @Body() dto: CreateExamBoardDto) {
     return this.examBoardService.addOrUpdateExamBoard(user.sub, dto);
@@ -38,7 +38,6 @@ export class ExamBoardController {
    * @returns the list of exam boards
    */
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student)
   async getExamBoards(@GetUser() user: any) {
     return this.examBoardService.getExamBoards(user.sub);
