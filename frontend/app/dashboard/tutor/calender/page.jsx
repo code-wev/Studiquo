@@ -250,7 +250,6 @@ export default function Calendar() {
         );
       }
     } catch (error) {
-      console.error("Error deleting time slot:", error);
       toast.error(`${error?.data?.message || error.message}`);
     }
   };
