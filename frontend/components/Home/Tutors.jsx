@@ -4,6 +4,7 @@ import { useGetTutorQuery } from "@/feature/shared/TutorApi";
 import Image from "next/image";
 import Link from "next/link";
 import { useRef } from "react";
+import { FaRegStar, FaStar } from "react-icons/fa";
 import { FiArrowLeft, FiArrowRight, FiStar } from "react-icons/fi";
 
 // const tutors = [
@@ -81,15 +82,21 @@ export default function TutorsSection() {
 
                 {/* Content */}
                 <div className='p-5'>
-                  <div className='flex items-center gap-1 text-[#FF8A00] text-sm'>
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <FiStar
-                        key={s}
-                        className='fill-[#FF8A00] text-[#FF8A00]'
-                      />
-                    ))}
-                    <p className='text-gray-600 ml-1 text-sm'>4.8 (06)</p>
-                  </div>
+                     <div className="flex items-center gap-2 text-yellow-400">
+                               <div className="flex items-center gap-1 text-yellow-500">
+                   {Array.from({ length: 5 }, (_, i) =>
+                     i < Math.round(tutor?.averageRating) ? (
+                       <FaStar key={i} />
+                     ) : (
+                       <FaRegStar key={i} />
+                     )
+                   )}
+                 </div>
+                 
+                                   <span className="text-gray-500 text-sm">
+                                     {tutor?.averageRating}  review
+                                   </span>
+                                 </div>
 
                   <h3 className='mt-3 font-bold text-gray-900'>{tutor?.user?.firstName + ' ' + tutor?.user?.lastName }</h3>
                <p className="text-gray-500 text-sm mb-2">

@@ -149,7 +149,7 @@ const TutorProfilePage = () => {
         firstName: profileData.firstName,
         lastName: profileData.lastName,
         bio: profileData.bio,
-        subjects: profileData.subjects, 
+        // subjects: profileData.subjects, 
         hourlyRate: profileData.hourlyRate,
       };
 
@@ -194,13 +194,7 @@ const TutorProfilePage = () => {
     { value: "MATH", label: "Mathematics" },
     { value: "ENGLISH", label: "English" },
     { value: "SCIENCE", label: "Science" },
-    { value: "PHYSICS", label: "Physics" },
-    { value: "CHEMISTRY", label: "Chemistry" },
-    { value: "BIOLOGY", label: "Biology" },
-    { value: "HISTORY", label: "History" },
-    { value: "GEOGRAPHY", label: "Geography" },
-    { value: "COMPUTER_SCIENCE", label: "Computer Science" },
-    { value: "ECONOMICS", label: "Economics" },
+ 
   ];
 
   // Default avatar if none is set

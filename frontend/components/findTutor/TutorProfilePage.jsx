@@ -6,6 +6,7 @@ import teacherImg from "@/public/hiw/teacher.png";
 import profile from "@/public/hiw/proflie.png";
 import { useParams, useRouter } from "next/navigation";
 import { FiSend } from "react-icons/fi";
+import { useTutorProfileQuery } from "@/feature/shared/TutorApi";
 
 const TutorProfilePage = () => {
   const tutor = {
@@ -42,6 +43,11 @@ const TutorProfilePage = () => {
   const router = useRouter();
   const params = useParams();
   const id = params.id;
+  const {data:singleTutor, isLoading} = useTutorProfileQuery(id);
+
+  const tutorData = singleTutor?.data;
+    console.log(tutorData, "aso tutor aso");
+
 
 
   return (
@@ -52,24 +58,36 @@ const TutorProfilePage = () => {
           <h2 className="font-semibold text-lg">Tutor Profile</h2>
           <div className="flex flex-col md:flex-row gap-6">
             <Image
-              src={tutor.image}
-              alt={tutor.name}
+              src={tutorData?.user?.avatar}
+              width={200}
+              height={200}
+              alt={tutor?.user?.firstName}
               className="w-48  object-cover "
             />
             <div className="flex-1 flex flex-col justify-between">
               <div className="space-y-2">
-                <h3 className="text-2xl font-semibold">{tutor.name}</h3>
-                <p className="text-gray-600">{tutor.specialty}</p>
+                <h3 className="text-2xl font-semibold">{tutorData?.user?.firstName + " " + tutorData?.user?.lastName}</h3>
+                   <p className="text-gray-500 text-sm mb-2">
+  {tutorData?.subjects.map((s, index) => (
+    <span key={index}>
+      {s}
+      {index !==tutorData?.subjects.length - 1 && ", "}
+    </span>
+  ))}
+</p>
                 <div className="flex items-center gap-2 text-yellow-400">
-                  {Array.from({ length: 5 }, (_, i) =>
-                    i < Math.floor(tutor.rating) ? (
-                      <FaStar key={i} />
-                    ) : (
-                      <FaRegStar key={i} />
-                    )
-                  )}
+              <div className="flex items-center gap-1 text-yellow-500">
+  {Array.from({ length: 5 }, (_, i) =>
+    i < Math.round(tutorData?.averageRating) ? (
+      <FaStar key={i} />
+    ) : (
+      <FaRegStar key={i} />
+    )
+  )}
+</div>
+
                   <span className="text-gray-500 text-sm">
-                    {tutor.rating} ({tutor.reviews} review)
+                    {tutorData?.averageRating}  review
                   </span>
                 </div>
                 <p className="text-orange-500 text-lg font-semibold">
@@ -77,7 +95,7 @@ const TutorProfilePage = () => {
                 </p>
                 <div>
                   <h4 className="font-semibold">Bio</h4>
-                  <p className="text-gray-700 text-sm">{tutor.bio}</p>
+                  <p className="text-gray-700 text-sm">{tutorData?.user?.bio}</p>
                 </div>
               </div>
 
@@ -90,12 +108,12 @@ const TutorProfilePage = () => {
                 >
                   Book Now
                 </button>
-                <button className="border border-gray-300 rounded-md p-2 text-gray-600 hover:bg-gray-100 transition">
+                {/* <button className="border border-gray-300 rounded-md p-2 text-gray-600 hover:bg-gray-100 transition">
                   <FaHeart />
                 </button>
                 <button className="border border-gray-300 rounded-md p-2 text-gray-600 hover:bg-gray-100 transition">
                   <FaRegComment />
-                </button>
+                </button> */}
               </div>
             </div>
           </div>
