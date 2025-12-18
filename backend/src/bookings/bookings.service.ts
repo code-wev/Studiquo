@@ -50,12 +50,35 @@ export class BookingsService {
    * @throws BadRequestException when slot/tutor/profile are missing
    */
   async createBooking(user: any, dto: CreateBookingDto) {
-    const booking = new this.bookingModel({ ...dto, status: 'PENDING' });
+    // Load timeslot first and ensure it exists
+    const slot = await this.timeSlotModel.findById(dto.timeSlot);
+    if (!slot) {
+      throw new BadRequestException('Invalid time slot');
+    }
+
+    // Ensure the timeslot isn't already booked (pending or scheduled)
+    const existing = await this.bookingModel.findOne({
+      timeSlot: new Types.ObjectId(slot._id),
+      status: { $in: ['PENDING', 'SCHEDULED'] },
+    });
+
+    if (existing) {
+      throw new BadRequestException('You have already booked this time slot');
+    }
+
+    const booking = new this.bookingModel({
+      timeSlot: new Types.ObjectId(slot._id),
+      subject: dto.subject,
+      type: dto.type,
+      student: new Types.ObjectId(user.userId),
+      status: 'PENDING',
+    });
+
     await booking.save();
 
     const bookingStudent = new this.bookingStudentsModel({
-      booking: booking._id,
-      student: user.userId,
+      booking: new Types.ObjectId(booking._id),
+      student: new Types.ObjectId(user.userId),
     });
     await bookingStudent.save();
 
@@ -73,11 +96,7 @@ export class BookingsService {
       return { booking };
     }
 
-    // Load timeslot and tutor info to compute amount
-    const slot = await this.timeSlotModel.findById(dto.timeSlot);
-    if (!slot) {
-      throw new BadRequestException('Invalid time slot');
-    }
+    // tutor info to compute amount
     const tutorAvailability = await this.availabilityModel.findById(
       new Types.ObjectId(slot.tutorAvailability),
     );

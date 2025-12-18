@@ -1,6 +1,7 @@
 "use client";
 
 import { useGetTutorAvailabilityQuery } from "@/feature/shared/AvailabilityApi";
+import { useCreateBookingMutation } from "@/feature/student/BookingApi";
 import prfImage from "@/public/hiw/prf.png";
 import Image from "next/image";
 import { useParams } from "next/navigation";
@@ -23,6 +24,10 @@ export default function Page() {
     isLoading,
     isError,
   } = useGetTutorAvailabilityQuery(id);
+
+  // Create booking mutation
+  const [createBooking, { isLoading: isCreatingBooking }] =
+    useCreateBookingMutation();
 
   // Calendar state
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -301,27 +306,51 @@ export default function Page() {
   };
 
   // Handle confirm booking
-  const handleConfirmBooking = () => {
-    if (!selectedDate || !selectedTimeSlot) return;
+  const handleConfirmBooking = async () => {
+    if (!selectedDate || !selectedTimeSlot || !id) return;
 
-    console.log("Booking details:", {
-      tutorId: id,
-      date: selectedDate,
-      slot: selectedTimeSlot,
-      bookingType: bookingType,
-    });
+    const bookingData = {
+      timeSlot: selectedTimeSlot.id, // This should be the time slot ID from the API
+      subject: selectedTimeSlot.subject,
+      type: selectedTimeSlot.type,
+    };
 
-    // Here you would typically:
-    // 1. Make API call to book the slot
-    // 2. Redirect to payment page
-    // 3. Show confirmation
-    alert(
-      `Booking confirmed!\nDate: ${formatDate(
-        selectedDate
-      )}\nTime: ${formatTimeDisplay(selectedTimeSlot)}\nType: ${
-        selectedTimeSlot.type === "ONE_TO_ONE" ? "One-to-One" : "Group"
-      }\nTotal: $${totalPrice.toFixed(2)}`
-    );
+    console.log("Booking request data:", bookingData);
+
+    try {
+      // Call the create booking API
+      const response = await createBooking(bookingData).unwrap();
+
+      console.log("Booking API success response:", response);
+
+      // Show success message
+      alert(
+        `Booking created successfully!\nDate: ${formatDate(
+          selectedDate
+        )}\nTime: ${formatTimeDisplay(selectedTimeSlot)}\nType: ${
+          selectedTimeSlot.type === "ONE_TO_ONE" ? "One-to-One" : "Group"
+        }\nTotal: $${totalPrice?.toFixed(2) || "0.00"}`
+      );
+
+      // Check if there's a payment URL in the response and redirect
+      if (response?.payment?.checkoutUrl) {
+        console.log(
+          "Redirecting to payment URL:",
+          response.payment.checkoutUrl
+        );
+        // Uncomment to redirect to payment page
+        // window.location.href = response.payment.checkoutUrl;
+      }
+
+      // You could also redirect to a payment page or show payment options here
+    } catch (error) {
+      console.error("Booking API error:", error);
+      alert(
+        `Failed to create booking: ${
+          error?.data?.message || error?.message || "Unknown error"
+        }`
+      );
+    }
   };
 
   // Get booking type display text
@@ -701,27 +730,36 @@ export default function Page() {
             <div className='py-4 space-y-2'>
               <div className='flex justify-between text-sm text-gray-700'>
                 <p>Session Price</p>
-                <p>${totalPrice.toFixed(2)}</p>
+                <p>${totalPrice?.toFixed(2) || "0.00"}</p>
               </div>
 
               <div className='flex justify-between font-semibold text-lg mt-3 pt-3 border-t border-gray-100'>
                 <p className='text-gray-900'>Total</p>
-                <p className='text-orange-500'>${totalPrice.toFixed(2)}</p>
+                <p className='text-orange-500'>
+                  ${totalPrice?.toFixed(2) || "0.00"}
+                </p>
               </div>
             </div>
 
             {/* Confirm Button */}
             <button
               onClick={handleConfirmBooking}
+              disabled={!selectedDate || !selectedTimeSlot || isCreatingBooking}
               className={`w-full py-3 rounded-xl font-semibold mt-2 transition-colors ${
-                selectedDate && selectedTimeSlot
+                selectedDate && selectedTimeSlot && !isCreatingBooking
                   ? "bg-purple-600 hover:bg-purple-700 text-white"
                   : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-              disabled={!selectedDate || !selectedTimeSlot}>
-              {selectedDate && selectedTimeSlot
-                ? "Confirm Slot"
-                : "Select Date & Time First"}
+              }`}>
+              {isCreatingBooking ? (
+                <div className='flex items-center justify-center'>
+                  <div className='animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2'></div>
+                  Processing...
+                </div>
+              ) : selectedDate && selectedTimeSlot ? (
+                "Confirm Slot"
+              ) : (
+                "Select Date & Time First"
+              )}
             </button>
 
             <div className='flex items-center justify-center gap-2 text-xs text-gray-500 mt-4'>

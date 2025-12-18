@@ -1,6 +1,7 @@
 import { AuthApi } from "@/feature/shared/AuthApi";
 import { AvailabilityApi } from "@/feature/shared/AvailabilityApi";
 import { TutorApi } from "@/feature/shared/TutorApi";
+import { BookingApi } from "@/feature/student/BookingApi";
 import { StudentApi } from "@/feature/student/StudentApi";
 import { configureStore } from "@reduxjs/toolkit";
 // import your reducers here (uncomment and add real slices when available)
@@ -15,8 +16,9 @@ export const store = configureStore({
     app: placeholderReducer,
     [AuthApi.reducerPath]: AuthApi.reducer,
     [AvailabilityApi.reducerPath]: AvailabilityApi.reducer,
-    [TutorApi.reducerPath] : TutorApi.reducer,
-    [StudentApi.reducerPath]: StudentApi.reducer
+    [TutorApi.reducerPath]: TutorApi.reducer,
+    [StudentApi.reducerPath]: StudentApi.reducer,
+    [BookingApi.reducerPath]: BookingApi.reducer,
   },
 
   middleware: (getDefaultMiddleware) =>
@@ -24,7 +26,8 @@ export const store = configureStore({
       AuthApi.middleware,
       AvailabilityApi.middleware,
       TutorApi.middleware,
-      StudentApi.middleware
+      StudentApi.middleware,
+      BookingApi.middleware,
     ]),
 });
 
