@@ -20,14 +20,6 @@ export class TutorSearchQueryDto {
   minRating?: number;
 
   @IsOptional()
-  @IsString({ message: 'First name must be a string' })
-  firstName?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Last name must be a string' })
-  lastName?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Bio must be a string' })
-  bio?: string;
+  @IsString({ message: 'Search must be a string' })
+  search?: string;
 }

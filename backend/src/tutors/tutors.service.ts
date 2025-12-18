@@ -69,16 +69,16 @@ export class TutorsService {
     }
 
     // User filters
-    if (query.firstName) {
-      userFilter.firstName = { $regex: query.firstName, $options: 'i' };
+    if (query.search) {
+      userFilter.firstName = { $regex: query.search, $options: 'i' };
     }
 
-    if (query.lastName) {
-      userFilter.lastName = { $regex: query.lastName, $options: 'i' };
+    if (query.search) {
+      userFilter.lastName = { $regex: query.search, $options: 'i' };
     }
 
-    if (query.bio) {
-      userFilter.bio = { $regex: query.bio, $options: 'i' };
+    if (query.search) {
+      userFilter.bio = { $regex: query.search, $options: 'i' };
     }
 
     return this.tutorProfileModel
