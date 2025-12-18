@@ -83,12 +83,6 @@ export class PaymentsController {
         const currency = event.data.object.currency;
         if (bookingId) {
           try {
-            await this.bookingModel.findByIdAndUpdate(
-              bookingId,
-              { status: 'SCHEDULED' },
-              { new: true },
-            );
-
             // Create payment record
             await this.paymentModel.create({
               booking: bookingId,
@@ -100,6 +94,12 @@ export class PaymentsController {
               status: 'succeeded',
               transactionId: event.data.object.id,
             });
+
+            await this.bookingModel.findByIdAndUpdate(
+              bookingId,
+              { status: 'SCHEDULED' },
+              { new: true },
+            );
 
             this.logger.log(`Booking ${bookingId} updated to SCHEDULED`);
           } catch (e: any) {
@@ -117,12 +117,6 @@ export class PaymentsController {
         const currency = event.data.object.currency;
         if (bookingId) {
           try {
-            await this.bookingModel.findByIdAndUpdate(
-              bookingId,
-              { status: 'CANCELLED' },
-              { new: true },
-            );
-
             // Create payment record
             await this.paymentModel.create({
               booking: bookingId,
@@ -134,6 +128,12 @@ export class PaymentsController {
               status: 'failed',
               transactionId: event.data.object.id,
             });
+
+            await this.bookingModel.findByIdAndUpdate(
+              bookingId,
+              { status: 'CANCELLED' },
+              { new: true },
+            );
 
             this.logger.log(`Booking ${bookingId} updated to CANCELLED`);
           } catch (e: any) {
