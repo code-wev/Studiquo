@@ -1048,10 +1048,8 @@ export default function Calendar() {
                                       await refetchAvailabilities();
                                       toast.success(`Availability removed`);
                                     } catch (error) {
-                                      console.log(error);
                                       toast.error(
-                                        error?.data?.message ||
-                                          "Failed to delete availability"
+                                        "If any slot booked on this date, cannot delete availability"
                                       );
                                     }
                                   }}
