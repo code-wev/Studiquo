@@ -2,9 +2,9 @@ import { base_url } from "@/utils/utils";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import Cookies from "js-cookie";
 
-export const StudentApi = createApi({
-  reducerPath: "StudentApi",
-  tagTypes: ["Student"],
+export const BookingApi = createApi({
+  reducerPath: "BookingApi",
+  tagTypes: ["Booking"],
   baseQuery: fetchBaseQuery({
     baseUrl: base_url,
     prepareHeaders: (headers) => {
@@ -17,19 +17,15 @@ export const StudentApi = createApi({
   }),
 
   endpoints: (builder) => ({
-    getExamBoard: builder.query({
-      query: () => `/exam-board`,
-      providesTags: ["Student"],
-    }),
-    updateBoard: builder.mutation({
+    createBooking: builder.mutation({
       query: (data) => ({
-        url: "/exam-board",
+        url: "/bookings",
         method: "POST",
         body: data,
       }),
-      invalidatesTags: ["Student"],
+      invalidatesTags: ["Booking"],
     }),
   }),
 });
 
-export const { useGetExamBoardQuery, useUpdateBoardMutation } = StudentApi;
+export const { useCreateBookingMutation } = BookingApi;

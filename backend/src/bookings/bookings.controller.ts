@@ -1,9 +1,4 @@
-import {
-  Body,
-  Controller,
-  Post,
-  UseGuards
-} from '@nestjs/common';
+import { Body, Controller, Post, UseGuards } from '@nestjs/common';
 import { GetUser } from 'common/decorators/get-user.decorator';
 import { UserRole } from 'src/models/user.model';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -14,11 +9,11 @@ import { CreateBookingDto } from './dto/booking.dto';
 
 @Controller('bookings')
 @UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.Student)
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Post()
-  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async createBooking(@GetUser() user: any, @Body() dto: CreateBookingDto) {
     return this.bookingsService.createBooking(user, dto);
   }
