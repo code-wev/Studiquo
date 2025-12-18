@@ -76,12 +76,10 @@ export class ExamBoardService {
         user: new Types.ObjectId(userId),
       })
       .select('examBoards');
-    if (!profile) {
-      throw new NotFoundException('Student profile not found');
-    }
+
     return {
       message: 'Exam board entries retrieved successfully',
-      boards: profile.examBoards,
+      boards: profile?.examBoards || [],
     };
   }
 }
