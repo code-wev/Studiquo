@@ -53,7 +53,6 @@ MessageSchema.index({ chatGroup: 1, createdAt: -1 });
 /**
  * Fast message fetch
  */
-MessageSchema.index({ chatGroup: 1, createdAt: -1 });
 
 /**
  * TTL index → auto delete messages

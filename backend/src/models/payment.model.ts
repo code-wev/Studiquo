@@ -21,17 +21,15 @@ export class Payment extends Document {
   @Prop({ required: true })
   method: string;
 
-  @Prop({ required: true })
+  @Prop({
+    type: String,
+    enum: ['succeeded', 'failed'],
+    required: true,
+  })
   status: string;
 
   @Prop({ required: true })
   transactionId: string;
-
-  @Prop({ required: true })
-  commission: number;
-
-  @Prop({ required: true })
-  tutorEarning: number;
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);

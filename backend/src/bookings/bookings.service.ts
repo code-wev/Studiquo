@@ -128,7 +128,11 @@ export class BookingsService {
       currency: 'eur', // euro only
       successUrl,
       cancelUrl,
-      metadata: { bookingId: String(booking._id) },
+      metadata: {
+        bookingId: String(booking._id),
+        studentId: String(user.userId),
+        tutorId: String(tutorAvailability.user),
+      },
       customerEmail: (user && user.email) || undefined,
       description: `Lesson with tutor ${String(tutorProfile.user)}`,
     });

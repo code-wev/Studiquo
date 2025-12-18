@@ -13,7 +13,7 @@ export class PaymentsService {
 
   async createPaymentIntent(
     amount: number,
-    currency: string = 'usd',
+    currency: string = 'eur',
     metadata?: Record<string, string>,
   ) {
     // eru payment intent

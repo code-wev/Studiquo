@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { Payment } from 'src/models/payment.model';
 import { Booking } from '../models/booking.model';
 import { PaymentsService } from './payments.service';
 
@@ -19,6 +20,7 @@ export class PaymentsController {
   constructor(
     private readonly paymentsService: PaymentsService,
     @InjectModel(Booking.name) private bookingModel: Model<Booking>,
+    @InjectModel(Payment.name) private paymentModel: Model<Payment>,
   ) {}
 
   /**
@@ -38,7 +40,7 @@ export class PaymentsController {
   async createPaymentIntent(
     @Body() body: { amount: number; currency?: string; bookingId?: string },
   ) {
-    const { amount, currency = 'usd', bookingId } = body;
+    const { amount, currency = 'eur', bookingId } = body;
     if (!amount || amount <= 0) {
       throw new BadRequestException('Invalid amount');
     }
@@ -75,6 +77,10 @@ export class PaymentsController {
       case 'payment_intent.succeeded': {
         this.logger.log('Payment succeeded:', event.data.object.id);
         const bookingId = event.data.object.metadata?.bookingId;
+        const studentId = event.data.object.metadata?.studentId;
+        const tutorId = event.data.object.metadata?.tutorId;
+        const amount = event.data.object.amount_received;
+        const currency = event.data.object.currency;
         if (bookingId) {
           try {
             await this.bookingModel.findByIdAndUpdate(
@@ -82,6 +88,19 @@ export class PaymentsController {
               { status: 'SCHEDULED' },
               { new: true },
             );
+
+            // Create payment record
+            await this.paymentModel.create({
+              booking: bookingId,
+              student: studentId,
+              tutor: tutorId,
+              amount,
+              currency,
+              method: 'stripe',
+              status: 'succeeded',
+              transactionId: event.data.object.id,
+            });
+
             this.logger.log(`Booking ${bookingId} updated to SCHEDULED`);
           } catch (e: any) {
             this.logger.error('Failed to update booking status', e.message);
@@ -92,6 +111,10 @@ export class PaymentsController {
       case 'payment_intent.payment_failed': {
         this.logger.log('Payment failed:', event.data.object.id);
         const bookingId = event.data.object.metadata?.bookingId;
+        const studentId = event.data.object.metadata?.studentId;
+        const tutorId = event.data.object.metadata?.tutorId;
+        const amount = event.data.object.amount;
+        const currency = event.data.object.currency;
         if (bookingId) {
           try {
             await this.bookingModel.findByIdAndUpdate(
@@ -99,6 +122,19 @@ export class PaymentsController {
               { status: 'CANCELLED' },
               { new: true },
             );
+
+            // Create payment record
+            await this.paymentModel.create({
+              booking: bookingId,
+              student: studentId,
+              tutor: tutorId,
+              amount,
+              currency,
+              method: 'stripe',
+              status: 'failed',
+              transactionId: event.data.object.id,
+            });
+
             this.logger.log(`Booking ${bookingId} updated to CANCELLED`);
           } catch (e: any) {
             this.logger.error('Failed to update booking status', e.message);
