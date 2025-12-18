@@ -28,7 +28,7 @@ export class ExamBoardController {
    */
   @Post('')
   async addExamBoard(@GetUser() user: any, @Body() dto: CreateExamBoardDto) {
-    return this.examBoardService.addOrUpdateExamBoard(user.sub, dto);
+    return this.examBoardService.addOrUpdateExamBoard(user.userId, dto);
   }
 
   /**
