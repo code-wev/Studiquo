@@ -2,8 +2,10 @@
 import {
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
+  IsString,
   IsUrl,
 } from 'class-validator';
 
@@ -21,29 +23,40 @@ export class CreateTimeSlotDto {
     {},
     { message: 'startTime must be a valid ISO datetime string' },
   )
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'startTime is required' })
   startTime: string;
 
   @IsDateString({}, { message: 'endTime must be a valid ISO datetime string' })
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'endTime is required' })
   endTime: string;
 
-  @IsOptional()
   @IsUrl({}, { message: 'meetLink must be a valid URL' })
-  meetLink?: string;
+  meetLink: string;
+
+  @IsString({ message: 'Type must be a string' })
+  @IsEnum(['ONE_TO_ONE', 'GROUP'], {
+    message: 'Type must be ONE_TO_ONE or GROUP',
+  })
+  type: string;
+
+  @IsString({ message: 'Subject must be a string' })
+  @IsEnum(['MATH', 'SCIENCE', 'ENGLISH'], {
+    message: 'Subject must be one of MATH|SCIENCE|ENGLISH',
+  })
+  subject: string;
 }
 
 export class UpdateTimeSlotDto {
-  @IsOptional()
   @IsDateString(
     {},
     { message: 'startTime must be a valid ISO datetime string' },
   )
-  startTime?: string;
+  @IsNotEmpty({ message: 'startTime is required' })
+  startTime: string;
 
-  @IsOptional()
   @IsDateString({}, { message: 'endTime must be a valid ISO datetime string' })
-  endTime?: string;
+  @IsNotEmpty({ message: 'endTime is required' })
+  endTime: string;
 
   @IsOptional()
   @IsUrl({}, { message: 'meetLink must be a valid URL' })
@@ -52,4 +65,17 @@ export class UpdateTimeSlotDto {
   @IsOptional()
   @IsBoolean({ message: 'isBooked must be a boolean' })
   isBooked?: boolean;
+
+  @IsOptional()
+  @IsString({ message: 'Type must be a string' })
+  @IsEnum(['ONE_TO_ONE', 'GROUP'], {
+    message: 'Type must be ONE_TO_ONE or GROUP',
+  })
+  type: string;
+
+  @IsString({ message: 'Subject must be a string' })
+  @IsEnum(['MATH', 'SCIENCE', 'ENGLISH'], {
+    message: 'Subject must be one of MATH|SCIENCE|ENGLISH',
+  })
+  subject: string;
 }

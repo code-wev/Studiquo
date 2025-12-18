@@ -12,6 +12,12 @@ export class TimeSlot extends Document {
   @Prop({ required: true })
   endTime: Date;
 
+  @Prop({ required: true, enum: ['MATH', 'SCIENCE', 'ENGLISH'] })
+  subject: string;
+
+  @Prop({ required: true, enum: ['ONE_TO_ONE', 'GROUP'], default: 'GROUP' })
+  type: string;
+
   @Prop({ default: false })
   isBooked: boolean;
 

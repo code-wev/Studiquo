@@ -48,20 +48,38 @@ export class AvailabilityController {
   }
 
   /**
+   * Delete an availability entry by ID.
+   *
+   * @param req - the request object containing `user` set by the auth guard
+   * @param availabilityId - the ID of the availability entry to delete
+   * @returns a success message on completion
+   */
+  @Delete('date/:availabilityId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.Tutor)
+  async deleteAvailability(
+    @GetUser() user: any,
+    @Param('availabilityId') availabilityId: MongoIdDto['id'],
+  ) {
+    return this.availabilityService.deleteAvailability(user, availabilityId);
+  }
+
+  /**
    * Add a time slot to a specific availability entry by ID.
    *
    * @param availabilityId - the ID of the availability entry
    * @param dto - data containing time slot details to add
    * @returns the created TimeSlot document
    */
-  @Post(':availabilityId/slots')
+  @Post('date/:availabilityId/slots')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
   async addTimeSlot(
+    @GetUser() user: any,
     @Param('availabilityId') availabilityId: MongoIdDto['id'],
     @Body() dto: CreateTimeSlotDto,
   ) {
-    return this.availabilityService.addTimeSlot(availabilityId, dto);
+    return this.availabilityService.addTimeSlot(user, availabilityId, dto);
   }
 
   /**
@@ -72,7 +90,7 @@ export class AvailabilityController {
    * @param dto - data containing time slot fields to update
    * @returns the updated TimeSlot document
    */
-  @Put(':slotId')
+  @Put('slots/:slotId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
   async updateSlot(
@@ -90,7 +108,7 @@ export class AvailabilityController {
    * @param slotId - the ID of the time slot to delete
    * @returns a success message on completion
    */
-  @Delete(':slotId')
+  @Delete('slots/:slotId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
   async deleteSlot(

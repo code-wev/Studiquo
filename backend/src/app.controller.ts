@@ -22,7 +22,7 @@ export class AppController {
    * @returns a friendly greeting string
    */
   @Get()
-  getHello(): string {
+  getHello(): { status: string } {
     return this.appService.getHello();
   }
 }
