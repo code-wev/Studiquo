@@ -339,7 +339,6 @@ export class AvailabilityService {
    * @throws NotFoundException if time slot not found
    */
   async deleteSlot(user: any, slotId: MongoIdDto['id']): Promise<TimeSlot> {
-    console.log(slotId);
     const slot = await this.timeSlotModel.findOne({
       _id: slotId,
       tutorAvailability: {
@@ -349,8 +348,6 @@ export class AvailabilityService {
           .exec(),
       },
     });
-
-    console.log(slot);
 
     if (!slot) {
       throw new NotFoundException('Time slot not found');
@@ -365,7 +362,7 @@ export class AvailabilityService {
         _id: slotId,
         tutorAvailability: {
           $in: await this.availabilityModel
-            .find({ user: user.userId })
+            .find({ user: new Types.ObjectId(user.userId) })
             .distinct('_id')
             .exec(),
         },
