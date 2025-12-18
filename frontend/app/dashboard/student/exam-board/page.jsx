@@ -8,8 +8,7 @@ export default function ExamBoard() {
     { id: 1, name: 'Science', board: '' },
     { id: 2, name: 'Math', board: '' },
     { id: 3, name: 'English', board: '' },
-    { id: 4, name: 'Math', board: '' },
-    { id: 5, name: 'English', board: '' }
+
   ]);
 
   const examBoards = [

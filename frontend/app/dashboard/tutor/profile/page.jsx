@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { BiChevronDown, BiCreditCard } from "react-icons/bi";
+import { BiChevronDown, BiUpload, BiX } from "react-icons/bi";
 import TitleSection from "@/components/dashboard/shared/TitleSection";
 import {
   useMyProfileQuery,
@@ -12,51 +12,203 @@ import toast from "react-hot-toast";
 
 const TutorProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [updateProfile, { isLoading, loading }] = useUpdateProfileMutation();
-  const { data: myPofile } = useMyProfileQuery();
+  const [updateProfile, { isLoading }] = useUpdateProfileMutation();
+  const { data: myPofile, refetch } = useMyProfileQuery();
+  const [uploading, setUploading] = useState(false);
 
   const [profileData, setProfileData] = useState({
-    firstName: myPofile?.data?.user?.firstName,
-    lastName: myPofile?.data?.user?.lastName,
-    // email: myPofile?.data?.user?.email,
-    subject: myPofile?.data?.user?.subject,
-    bio: myPofile?.data?.user?.bio,
-    // paymentName: "Aubrey Aubrey",
-    // cardNumber: "",
-    // expiresMonth: "March",
-    // expiresYear: "2027",
-    // cvc: "CVC",
+    firstName: "",
+    lastName: "",
+    email: "",
+    subjects: [],
+    bio: "",
+    hourlyRate: "",
+    avatar: "",
   });
 
-  console.log(myPofile, "khela hobe");
+  console.log(myPofile, "tomi amar my profile");
+
+  // Initialize profileData when myPofile data is available
+  useEffect(() => {
+    if (myPofile?.data?.user) {
+      const userData = myPofile.data.user;
+      const profileInfo = myPofile.data.profile;
+      
+      setProfileData({
+        firstName: userData.firstName || "",
+        lastName: userData.lastName || "",
+        email: userData.email || "",
+        subjects: profileInfo?.subjects || [],
+        bio: userData.bio || "",
+        hourlyRate: profileInfo?.hourlyRate || "",
+        avatar: userData.avatar || "",
+      });
+    }
+  }, [myPofile]);
 
   const handleInputChange = (field, value) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleSubjectChange = (e) => {
+    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+    handleInputChange("subjects", selectedOptions);
+  };
+
+  // Image upload to imgbb
+  const uploadImageToImgBB = async (file) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('key', 'f119187269ac7e77ca4097bbbcb47457'); // Your imgbb API key
+
+    try {
+      setUploading(true);
+      const response = await fetch('https://api.imgbb.com/1/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        return data.data.url; // Return the image URL
+      } else {
+        throw new Error(data.error?.message || 'Image upload failed');
+      }
+    } catch (error) {
+      console.error('Image upload error:', error);
+      toast.error('Failed to upload image');
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    const imageUrl = await uploadImageToImgBB(file);
+    
+    if (imageUrl) {
+      // Update local state
+      setProfileData(prev => ({ ...prev, avatar: imageUrl }));
+      
+      // Update in backend
+      try {
+        const result = await updateProfile({ avatar: imageUrl });
+        
+        if (result.error) {
+          toast.error('Failed to save avatar');
+        } else {
+          toast.success('Avatar updated successfully');
+          refetch(); // Refresh profile data
+        }
+      } catch (error) {
+        console.error('Avatar update error:', error);
+        toast.error('Failed to save avatar');
+      }
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    try {
+      const result = await updateProfile({ avatar: "" });
+      
+      if (result.error) {
+        toast.error('Failed to remove avatar');
+      } else {
+        setProfileData(prev => ({ ...prev, avatar: "" }));
+        toast.success('Avatar removed successfully');
+        refetch(); // Refresh profile data
+      }
+    } catch (error) {
+      console.error('Avatar remove error:', error);
+      toast.error('Failed to remove avatar');
+    }
+  };
+
   const handleSave = async () => {
     setIsEditing(false);
-    console.log(profileData, "toi profile data");
-    // Add your save logic here
+    
     try {
-      const result = await updateProfile(profileData);
-      if (result.error) {
-        console.log(result, "tomi amar result");
-      }
+      // Prepare data for API call
+      const updateData = {
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        bio: profileData.bio,
+        subjects: profileData.subjects, 
+        hourlyRate: profileData.hourlyRate,
+      };
 
-      toast.success("Profile Update Succesfully");
+      console.log(updateData, "update data");
+
+      const result = await updateProfile(updateData);
+      
+      if (result.error) {
+        toast.error(result.error.data?.message || "Update failed");
+        console.error("Update error:", result.error);
+      } else {
+        toast.success("Profile Updated Successfully");
+        refetch(); // Refresh profile data
+      }
     } catch (error) {
-      console.log(error);
+      console.error("Update error:", error);
+      toast.error("An error occurred while updating profile");
     }
   };
 
   const handleCancel = () => {
+    // Reset to original data
+    if (myPofile?.data?.user) {
+      const userData = myPofile.data.user;
+      const profileInfo = myPofile.data.profile;
+      
+      setProfileData({
+        firstName: userData.firstName || "",
+        lastName: userData.lastName || "",
+        email: userData.email || "",
+        subjects: profileInfo?.subjects || [],
+        bio: userData.bio || "",
+        hourlyRate: profileInfo?.hourlyRate || "",
+        avatar: userData.avatar || "",
+      });
+    }
     setIsEditing(false);
-    // Reset to original data if needed
   };
 
+  // Available subjects options
+  const subjectOptions = [
+    { value: "MATH", label: "Mathematics" },
+    { value: "ENGLISH", label: "English" },
+    { value: "SCIENCE", label: "Science" },
+    { value: "PHYSICS", label: "Physics" },
+    { value: "CHEMISTRY", label: "Chemistry" },
+    { value: "BIOLOGY", label: "Biology" },
+    { value: "HISTORY", label: "History" },
+    { value: "GEOGRAPHY", label: "Geography" },
+    { value: "COMPUTER_SCIENCE", label: "Computer Science" },
+    { value: "ECONOMICS", label: "Economics" },
+  ];
+
+  // Default avatar if none is set
+  const defaultAvatar = "https://i.pravatar.cc/150?img=45";
+  const displayAvatar = profileData.avatar || defaultAvatar;
+
   return (
-    <div className=" bg-white p-12">
+    <div className="bg-white p-12">
       <TitleSection bg={"#FFFFFF"} title={"Profile"} />
       <div className="mx-auto p-8">
         {/* Header */}
@@ -79,9 +231,10 @@ const TutorProfilePage = () => {
               </button>
               <button
                 onClick={handleSave}
-                className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                disabled={isLoading}
+                className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:bg-purple-300"
               >
-                Save Changes
+                {isLoading ? "Saving..." : "Save Changes"}
               </button>
             </div>
           )}
@@ -89,17 +242,77 @@ const TutorProfilePage = () => {
 
         {/* Basic Information */}
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-6">
-            <Image
-              width={80}
-              height={80}
-              src="https://i.pravatar.cc/150?img=45"
-              alt="Profile"
-              className="w-16 h-16 rounded-full object-cover"
-            />
-            <h2 className="text-2xl font-semibold text-gray-800">
-              Basic Information
-            </h2>
+          <div className="flex items-start gap-6 mb-6">
+            {/* Avatar Section */}
+            <div className="relative shrink-0">
+              <div className="relative group">
+                <Image
+                  width={80}
+                  height={80}
+                  src={displayAvatar}
+                  alt="Profile"
+                  className="w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg"
+                />
+                
+                {/* Upload Overlay */}
+                <div className="absolute inset-0 bg-black bg-opacity-40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <label 
+                    htmlFor="avatar-upload"
+                    className="cursor-pointer p-2 bg-white rounded-full hover:bg-gray-100 transition-colors"
+                  >
+                    <BiUpload size={20} className="text-gray-700" />
+                    <input
+                      id="avatar-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                      disabled={uploading}
+                    />
+                  </label>
+                </div>
+
+                {/* Remove Avatar Button */}
+                {profileData.avatar && (
+                  <button
+                    onClick={handleRemoveAvatar}
+                    disabled={uploading}
+                    className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg"
+                  >
+                    <BiX size={18} />
+                  </button>
+                )}
+              </div>
+
+              {/* Uploading Indicator */}
+              {uploading && (
+                <div className="absolute inset-0 bg-white bg-opacity-80 rounded-full flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
+                </div>
+              )}
+              
+              <div className="mt-3 text-center">
+                <label
+                  htmlFor="avatar-upload"
+                  className="text-sm text-purple-600 hover:text-purple-700 cursor-pointer font-medium"
+                >
+                  {uploading ? "Uploading..." : "Change photo"}
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  JPG, PNG up to 5MB
+                </p>
+              </div>
+            </div>
+
+            {/* Profile Title */}
+            <div className="flex-1">
+              <h2 className="text-2xl font-semibold text-gray-800">
+                Basic Information
+              </h2>
+              <p className="text-gray-600 mt-2">
+                Update your personal information and profile photo
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-6 mb-6">
@@ -110,7 +323,6 @@ const TutorProfilePage = () => {
               </label>
               <input
                 type="text"
-                defaultValue={myPofile?.data?.user?.firstName}
                 value={profileData.firstName}
                 onChange={(e) => handleInputChange("firstName", e.target.value)}
                 disabled={!isEditing}
@@ -125,7 +337,6 @@ const TutorProfilePage = () => {
               </label>
               <input
                 type="text"
-                defaultValue={myPofile?.data?.user?.lastName}
                 value={profileData.lastName}
                 onChange={(e) => handleInputChange("lastName", e.target.value)}
                 disabled={!isEditing}
@@ -141,38 +352,66 @@ const TutorProfilePage = () => {
               <input
                 type="email"
                 readOnly
-                defaultValue={myPofile?.data?.user?.email}
                 value={profileData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
               />
             </div>
 
-            {/* Subject */}
+            {/* Hourly Rate */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Subject
+                Hourly Rate ($)
               </label>
-              <div className="relative">
-                <select
-                  value={profileData.subject}
-                  defaultValue={myPofile?.data?.profile?.subjects[0]}
-                  onChange={(e) => handleInputChange("subject", e.target.value)}
-                  disabled={!isEditing}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
-                >
-                  <option value="MATH">Math</option>
-                  <option value="ENGLISH">English</option>
-                  <option value="SCIENCE">Science</option>
-                  {/* <option value="History">History</option> */}
-                </select>
-                <BiChevronDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  size={20}
-                />
-              </div>
+              <input
+                type="number"
+                value={profileData.hourlyRate}
+                onChange={(e) => handleInputChange("hourlyRate", e.target.value)}
+                disabled={!isEditing}
+                min="0"
+                step="0.01"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
+              />
             </div>
+          </div>
+
+          {/* Subjects (Multi-select) */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Subjects
+            </label>
+            <div className="relative">
+              <select
+                multiple
+                value={profileData.subjects}
+                onChange={handleSubjectChange}
+                disabled={!isEditing}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600 min-h-[100px]"
+                size={5}
+              >
+                {subjectOptions.map((subject) => (
+                  <option 
+                    key={subject.value} 
+                    value={subject.value}
+                    className="px-2 py-1 hover:bg-purple-50"
+                  >
+                    {subject.label}
+                  </option>
+                ))}
+              </select>
+              {!isEditing && profileData.subjects.length === 0 && (
+                <span className="absolute left-4 top-2 text-gray-500">
+                  No subjects selected
+                </span>
+              )}
+            </div>
+            <p className="mt-2 text-sm text-gray-500">
+              {isEditing ? "Hold Ctrl (Windows) or Cmd (Mac) to select multiple subjects" : ""}
+              {!isEditing && profileData.subjects.length > 0 && (
+                <span className="font-medium">
+                  Selected: {profileData.subjects.length} subject(s)
+                </span>
+              )}
+            </p>
           </div>
 
           {/* Bio */}
@@ -182,131 +421,34 @@ const TutorProfilePage = () => {
             </label>
             <textarea
               value={profileData.bio}
-              defaultValue={myPofile?.data?.user?.bio}
               onChange={(e) => handleInputChange("bio", e.target.value)}
               disabled={!isEditing}
-              rows={3}
+              rows={4}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600 resize-none"
+              placeholder="Tell students about your teaching experience, qualifications, and approach..."
             />
           </div>
         </div>
 
-        {/* Payment Information */}
-        <div>
-          {/* <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-            Payment Information
-          </h2> */}
-
-          {/* Stripe Button */}
-          {/* <div className="flex items-center justify-center gap-2 py-6 mb-6 border border-gray-200 rounded-lg bg-gray-50">
-            <BiCreditCard size={20} className="text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">Stripe</span>
-          </div> */}
-
-          {/* <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Name
-            </label>
-            <input
-              type="text"
-              value={profileData.paymentName}
-              onChange={(e) => handleInputChange("paymentName", e.target.value)}
-              disabled={!isEditing}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
-            />
-          </div> */}
-
-          {/* <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Card number
-            </label>
-            <input
-              type="text"
-              value={profileData.cardNumber}
-              onChange={(e) => handleInputChange("cardNumber", e.target.value)}
-              disabled={!isEditing}
-              placeholder="1234 5678 9012 3456"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
-            />
-          </div> */}
-
-          {/* <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Expires
-              </label>
-              <div className="relative">
-                <select
-                  value={profileData.expiresMonth}
-                  onChange={(e) =>
-                    handleInputChange("expiresMonth", e.target.value)
-                  }
-                  disabled={!isEditing}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
-                >
-                  <option>January</option>
-                  <option>February</option>
-                  <option>March</option>
-                  <option>April</option>
-                  <option>May</option>
-                  <option>June</option>
-                  <option>July</option>
-                  <option>August</option>
-                  <option>September</option>
-                  <option>October</option>
-                  <option>November</option>
-                  <option>December</option>
-                </select>
-                <BiChevronDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  size={20}
-                />
-              </div>
+        {/* Preview of selected subjects */}
+        {profileData.subjects.length > 0 && (
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-700 mb-2">Selected Subjects:</h3>
+            <div className="flex flex-wrap gap-2">
+              {profileData.subjects.map((subjectValue) => {
+                const subject = subjectOptions.find(s => s.value === subjectValue);
+                return (
+                  <span
+                    key={subjectValue}
+                    className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium"
+                  >
+                    {subject?.label || subjectValue}
+                  </span>
+                );
+              })}
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Year
-              </label>
-              <div className="relative">
-                <select
-                  value={profileData.expiresYear}
-                  onChange={(e) =>
-                    handleInputChange("expiresYear", e.target.value)
-                  }
-                  disabled={!isEditing}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
-                >
-                  <option>2024</option>
-                  <option>2025</option>
-                  <option>2026</option>
-                  <option>2027</option>
-                  <option>2028</option>
-                  <option>2029</option>
-                  <option>2030</option>
-                </select>
-                <BiChevronDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  size={20}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                CVC
-              </label>
-              <input
-                type="text"
-                value={profileData.cvc}
-                onChange={(e) => handleInputChange("cvc", e.target.value)}
-                disabled={!isEditing}
-                maxLength={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
-              />
-            </div>
-          </div> */}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
