@@ -1,258 +1,357 @@
 "use client";
 
-import { useGetTutorQuery } from "@/feature/shared/TutorApi";
-import image from "@/public/hiw/Logo.png";
+import { useGetTutorQuery, useGetSubjectsQuery } from "@/feature/shared/TutorApi";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AiOutlineSearch } from "react-icons/ai";
 import { FaArrowRight, FaStar } from "react-icons/fa";
+import { debounce } from "lodash";
 
-// const tutorsData = [
-//   {
-//     id: 1,
-//     name: "Jenny Wilson",
-//     subject: "Mathematics, English Expert",
-//     description:
-//       "Hello, I'm Abdullah. I'm a friendly and patient GCSE Maths tutor who loves helping students feel more confident with maths. I explain topics in a clear, simple way and make sure my students really understand before moving on. One of my students went from a grade 3 to a grade 6 in just two months, an...",
-//     price: 24,
-//     rating: 5,
-//     image: image,
-//   },
-//   {
-//     id: 2,
-//     name: "Wade Warren",
-//     subject: "Mathematics, English Expert",
-//     description:
-//       "Hello, I'm Abdullah. I'm a friendly and patient GCSE Maths tutor who loves helping students feel more confident with maths. I explain topics in a clear, simple way and make sure my students really understand before moving on. One of my students went from a grade 3 to a grade 6 in just two months, an...",
-//     price: 24,
-//     rating: 5,
-//     image: image,
-//   },
-//   // add more tutors as needed
-// ];
-
-const FIndTutorPage = () => {
+const FindTutorPage = () => {
   const [search, setSearch] = useState("");
-  const [sort, setSort] = useState("");
-  const [priceRange, setPriceRange] = useState([0, 100]);
-  const [ratingFilter, setRatingFilter] = useState(0);
-  const {data:tutor} = useGetTutorQuery();
-
+  const [subject, setSubject] = useState("");
+  const [priceRange, setPriceRange] = useState([0, 1000]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const limit = 12;
   
-    const tutors = tutor?.data?.data;
-
-
-    console.log(tutors, "tutors is here, ");
+  // Use debounced search to avoid too many API calls
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   
+  const debouncedSetSearch = useCallback(
+    debounce((value) => setDebouncedSearch(value), 500),
+    []
+  );
 
-  // const filteredTutors = tutorsData
-  //   .filter(
-  //     (tutor) =>
-  //       tutor.name.toLowerCase().includes(search.toLowerCase()) &&
-  //       tutor.price >= priceRange[0] &&
-  //       tutor.price <= priceRange[1] &&
-  //       tutor.rating >= ratingFilter
-  //   )
-  //   .sort((a, b) => {
-  //     if (sort === "price-asc") return a.price - b.price;
-  //     if (sort === "price-desc") return b.price - a.price;
-  //     return 0;
-  //   });
+  // Update debounced search when search changes
+  useEffect(() => {
+    debouncedSetSearch(search);
+    return () => debouncedSetSearch.cancel();
+  }, [search, debouncedSetSearch]);
 
-  const ratingsOptions = [
-    { value: 5, label: "5 stars" },
-    { value: 4, label: "4 stars & up" },
-    { value: 3, label: "3 stars & up" },
-    { value: 0, label: "All Ratings" },
-  ];
+  // Build query parameters
+  const queryParams = {
+    page: currentPage,
+    limit: limit,
+    search: debouncedSearch,
+    minHourlyRate: priceRange[0],
+    maxHourlyRate: priceRange[1],
+    subject: subject || undefined,
+  };
+
+  const { data: tutorData, isLoading, isError } = useGetTutorQuery(queryParams);
+  const { data: subjectsData } = useGetSubjectsQuery();
+
+  const tutors = tutorData?.data?.data || [];
+  const meta = tutorData?.data?.meta;
+  const subjects = subjectsData?.data || [];
+
+  // Calculate total pages
+  const totalPages = meta?.totalPages || 1;
+
+  // Handle page change
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Handle price range change
+  const handlePriceRangeChange = (e) => {
+    const value = parseInt(e.target.value);
+    setPriceRange([0, value]);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
+
+  // Handle subject change
+  const handleSubjectChange = (e) => {
+    setSubject(e.target.value);
+    setCurrentPage(1); // Reset to first page when filter changes
+  };
+
+  // Reset all filters
+  const resetFilters = () => {
+    setSearch("");
+    setSubject("");
+    setPriceRange([0, 1000]);
+    setCurrentPage(1);
+  };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <section className='bg-[#EDE7FB3D] min-h-screen'>
+        <div className='max-w-7xl mx-auto p-6'>
+          <div className='text-center mb-6'>
+            <h1 className='text-2xl font-semibold'>Meet Our Tutors</h1>
+            <p className='text-gray-500'>
+              Loading tutors...
+            </p>
+          </div>
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  // Error state
+  if (isError) {
+    return (
+      <section className='bg-[#EDE7FB3D] min-h-screen'>
+        <div className='max-w-7xl mx-auto p-6'>
+          <div className='text-center mb-6'>
+            <h1 className='text-2xl font-semibold'>Meet Our Tutors</h1>
+            <p className='text-gray-500 text-red-600'>
+              Error loading tutors. Please try again.
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className='bg-[#EDE7FB3D]'>
-      <div className='max-w-7xl mx-auto p-6 '>
+    <section className='bg-[#EDE7FB3D] min-h-screen'>
+      <div className='max-w-7xl mx-auto p-6'>
         <div className='text-center mb-6'>
           <h1 className='text-2xl font-semibold'>Meet Our Tutors</h1>
           <p className='text-gray-500'>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+            Find the perfect tutor for your learning journey
           </p>
         </div>
 
-        {/* Filters */}
-
-        <div className='md:flex  justify-between gap-12'>
-          <section>
-            <div className='w-full md:w-64 bg-white p-4 rounded-md'>
+        {/* Filters & Content */}
+        <div className='md:flex justify-between gap-12'>
+          {/* Left Sidebar - Filters */}
+          <section className="md:w-1/4">
+            <div className='w-full bg-white p-4 rounded-md sticky top-6'>
               <div className='flex justify-between items-center'>
-                <h3 className='font-semibold '>Filters</h3>
+                <h3 className='font-semibold text-lg'>Filters</h3>
                 <button
-                  onClick={() => {
-                    setSearch("");
-                    setSort("");
-                    setPriceRange([0, 100]);
-                    setRatingFilter(0);
-                  }}
-                  className='text-purple-600 font-bold hover:underline text-sm '>
+                  onClick={resetFilters}
+                  className='text-purple-600 font-bold hover:underline text-sm'
+                >
                   Clear Everything
                 </button>
               </div>
-              <div className='mb-4 mt-16'>
-                <label className='font-bold text-lg '>Price Range</label>
-                <div className='flex justify-between mt-2 text-sm'>
+              
+              {/* Price Range Filter */}
+              <div className='mb-6 mt-8'>
+                <label className='font-bold text-lg block mb-2'>Price Range</label>
+                <div className='flex justify-between mt-2 text-sm mb-1'>
                   <span>${priceRange[0]}</span>
                   <span>${priceRange[1]}</span>
                 </div>
                 <input
                   type='range'
                   min={0}
-                  max={100}
+                  max={1000}
                   value={priceRange[1]}
-                  onChange={(e) => setPriceRange([0, Number(e.target.value)])}
-                  className='w-full bg-[#CCB7F8] mt-2'
+                  onChange={handlePriceRangeChange}
+                  className='w-full h-2 bg-[#CCB7F8] rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#3A0E95]'
                 />
+                <div className="text-xs text-gray-500 text-center mt-1">
+                  Up to ${priceRange[1]}/hour
+                </div>
               </div>
 
-              <div className='p-4 w-full max-w-sm'>
-                <h3 className='font-medium mb-2'>Ratings</h3>
-
-                <div className='flex flex-col gap-2 mb-4'>
-                  {ratingsOptions.map((option) => (
-                    <label
-                      key={option.value}
-                      className='flex items-center gap-2 cursor-pointer group'>
-                      {/* Radio button on left side */}
-                      <div className='relative flex items-center justify-center'>
-                        <input
-                          type='radio'
-                          name='rating'
-                          value={option.value}
-                          checked={ratingFilter === option.value}
-                          onChange={() => setRatingFilter(option.value)}
-                          className='hidden'
-                        />
-
-                        {/* Custom radio button */}
-                        <div
-                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center
-            ${
-              ratingFilter === option.value
-                ? "border-[#3A0E95] bg-[#3A0E95]"
-                : "border-gray-400 bg-white group-hover:border-[#3A0E95]"
-            }`}></div>
-                      </div>
-
-                      {/* Stars and label */}
-                      <div className='flex items-center ml-2'>
-                        {option.value !== 0 && (
-                          <>
-                            <div className='flex items-center'>
-                              {[1, 2, 3, 4, 5].map((star) => (
-                                <FaStar
-                                  key={star}
-                                  className={`${
-                                    star <= option.value
-                                      ? "text-[#F78D25]"
-                                      : "text-gray-300"
-                                  }`}
-                                />
-                              ))}
-                            </div>
-                          </>
-                        )}
-
-                        {option.value === 0 && (
-                          <span className='text-gray-700'>{option.label}</span>
-                        )}
-                      </div>
-                    </label>
+              {/* Subject Filter */}
+              <div className='mb-6'>
+                <label className='font-bold text-lg block mb-2'>Subject</label>
+                <select
+                  value={subject}
+                  onChange={handleSubjectChange}
+                  className='w-full border border-[#D8DCE1] rounded p-2 bg-white'
+                >
+                  <option value="">All Subjects</option>
+                  {subjects.map((subjectItem) => (
+                    <option key={subjectItem._id} value={subjectItem.name}>
+                      {subjectItem.name}
+                    </option>
                   ))}
-                </div>
+                </select>
+              </div>
 
+              {/* Results Count */}
+              <div className="mt-8 p-3 bg-purple-50 rounded-lg">
+                <p className="text-sm text-gray-600">
+                  Showing {tutors.length} of {meta?.total || 0} tutors
+                </p>
                 <button
-                  onClick={() => applyFilter(ratingFilter)}
-                  className='w-full bg-[#CCB7F8] font-semibold text-[#3A0E95] py-2 px-4 rounded transition hover:bg-[#BBA5E9]'>
+                  onClick={() => setCurrentPage(1)}
+                  className='w-full mt-3 bg-[#CCB7F8] font-semibold text-[#3A0E95] py-2 px-4 rounded transition hover:bg-[#BBA5E9]'
+                >
                   Apply Filters
                 </button>
               </div>
             </div>
           </section>
 
-          <section>
-            <section className=''>
-              <div className='flex flex-col md:flex-row gap-6 mb-6'>
-                {/* Search & Sort */}
-                <div className='flex-1 bg-white p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center'>
-                  <div className='flex flex-1 border border-[#D8DCE1] rounded p-2 items-center'>
-                    <AiOutlineSearch className='text-gray-400 mr-2' />
-                    <input
-                      type='text'
-                      placeholder='Search by name...'
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className='flex-1 outline-none'
-                    />
-                  </div>
-                  {/* <select
-                  value={sort}
-                  onChange={(e) => setSort(e.target.value)}
-                  className="border border-[#D8DCE1] rounded p-2"
-                >
-                  <option value="">Sort by</option>
-                  <option value="price-asc">A Lavel</option>
-                  <option value="price-desc">GCSE</option>
-                </select> */}
-                  <select className='border border-[#D8DCE1] rounded p-2'>
-                    <option>Sort by Subject</option>
-                    <option>Mathematics</option>
-                    <option>English</option>
-                  </select>
+          {/* Right Content */}
+          <section className="md:w-3/4">
+            {/* Search & Sort Bar */}
+            <div className='flex flex-col md:flex-row gap-6 mb-6'>
+              <div className='flex-1 bg-white p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-center'>
+                <div className='flex flex-1 border border-[#D8DCE1] rounded p-2 items-center'>
+                  <AiOutlineSearch className='text-gray-400 mr-2' />
+                  <input
+                    type='text'
+                    placeholder='Search by name...'
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className='flex-1 outline-none'
+                  />
                 </div>
+                <select
+                  value={subject}
+                  onChange={handleSubjectChange}
+                  className="border border-[#D8DCE1] rounded p-2 w-full md:w-auto"
+                >
+                  <option value="">All Subjects</option>
+                  {subjects.map((subjectItemy) => (
+                    <option key={subjectItem._id} value={subjectItem.name}>
+                      {subjectItem.name}
+                    </option>
+                  ))}
+                </select>
               </div>
-            </section>
+            </div>
 
             {/* Tutor Cards */}
-            <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
-              {tutors?.map((tutor) => (
-                <div
-                  key={tutor.id}
-                  className='bg-white rounded-lg p-4 flex flex-col'>
-                  <div className='flex justify-between gap-3 mb-2'>
-                    <div>
-                      <h4 className='font-semibold'>{tutor?.user?.firstName}</h4>
-                           <p className="text-gray-500 text-sm mb-2">
-  {tutor.subjects.map((s, index) => (
-    <span key={index}>
-      {s}
-      {index !== tutor.subjects.length - 1 && ", "}
-    </span>
-  ))}
-</p>
-                    </div>
+            {tutors.length === 0 ? (
+              <div className="bg-white rounded-lg p-8 text-center">
+                <h3 className="text-xl font-semibold mb-2">No tutors found</h3>
+                <p className="text-gray-500">Try adjusting your search or filters</p>
+                <button
+                  onClick={resetFilters}
+                  className="mt-4 text-purple-600 font-semibold hover:underline"
+                >
+                  Reset all filters
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className='grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8'>
+                  {tutors.map((tutor) => (
+                    <div
+                      key={tutor._id}
+                      className='bg-white rounded-lg p-4 flex flex-col h-full hover:shadow-lg transition-shadow duration-300'
+                    >
+                      <div className='flex justify-between gap-3 mb-2'>
+                        <div className="flex-1">
+                          <h4 className='font-semibold text-lg'>
+                            {tutor?.user?.firstName} {tutor?.user?.lastName}
+                          </h4>
+                          <p className="text-gray-500 text-sm mb-2">
+                            {tutor.subjects?.map((s, index) => (
+                              <span key={index}>
+                                {s}
+                                {index !== tutor.subjects.length - 1 && ", "}
+                              </span>
+                            ))}
+                          </p>
+                        </div>
 
-                    <Image
-                      src={tutor.user?.avatar}
-                      alt={tutor?.user?.name}
-                      width={300}
-                      height={300}
-                      className='w-12 h-12 rounded-full object-cover'
-                    />
-                  </div>
-                  <p className='text-[#666666] leading-loose  mb-2 mt-4 line-clamp-4'>
-                    {tutor?.user?.bio}
-                  </p>
-                  <p className='font-semibold text-[20px] mb-2 pt-6 pb-4'>
-                    ${tutor?.hourlyRate}
-                  </p>
-                  <Link href={`/find-tutor/${tutor?.user?._id}`}>
-                    <button className='mt-auto max-w-35 cursor-pointer flex items-center gap-4  bg-[#CCB7F8]  py-2 whitespace-nowrap px-6 rounded text-[#3A0E95]'>
-                      <span>Book Now</span>
-                      <span>
-                        <FaArrowRight className='text-lg' />
-                      </span>
-                    </button>
-                  </Link>
+                        <Image
+                          src={tutor.user?.avatar || "/default-avatar.png"}
+                          alt={tutor?.user?.firstName}
+                          width={300}
+                          height={300}
+                          className='w-12 h-12 rounded-full object-cover border-2 border-purple-100'
+                        />
+                      </div>
+                      
+                      <p className='text-[#666666] leading-loose mb-4 mt-2 line-clamp-4 flex-grow'>
+                        {tutor?.user?.bio || "No bio available"}
+                      </p>
+                      
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-1">
+                          <FaStar className="text-[#F78D25]" />
+                          <span className="font-medium">
+                            {tutor.averageRating ? tutor.averageRating.toFixed(1) : "New"}
+                          </span>
+                          <span className="text-gray-500 text-sm">
+                            ({tutor.ratingCount || 0} ratings)
+                          </span>
+                        </div>
+                        <p className='font-semibold text-xl text-purple-700'>
+                          ${tutor?.hourlyRate}/hour
+                        </p>
+                      </div>
+                      
+                      <Link href={`/find-tutor/${tutor?.user?._id}`} className="mt-auto">
+                        <button className='w-full cursor-pointer flex items-center justify-center gap-2 bg-[#CCB7F8] hover:bg-[#BBA5E9] py-3 px-6 rounded text-[#3A0E95] font-semibold transition-colors duration-300'>
+                          <span>Book Now</span>
+                          <FaArrowRight className='text-lg' />
+                        </button>
+                      </Link>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex justify-center items-center gap-2 mt-8">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className={`px-4 py-2 rounded-lg border ${
+                        currentPage === 1
+                          ? "text-gray-400 border-gray-300 cursor-not-allowed"
+                          : "text-purple-600 border-purple-300 hover:bg-purple-50"
+                      }`}
+                    >
+                      Previous
+                    </button>
+                    
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let pageNum;
+                      if (totalPages <= 5) {
+                        pageNum = i + 1;
+                      } else if (currentPage <= 3) {
+                        pageNum = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        pageNum = totalPages - 4 + i;
+                      } else {
+                        pageNum = currentPage - 2 + i;
+                      }
+                      
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`w-10 h-10 rounded-lg ${
+                            currentPage === pageNum
+                              ? "bg-[#3A0E95] text-white"
+                              : "border border-purple-300 text-purple-600 hover:bg-purple-50"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    })}
+                    
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className={`px-4 py-2 rounded-lg border ${
+                        currentPage === totalPages
+                          ? "text-gray-400 border-gray-300 cursor-not-allowed"
+                          : "text-purple-600 border-purple-300 hover:bg-purple-50"
+                      }`}
+                    >
+                      Next
+                    </button>
+                    
+                    <span className="text-gray-600 text-sm ml-4">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
           </section>
         </div>
       </div>
@@ -260,4 +359,4 @@ const FIndTutorPage = () => {
   );
 };
 
-export default FIndTutorPage;
+export default FindTutorPage;
