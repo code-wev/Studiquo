@@ -12,6 +12,14 @@ import { CreateBookingDto } from './dto/booking.dto';
 
 @Injectable()
 export class BookingsService {
+  /**
+   * BookingsService
+   *
+   * Responsible for creating bookings, linking students to bookings,
+   * creating lesson reports and initiating payment (Checkout session).
+   * Bookings are initially created with `PENDING` status and only
+   * become `SCHEDULED` after successful payment (via Stripe webhook).
+   */
   constructor(
     @InjectModel(Booking.name) private bookingModel: Model<Booking>,
     @InjectModel(BookingStudents.name)
@@ -26,6 +34,21 @@ export class BookingsService {
     private paymentsService?: PaymentsService,
   ) {}
 
+  /**
+   * Create a booking and initiate payment.
+   *
+   * Steps:
+   * - persist a `Booking` with status `PENDING`
+   * - create a `BookingStudents` record linking the booking to the student
+   * - create a stub `LessonReport`
+   * - compute amount from the timeslot and tutor hourly rate
+   * - create a Stripe Checkout Session and return the `checkoutUrl` and `sessionId`
+   *
+   * @param user - authenticated user (student)
+   * @param dto - validated booking DTO containing `timeSlot`, `subject`, `type`
+   * @returns booking and payment session details
+   * @throws BadRequestException when slot/tutor/profile are missing
+   */
   async createBooking(user: any, dto: CreateBookingDto) {
     const booking = new this.bookingModel({ ...dto, status: 'PENDING' });
     await booking.save();

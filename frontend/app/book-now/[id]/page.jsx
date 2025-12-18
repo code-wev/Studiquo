@@ -37,10 +37,7 @@ export default function Page() {
   const tutorData = availabilityData?.data?.tutor;
 
   // Pricing - Fixed for all sessions
-  const PRICE = tutorData?.hourlyRate;
-  const PLATFORM_FEE_PERCENTAGE = 20;
-  const platformFee = (PRICE * PLATFORM_FEE_PERCENTAGE) / 100;
-  const totalPrice = PRICE + platformFee;
+  const totalPrice = tutorData?.hourlyRate;
 
   // Initialize with today's date
   useEffect(() => {
@@ -704,11 +701,7 @@ export default function Page() {
             <div className='py-4 space-y-2'>
               <div className='flex justify-between text-sm text-gray-700'>
                 <p>Session Price</p>
-                <p>${PRICE.toFixed(2)}</p>
-              </div>
-              <div className='flex justify-between text-sm text-gray-700'>
-                <p>Platform fee ({PLATFORM_FEE_PERCENTAGE}%)</p>
-                <p>${platformFee.toFixed(2)}</p>
+                <p>${totalPrice.toFixed(2)}</p>
               </div>
 
               <div className='flex justify-between font-semibold text-lg mt-3 pt-3 border-t border-gray-100'>

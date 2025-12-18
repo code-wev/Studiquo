@@ -11,8 +11,22 @@ import { CreateBookingDto } from './dto/booking.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.Student)
 export class BookingsController {
+  /**
+   * BookingsController
+   *
+   * Handles student booking routes. Protected by JWT and role guards;
+   * only users with the `Student` role may create bookings.
+   */
   constructor(private readonly bookingsService: BookingsService) {}
 
+  /**
+   * Create a new booking and return payment redirect info.
+   *
+   * @user - authenticated student user
+   * @dto - booking details (timeSlot, subject, type)
+   * The service will create the booking (PENDING) and return a
+   * Stripe Checkout URL to complete payment.
+   */
   @Post()
   async createBooking(@GetUser() user: any, @Body() dto: CreateBookingDto) {
     return this.bookingsService.createBooking(user, dto);
