@@ -28,7 +28,7 @@ export class ExamBoardController {
    */
   @Post('')
   async addExamBoard(@GetUser() user: any, @Body() dto: CreateExamBoardDto) {
-    return this.examBoardService.addOrUpdateExamBoard(user.sub, dto);
+    return this.examBoardService.addOrUpdateExamBoard(user.userId, dto);
   }
 
   /**
@@ -39,6 +39,6 @@ export class ExamBoardController {
    */
   @Get()
   async getExamBoards(@GetUser() user: any) {
-    return this.examBoardService.getExamBoards(user.sub);
+    return this.examBoardService.getExamBoards(user.userId);
   }
 }
