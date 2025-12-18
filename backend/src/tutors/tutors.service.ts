@@ -45,6 +45,7 @@ export class TutorsService {
     const {
       subject,
       maxHourlyRate,
+      minHourlyRate,
       minRating,
       search,
       page = 1,
@@ -63,7 +64,11 @@ export class TutorsService {
     }
 
     if (maxHourlyRate !== undefined) {
-      tutorMatch.hourlyRate = { $lte: maxHourlyRate };
+      tutorMatch.hourlyRate = { ...tutorMatch.hourlyRate, $lte: maxHourlyRate };
+    }
+
+    if (minHourlyRate !== undefined) {
+      tutorMatch.hourlyRate = { ...tutorMatch.hourlyRate, $gte: minHourlyRate };
     }
 
     /** --------------------

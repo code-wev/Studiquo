@@ -25,6 +25,12 @@ export class TutorSearchPaginationDto {
   @Transform(({ value }) => (value === '' ? undefined : value))
   @Type(() => Number)
   @IsNumber()
+  minHourlyRate?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Type(() => Number)
+  @IsNumber()
   minRating?: number;
 
   @IsOptional()
