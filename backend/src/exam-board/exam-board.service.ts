@@ -90,8 +90,6 @@ export class ExamBoardService {
       user: new Types.ObjectId(userId),
     });
 
-    console.log(profile);
-
     return {
       message: 'Exam board entries retrieved successfully',
       boards: profile?.examBoards || [],
