@@ -27,6 +27,7 @@ import {
  * role-based guards where appropriate.
  */
 @Controller('availability')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class AvailabilityController {
   constructor(private readonly availabilityService: AvailabilityService) {}
 
@@ -38,7 +39,6 @@ export class AvailabilityController {
    * @returns the created TutorAvailability document
    */
   @Post('date')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
   async addAvailability(
     @GetUser() user: any,
@@ -55,7 +55,6 @@ export class AvailabilityController {
    * @returns a success message on completion
    */
   @Delete('date/:availabilityId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
   async deleteAvailability(
     @GetUser() user: any,
@@ -72,7 +71,6 @@ export class AvailabilityController {
    * @returns the created TimeSlot document
    */
   @Post('date/:availabilityId/slots')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
   async addTimeSlot(
     @GetUser() user: any,
@@ -91,7 +89,6 @@ export class AvailabilityController {
    * @returns the updated TimeSlot document
    */
   @Put('slots/:slotId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
   async updateSlot(
     @GetUser() user: any,
@@ -109,7 +106,6 @@ export class AvailabilityController {
    * @returns a success message on completion
    */
   @Delete('slots/:slotId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
   async deleteSlot(
     @GetUser() user: any,

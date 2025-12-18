@@ -15,6 +15,7 @@ import { UsersService } from './users.service';
  * using JWT and role-based guards.
  */
 @Controller('users')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class UsersController {
   /**
    * Create the `UsersController`.
@@ -30,7 +31,6 @@ export class UsersController {
    * @returns the user document excluding the password field
    */
   @Get('me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async getMe(@GetUser() user: any) {
     return this.usersService.getMe(user.userId);
@@ -44,7 +44,6 @@ export class UsersController {
    * @returns the updated user document (without password)
    */
   @Put('me')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async updateMe(@GetUser() user: any, @Body() body: UpdateProfileDto) {
     return this.usersService.updateMe(user, body);
@@ -58,7 +57,6 @@ export class UsersController {
    * @returns the updated parent user document (without password)
    */
   @Post('me/children')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Parent)
   async addChild(@GetUser() user: any, @Body() studentId: MongoIdDto['id']) {
     return this.usersService.addChildToParent(user.userId, studentId);
@@ -75,7 +73,6 @@ export class UsersController {
    * @returns a success message on completion
    */
   @Put('me/password')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async updatePassword(@GetUser() user: any, @Body() body) {
     return this.usersService.updatePassword(user, body);

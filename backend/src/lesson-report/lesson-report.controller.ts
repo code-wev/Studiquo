@@ -20,11 +20,11 @@ import {
 import { LessonReportService } from './lesson-report.service';
 
 @Controller('lesson-reports')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class LessonReportController {
   constructor(private readonly lessonReportService: LessonReportService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor, UserRole.Admin)
   create(@Body() createDto: CreateLessonReportDto) {
     // Optionally, you can use req.user for audit or ownership
@@ -32,21 +32,18 @@ export class LessonReportController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor, UserRole.Admin)
   findAll() {
     return this.lessonReportService.findAll();
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor, UserRole.Admin)
   findOne(@Param('id') id: MongoIdDto['id']) {
     return this.lessonReportService.findOne(id);
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor, UserRole.Admin)
   update(
     @Param('id') id: MongoIdDto['id'],
@@ -56,7 +53,6 @@ export class LessonReportController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Admin)
   remove(@Param('id') id: MongoIdDto['id']) {
     return this.lessonReportService.remove(id);

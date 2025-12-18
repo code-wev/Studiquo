@@ -8,11 +8,11 @@ import { DocumentsService } from './documents.service';
 import { UploadDocumentDto } from './dto/document.dto';
 
 @Controller('documents')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class DocumentsController {
   constructor(private readonly documentsService: DocumentsService) {}
 
   @Post('dbs')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor, UserRole.Admin)
   async uploadDBS(@GetUser() user: any, @Body() dto: UploadDocumentDto) {
     return this.documentsService.uploadDBS(user, dto);

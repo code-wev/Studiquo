@@ -17,45 +17,40 @@ import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/booking.dto';
 
 @Controller('bookings')
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async createBooking(@GetUser() user: any, @Body() dto: CreateBookingDto) {
     return this.bookingsService.createBooking(user, dto);
   }
 
   @Put(':bookingId/cancel')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Admin)
   async cancelBooking(@Param('bookingId') bookingId: MongoIdDto['id']) {
     return this.bookingsService.updateBookingStatus(bookingId, 'CANCELLED');
   }
   @Put(':bookingId/complete')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor, UserRole.Admin)
   async completeBooking(@Param('bookingId') bookingId: MongoIdDto['id']) {
     return this.bookingsService.updateBookingStatus(bookingId, 'COMPLETED');
   }
 
   @Get('my-bookings')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async myBookings(@GetUser() user: any) {
     return this.bookingsService.getMyBookings(user);
   }
 
   @Get('my-schedule')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor, UserRole.Admin)
   async mySchedule(@GetUser() user: any) {
     return this.bookingsService.getMySchedule(user);
   }
 
   @Get(':bookingId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async bookingDetails(@Param('bookingId') bookingId: MongoIdDto['id']) {
     return this.bookingsService.getBookingDetails(bookingId);
