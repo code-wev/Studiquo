@@ -1,5 +1,6 @@
 import {
-  IsEnum,
+  IsArray,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -33,9 +34,10 @@ export class UpdateProfileDto {
 
   // Tutor fields
   @IsOptional()
-  @IsString({ message: 'Subject must be a string' })
-  @IsEnum(['MATH', 'SCIENCE', 'ENGLISH'], {
-    message: 'Subject must be one of MATH|SCIENCE|ENGLISH',
+  @IsArray({ message: 'Subjects must be an array' })
+  @IsIn(['MATH', 'SCIENCE', 'ENGLISH'], {
+    each: true,
+    message: 'Each subject must be one of MATH, SCIENCE, ENGLISH',
   })
   subjects?: string[];
 
