@@ -6,11 +6,8 @@ import { Booking } from 'src/models/booking.model';
 import { Payment } from 'src/models/payment.model';
 import { Payout } from 'src/models/payout.model';
 import { Review } from 'src/models/review.model';
-import { TimeSlot } from 'src/models/timeSlot.model';
-import { TutorAvailability } from 'src/models/tutorAvailability.model';
 import { ReviewQueryDto } from 'src/reviews/dto/review.dto';
 import { TutorProfile } from '../models/tutorProfile.model';
-import { User } from '../models/user.model';
 import { TutorSearchPaginationDto } from './dto/tutor.dto';
 
 @Injectable()
@@ -21,9 +18,6 @@ export class TutorsService {
   constructor(
     @InjectModel(TutorProfile.name)
     private tutorProfileModel: Model<TutorProfile>,
-
-    @InjectModel(User.name)
-    private userModel: Model<User>,
 
     @InjectModel(Review.name)
     private reviewModel: Model<Review>,
@@ -36,12 +30,6 @@ export class TutorsService {
 
     @InjectModel(Payout.name)
     private payoutModel: Model<Payout>,
-
-    @InjectModel(TimeSlot.name)
-    private timeSlotModel: Model<TimeSlot>,
-
-    @InjectModel(TutorAvailability.name)
-    private tutorAvailabilityModel: Model<TutorAvailability>,
   ) {}
   /**
    * Search tutors by profile and user fields.
@@ -191,7 +179,7 @@ export class TutorsService {
    */
   async getPublicProfile(tutorId: MongoIdDto['id']) {
     const tutorProfile = await this.tutorProfileModel
-      .findById(tutorId)
+      .findOne({ user: new Types.ObjectId(tutorId) })
       .populate({
         path: 'user',
         select: 'firstName lastName avatar bio role',
@@ -202,11 +190,28 @@ export class TutorsService {
       throw new NotFoundException('Tutor profile not found');
     }
 
+    // Get average rating and count
+    const ratingStats = await this.reviewModel.aggregate([
+      { $match: { tutor: new Types.ObjectId(tutorId) } },
+      {
+        $group: {
+          _id: null,
+          averageRating: { $avg: '$rating' },
+          ratingCount: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const averageRating = ratingStats[0]?.averageRating || 0;
+    const ratingCount = ratingStats[0]?.ratingCount || 0;
+
     return {
       id: tutorProfile._id,
       subjects: tutorProfile.subjects,
       hourlyRate: tutorProfile.hourlyRate,
       user: tutorProfile.user,
+      averageRating,
+      ratingCount,
     };
   }
 
