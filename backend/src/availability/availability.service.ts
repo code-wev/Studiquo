@@ -260,7 +260,6 @@ export class AvailabilityService {
       meetLink: dto.meetLink ?? undefined,
       type: dto.type,
       subject: dto.subject,
-      isBooked: false,
     });
   }
 
@@ -308,12 +307,7 @@ export class AvailabilityService {
       throw new NotFoundException('Time slot not found');
     }
 
-    // If the slot is already booked, prevent changing times
-    if (slot.isBooked && (dto.startTime || dto.endTime)) {
-      throw new BadRequestException(
-        'Cannot change times of a booked time slot',
-      );
-    }
+    // TODO: If the slot is already booked, prevent changing times
 
     // Validate new times if provided
     if (dto.startTime || dto.endTime) {
@@ -354,9 +348,7 @@ export class AvailabilityService {
     if (dto.meetLink !== undefined) {
       slot.meetLink = dto.meetLink;
     }
-    if (dto.isBooked !== undefined) {
-      slot.isBooked = dto.isBooked;
-    }
+
     if (dto.type) {
       slot.type = dto.type;
     }
@@ -389,9 +381,7 @@ export class AvailabilityService {
       throw new NotFoundException('Time slot not found');
     }
 
-    if (slot.isBooked) {
-      throw new BadRequestException('Cannot delete a booked time slot');
-    }
+    // TODO: Can't delete a booked slot
 
     const deleted = await this.timeSlotModel
       .findOneAndDelete({
