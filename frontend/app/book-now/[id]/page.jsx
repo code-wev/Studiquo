@@ -29,6 +29,7 @@ export default function Page() {
   const [selectedDate, setSelectedDate] = useState(null);
   const [calendarDays, setCalendarDays] = useState([]);
   const [availabilityMap, setAvailabilityMap] = useState({});
+  const [availableDates, setAvailableDates] = useState([]);
 
   // Time slots state
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null);
@@ -37,16 +38,30 @@ export default function Page() {
   useEffect(() => {
     if (availabilityData?.data?.availabilities) {
       processAvailabilityData();
-      setSelectedDate(new Date());
+    }
+  }, [availabilityData, bookingType]);
+
+  // Generate calendar when currentDate changes
+  useEffect(() => {
+    if (availabilityData?.data?.availabilities) {
       generateCalendarDays(currentDate);
     }
-  }, [availabilityData, currentDate, bookingType]);
+  }, [currentDate, availabilityMap]);
+
+  // Auto-select first available date
+  useEffect(() => {
+    if (availableDates.length > 0 && !selectedDate) {
+      const firstAvailableDate = new Date(availableDates[0]);
+      setSelectedDate(firstAvailableDate);
+    }
+  }, [availableDates, selectedDate]);
 
   // Process availability data from API
   const processAvailabilityData = () => {
     if (!availabilityData?.data?.availabilities) return;
 
     const map = {};
+    const dates = [];
 
     availabilityData.data.availabilities.forEach((availability) => {
       const dateKey = availability.date; // "2025-12-20"
@@ -69,10 +84,15 @@ export default function Page() {
           hasSlots: true,
           slots: availableSlots,
         };
+        dates.push(dateKey);
       }
     });
 
     setAvailabilityMap(map);
+    setAvailableDates(dates);
+
+    // Reset selected time slot when availability changes
+    setSelectedTimeSlot(null);
   };
 
   // Generate calendar days for the current month
@@ -146,6 +166,7 @@ export default function Page() {
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() - 1);
     setCurrentDate(newDate);
+    setSelectedTimeSlot(null);
   };
 
   // Navigate to next month
@@ -153,6 +174,7 @@ export default function Page() {
     const newDate = new Date(currentDate);
     newDate.setMonth(newDate.getMonth() + 1);
     setCurrentDate(newDate);
+    setSelectedTimeSlot(null);
   };
 
   // Handle date selection
@@ -168,6 +190,49 @@ export default function Page() {
   const handleBookingTypeChange = (type) => {
     setBookingType(type);
     setSelectedTimeSlot(null);
+
+    // Auto-select first available date for the new booking type
+    if (availabilityData?.data?.availabilities) {
+      const newAvailabilityMap = {};
+      const newAvailableDates = [];
+
+      availabilityData.data.availabilities.forEach((availability) => {
+        const dateKey = availability.date;
+
+        let availableSlots = availability.slots.filter(
+          (slot) => !slot.isBooked
+        );
+
+        if (type === "single") {
+          availableSlots = availableSlots.filter(
+            (slot) => slot.type === "ONE_TO_ONE"
+          );
+        } else if (type === "group") {
+          availableSlots = availableSlots.filter(
+            (slot) => slot.type === "GROUP"
+          );
+        }
+
+        if (availableSlots.length > 0) {
+          newAvailabilityMap[dateKey] = {
+            hasSlots: true,
+            slots: availableSlots,
+          };
+          newAvailableDates.push(dateKey);
+        }
+      });
+
+      setAvailabilityMap(newAvailabilityMap);
+      setAvailableDates(newAvailableDates);
+
+      // Select first available date
+      if (newAvailableDates.length > 0) {
+        const firstAvailableDate = new Date(newAvailableDates[0]);
+        setSelectedDate(firstAvailableDate);
+      } else {
+        setSelectedDate(null);
+      }
+    }
   };
 
   // Handle time slot selection
@@ -485,6 +550,23 @@ export default function Page() {
                   {bookingType !== "all" &&
                     " Try selecting 'All' booking type or choose a different date."}
                 </p>
+              </div>
+            )}
+
+            {/* Selected date info */}
+            {selectedDate && (
+              <div className='mt-4 text-sm text-gray-600'>
+                <p>
+                  <span className='font-medium'>Selected Date:</span>{" "}
+                  {formatDate(selectedDate)}
+                </p>
+                {selectedTimeSlot && (
+                  <p className='mt-1'>
+                    <span className='font-medium'>Selected Slot:</span>{" "}
+                    {selectedTimeSlot.startTimeLabel} -{" "}
+                    {selectedTimeSlot.endTimeLabel}
+                  </p>
+                )}
               </div>
             )}
           </div>
