@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model, Types } from 'mongoose';
@@ -6,9 +10,10 @@ import { Booking } from 'src/models/booking.model';
 import { Payment } from 'src/models/payment.model';
 import { Payout } from 'src/models/payout.model';
 import { Review } from 'src/models/review.model';
+import { Wallet } from 'src/models/wallet.model';
 import { ReviewQueryDto } from 'src/reviews/dto/review.dto';
 import { TutorProfile } from '../models/tutorProfile.model';
-import { TutorSearchPaginationDto } from './dto/tutor.dto';
+import { PaymentRequestDto, TutorSearchPaginationDto } from './dto/tutor.dto';
 
 @Injectable()
 export class TutorsService {
@@ -30,6 +35,8 @@ export class TutorsService {
 
     @InjectModel(Payout.name)
     private payoutModel: Model<Payout>,
+    @InjectModel(Wallet.name)
+    private walletModel: Model<Wallet>,
   ) {}
   /**
    * Search tutors by profile and user fields.
@@ -372,5 +379,70 @@ export class TutorsService {
           : null,
       })),
     };
+  }
+
+  /**
+   * Return wallet for authenticated tutor.
+   */
+  async getMyWallet(user: any) {
+    const userId = user.userId;
+    const wallet = await this.walletModel.findOne({ tutorId: userId }).lean();
+    return {
+      balance: (wallet && wallet.balance) || 0,
+      currency: (wallet && wallet.currency) || 'eur',
+    };
+  }
+
+  /**
+   * Tutor requests a payout. Amount expected in smallest currency unit (cents).
+   */
+  async requestPayout(user: any, dto: PaymentRequestDto) {
+    const userId = user.userId;
+    const { amount, method } = dto;
+
+    if (!amount || amount <= 0) {
+      throw new BadRequestException('Invalid payout amount');
+    }
+
+    // Load wallet
+    const wallet = await this.walletModel.findOne({ tutorId: userId });
+    const balance = (wallet && wallet.balance) || 0;
+    if (balance < amount) {
+      throw new BadRequestException('Insufficient wallet balance');
+    }
+
+    // Deduct amount from wallet and create payout request
+    const session = await this.walletModel.db.startSession();
+    session.startTransaction();
+    try {
+      await this.walletModel
+        .updateOne(
+          { tutorId: userId },
+          { $inc: { balance: -amount }, $set: { updatedAt: new Date() } },
+        )
+        .session(session);
+
+      const payout = await this.payoutModel.create(
+        [
+          {
+            tutorId: userId,
+            amount,
+            method: method || 'bank',
+            status: 'PENDING',
+            transactionId: '',
+          },
+        ],
+        { session },
+      );
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return payout[0];
+    } catch (err: any) {
+      await session.abortTransaction();
+      session.endSession();
+      throw err;
+    }
   }
 }

@@ -50,3 +50,12 @@ export class TutorSearchPaginationDto {
   @IsNumber()
   limit: number = 10;
 }
+
+export class PaymentRequestDto {
+  @IsNumber({}, { message: 'Amount must be a number' })
+  amount: number;
+
+  @IsOptional()
+  @IsString({ message: 'Method must be a string' })
+  method?: string;
+}

@@ -12,6 +12,7 @@ import {
   TutorAvailability,
   TutorAvailabilitySchema,
 } from 'src/models/tutorAvailability.model';
+import { Wallet, WalletSchema } from 'src/models/wallet.model';
 import { TutorProfile, TutorProfileSchema } from '../models/tutorProfile.model';
 import { User, UserSchema } from '../models/user.model';
 import { TutorsController } from './tutors.controller';
@@ -32,6 +33,7 @@ import { TutorsService } from './tutors.service';
       { name: Booking.name, schema: BookingSchema },
       { name: Payment.name, schema: PaymentSchema },
       { name: Payout.name, schema: PayoutSchema },
+      { name: Wallet.name, schema: WalletSchema },
       { name: TimeSlot.name, schema: TimeSlotSchema },
       { name: TutorAvailability.name, schema: TutorAvailabilitySchema },
     ]),

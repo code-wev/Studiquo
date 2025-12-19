@@ -8,8 +8,9 @@ import {
   Post,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Payment } from 'src/models/payment.model';
+import { Wallet } from 'src/models/wallet.model';
 import { Booking } from '../models/booking.model';
 import { PaymentsService } from './payments.service';
 
@@ -21,6 +22,7 @@ export class PaymentsController {
     private readonly paymentsService: PaymentsService,
     @InjectModel(Booking.name) private bookingModel: Model<Booking>,
     @InjectModel(Payment.name) private paymentModel: Model<Payment>,
+    @InjectModel(Wallet.name) private walletModel: Model<Wallet>,
   ) {}
 
   /**
@@ -89,7 +91,7 @@ export class PaymentsController {
             const tutorEarning = Math.max(0, amt - commission);
 
             // Create payment record including commission and tutor earning
-            await this.paymentModel.create({
+            const paymentDoc = await this.paymentModel.create({
               booking: bookingId,
               student: studentId,
               tutor: tutorId,
@@ -101,6 +103,26 @@ export class PaymentsController {
               commission,
               tutorEarning,
             });
+
+            // Credit tutor wallet (create if missing)
+            try {
+              const tutorObjectId = tutorId ? tutorId : null;
+              if (tutorObjectId) {
+                const wallet = await this.walletModel.findOneAndUpdate(
+                  { tutorId: new Types.ObjectId(tutorObjectId) },
+                  {
+                    $inc: { balance: tutorEarning },
+                    $set: { updatedAt: new Date() },
+                  },
+                  { upsert: true, new: true },
+                );
+                this.logger.log(
+                  `Credited tutor ${tutorObjectId} wallet by ${tutorEarning} (new balance ${wallet.balance})`,
+                );
+              }
+            } catch (err: any) {
+              this.logger.error('Failed to credit tutor wallet', err.message);
+            }
 
             await this.bookingModel.findByIdAndUpdate(
               bookingId,
