@@ -18,7 +18,7 @@ export class PaymentsService {
   ) {
     // eru payment intent
     return await this.stripe.paymentIntents.create({
-      amount: Math.round(amount * 100), // amount in cents
+      amount: Math.round(amount * 100), // amount in pennies
       currency,
       metadata,
     });
