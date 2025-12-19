@@ -171,7 +171,16 @@ export class UsersService extends BaseService<User> {
     };
   }
 
-  async addChildToParent(parentId: string, studentId: string) {
+  /**
+   * Add a child (student) to a parent user's `children` array.
+   *
+   * @param parentId - the MongoDB ID of the parent user
+   * @param studentId - the studentId of the child to add
+   */
+  async addChildToParent(
+    parentId: MongoIdDto['id'],
+    studentId: MongoIdDto['id'],
+  ) {
     // Find parent
     const parent = await this.model.findById(parentId);
     if (!parent) {
