@@ -93,7 +93,8 @@ export class UsersService extends BaseService<User> {
 
       // tutor fields
       subjects,
-      hourlyRate,
+      groupHourlyRate,
+      oneOnOneHourlyRate,
     } = data;
 
     /**
@@ -118,7 +119,10 @@ export class UsersService extends BaseService<User> {
     if (userRole === UserRole.Tutor) {
       const tutorUpdate: any = {};
       if (subjects !== undefined) tutorUpdate.subjects = subjects;
-      if (hourlyRate !== undefined) tutorUpdate.hourlyRate = hourlyRate;
+      if (groupHourlyRate !== undefined)
+        tutorUpdate.groupHourlyRate = groupHourlyRate;
+      if (oneOnOneHourlyRate !== undefined)
+        tutorUpdate.oneOnOneHourlyRate = oneOnOneHourlyRate;
 
       profile = await this.tutorProfileModel.findOneAndUpdate(
         { user: new Types.ObjectId(user.userId) },

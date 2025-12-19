@@ -213,7 +213,8 @@ export class TutorsService {
     return {
       id: tutorProfile._id,
       subjects: tutorProfile.subjects,
-      hourlyRate: tutorProfile.hourlyRate,
+      groupHourlyRate: tutorProfile.groupHourlyRate,
+      oneOnOneHourlyRate: tutorProfile.oneOnOneHourlyRate,
       user: tutorProfile.user,
       averageRating,
       ratingCount,
@@ -343,7 +344,8 @@ export class TutorsService {
     return {
       tutorProfileId: tutorProfile._id,
       subjects: tutorProfile.subjects,
-      hourlyRate: tutorProfile.hourlyRate,
+      groupHourlyRate: tutorProfile.groupHourlyRate,
+      oneOnOneHourlyRate: tutorProfile.oneOnOneHourlyRate,
       totalStudents: (distinctStudents || []).length,
       totalSessions: totalSessions || 0,
       totalEarnings:

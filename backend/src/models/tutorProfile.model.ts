@@ -13,8 +13,13 @@ export class TutorProfile extends Document {
   })
   subjects: string[];
 
+  // hourly rate in euros for group lessons
   @Prop({ required: true })
-  hourlyRate: number;
+  groupHourlyRate: number;
+
+  // hourly rate in euros for one-on-one lessons
+  @Prop({ required: true })
+  oneOnOneHourlyRate: number;
 }
 
 export const TutorProfileSchema = SchemaFactory.createForClass(TutorProfile);

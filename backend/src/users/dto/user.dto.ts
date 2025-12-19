@@ -42,6 +42,10 @@ export class UpdateProfileDto {
   subjects?: string[];
 
   @IsOptional()
-  @IsNumber({}, { message: 'Hourly rate must be a number' })
-  hourlyRate?: number;
+  @IsNumber({}, { message: 'Group hourly rate must be a number' })
+  groupHourlyRate?: number;
+
+  @IsOptional()
+  @IsNumber({}, { message: 'One-on-one hourly rate must be a number' })
+  oneOnOneHourlyRate?: number;
 }

@@ -128,7 +128,12 @@ export class BookingsService {
     const end = new Date(slot.endTime).getTime();
     const hours = Math.max(0.25, (end - start) / (1000 * 60 * 60));
 
-    const amount = Number((tutorProfile.hourlyRate * hours).toFixed(2));
+    const amount = Number(
+      (dto.type === 'ONE_TO_ONE'
+        ? tutorProfile.oneOnOneHourlyRate
+        : tutorProfile.groupHourlyRate * hours
+      ).toFixed(2),
+    );
 
     // Create Stripe Checkout Session and attach bookingId metadata
     const successUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-success?bookingId=${booking._id}`;
