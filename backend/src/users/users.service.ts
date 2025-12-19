@@ -10,12 +10,13 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
+import { SearchDto } from 'common/dto/search.dto';
 import { Model, Types } from 'mongoose';
 import { StudentProfile } from 'src/models/studentProfile.model';
 import { TutorProfile } from 'src/models/tutorProfile.model';
 import { BaseService } from '../../common/base.service';
 import { User, UserRole } from '../models/user.model';
-import { UpdateProfileDto } from './dto/user.dto';
+import { RespondToParentRequestDto, UpdateProfileDto } from './dto/user.dto';
 
 @Injectable()
 export class UsersService extends BaseService<User> {
@@ -183,9 +184,7 @@ export class UsersService extends BaseService<User> {
   ) {
     // Find parent
     const parent = await this.model.findById(parentId);
-    if (!parent) {
-      throw new NotFoundException('Parent not found');
-    }
+    if (!parent) throw new NotFoundException('Parent not found');
 
     if (parent.role !== UserRole.Parent) {
       throw new ForbiddenException('Only parents can add children');
@@ -197,29 +196,165 @@ export class UsersService extends BaseService<User> {
       role: UserRole.Student,
     });
 
-    if (!student) {
-      throw new NotFoundException('Student not found with this ID');
-    }
+    if (!student) throw new NotFoundException('Student not found with this ID');
 
     // Prevent adding self
     if (student._id.equals(parent._id)) {
       throw new BadRequestException('You cannot add yourself as a child');
     }
 
-    // Add child (no duplicates)
+    // If parent already approved (exists in parent's children) -> short-circuit
+    const alreadyChild = await this.model.findOne({
+      _id: parent._id,
+      children: new Types.ObjectId(student._id),
+    });
+    if (alreadyChild) {
+      return {
+        message: 'This child is already linked to you',
+        student: {
+          id: student._id,
+          studentId: student.studentId,
+          name: `${student.firstName} ${student.lastName}`,
+        },
+      };
+    }
+
+    // If already requested, inform
+    const alreadyRequested = await this.model.findOne({
+      _id: student._id,
+      pendingParents: new Types.ObjectId(parent._id),
+    });
+    if (alreadyRequested) {
+      return { message: 'Request already sent and awaiting approval' };
+    }
+
+    // Add parent to student's pendingParents
     await this.model.updateOne(
-      { _id: parent._id },
-      { $addToSet: { children: new Types.ObjectId(student._id) } },
+      { _id: student._id },
+      { $addToSet: { pendingParents: new Types.ObjectId(parent._id) } },
     );
 
     return {
-      message: 'Child added successfully',
+      message: 'Parent request sent. Student must approve to link child.',
       student: {
         id: student._id,
         studentId: student.studentId,
         name: `${student.firstName} ${student.lastName}`,
       },
     };
+  }
+
+  /**
+   * Search students for a parent to add.
+   *
+   * @param parentId - the MongoDB ID of the parent user
+   * @param query - the search query string
+   * @return array of matching student user documents (limited fields)
+   */
+  async searchStudentsForParent(
+    parentId: MongoIdDto['id'],
+    search: SearchDto['search'],
+  ) {
+    // ensure parent exists and is allowed
+    const parent = await this.model.findById(parentId);
+    if (!parent) throw new NotFoundException('Parent not found');
+    if (parent.role !== UserRole.Parent)
+      throw new ForbiddenException('Only parents can search for students');
+
+    const q = search?.trim() || '';
+    const regex = new RegExp(q, 'i');
+
+    const results = await this.model
+      .find({
+        role: UserRole.Student,
+        $or: [
+          { studentId: q },
+          { firstName: regex },
+          { lastName: regex },
+          { email: regex },
+        ],
+      })
+      .select('firstName lastName studentId email')
+      .limit(20)
+      .lean();
+
+    return { message: 'Search completed', results };
+  }
+
+  /**
+   * List pending parent requests for a student (student view).
+   *
+   * @param studentId - the MongoDB ID of the student user
+   * @return array of parent user documents who have requested to be added as a parent
+   */
+  async listPendingParentRequests(studentId: MongoIdDto['id']) {
+    const student = await this.model
+      .findById(studentId)
+      .populate('pendingParents', 'firstName lastName email')
+      .lean();
+    if (!student) throw new NotFoundException('Student not found');
+    if (student.role !== UserRole.Student)
+      throw new ForbiddenException('Only students can view parent requests');
+
+    return {
+      message: 'Pending parent requests retrieved',
+      requests: student.pendingParents || [],
+    };
+  }
+
+  /**
+   * Student responds to a parent request (accept/reject).
+   *
+   * @param studentId - the MongoDB ID of the student user
+   * @param parentId - the MongoDB ID of the parent user
+   * @param accept - boolean indicating whether to accept or decline the request
+   * @return a message indicating the result
+   */
+  async respondToParentRequest(
+    studentId: MongoIdDto['id'],
+    parentId: MongoIdDto['id'],
+    accept: RespondToParentRequestDto['accept'],
+  ) {
+    const student = await this.model.findById(studentId);
+    if (!student) throw new NotFoundException('Student not found');
+    if (student.role !== UserRole.Student)
+      throw new ForbiddenException(
+        'Only students can respond to parent requests',
+      );
+
+    const parent = await this.model.findById(parentId);
+    if (!parent) throw new NotFoundException('Parent not found');
+    if (parent.role !== UserRole.Parent)
+      throw new BadRequestException('Provided user is not a parent');
+
+    // Ensure there is a pending request
+    const isPending = (student.pendingParents || []).some((p: any) =>
+      new Types.ObjectId(p).equals(parent._id),
+    );
+    if (!isPending) {
+      throw new BadRequestException('No pending request from this parent');
+    }
+
+    // Remove pending regardless of accept/decline
+    await this.model.updateOne(
+      { _id: student._id },
+      { $pull: { pendingParents: new Types.ObjectId(parent._id) } },
+    );
+
+    if (accept) {
+      // add student to parent's children and add parent to student's parents
+      await this.model.updateOne(
+        { _id: parent._id },
+        { $addToSet: { children: new Types.ObjectId(student._id) } },
+      );
+      await this.model.updateOne(
+        { _id: student._id },
+        { $addToSet: { parents: new Types.ObjectId(parent._id) } },
+      );
+      return { message: 'Parent request accepted' };
+    }
+
+    return { message: 'Parent request declined' };
   }
 
   /**

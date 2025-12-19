@@ -49,3 +49,11 @@ export class UpdateProfileDto {
   @IsNumber({}, { message: 'One-on-one hourly rate must be a number' })
   oneOnOneHourlyRate?: number;
 }
+
+export class RespondToParentRequestDto {
+  @IsNotEmpty()
+  @IsIn([true, false], {
+    message: 'Accept must be a boolean value',
+  })
+  accept: boolean;
+}

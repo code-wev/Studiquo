@@ -46,6 +46,26 @@ export class User extends Document {
   })
   children?: Types.ObjectId[];
 
+  /**
+   * For Student role: list of parent ids who are already approved
+   */
+  @Prop({
+    type: [Types.ObjectId],
+    ref: 'User',
+    default: [],
+  })
+  parents?: Types.ObjectId[];
+
+  /**
+   * For Student role: parent requests that are awaiting student's approval
+   */
+  @Prop({
+    type: [Types.ObjectId],
+    ref: 'User',
+    default: [],
+  })
+  pendingParents?: Types.ObjectId[];
+
   // Optional fields
   @Prop()
   token: string;
