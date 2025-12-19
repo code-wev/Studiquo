@@ -2,9 +2,8 @@ import { base_url } from "@/utils/utils";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import Cookies from "js-cookie";
 
-export const TutorApi = createApi({
-  reducerPath: "TutorApi",
-  tagTypes: ["Tutor"],
+export const ParentApi = createApi({
+  reducerPath: "ParentApi",
   baseQuery: fetchBaseQuery({
     baseUrl: base_url,
     prepareHeaders: (headers) => {
@@ -16,15 +15,10 @@ export const TutorApi = createApi({
     },
   }),
   endpoints: (builder) => ({
-    getTutor: builder.query({
-      query: () => "/tutors?page=1&limit=1",
-      providesTags: ["Tutor"],
-    }),
-
-    tutorProfile: builder.query({
-      query: (id) => `/tutors/${id}`,
+    childrenSearch: builder.query({
+      query: (search) => `/users/children/search?search=${search}`,
     }),
   }),
 });
 
-export const { useGetTutorQuery, useTutorProfileQuery } = TutorApi;
+export const { useChildrenSearchQuery } = ParentApi;
