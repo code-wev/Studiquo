@@ -83,16 +83,23 @@ export class PaymentsController {
         const currency = event.data.object.currency;
         if (bookingId) {
           try {
-            // Create payment record
+            // amount is in smallest currency unit (cents)
+            const amt = Number(amount) || 0;
+            const commission = Math.round(amt * 0.2); // 20% commission
+            const tutorEarning = Math.max(0, amt - commission);
+
+            // Create payment record including commission and tutor earning
             await this.paymentModel.create({
               booking: bookingId,
               student: studentId,
               tutor: tutorId,
-              amount,
+              amount: amt,
               currency,
               method: 'stripe',
-              status: 'succeeded',
+              status: 'COMPLETED',
               transactionId: event.data.object.id,
+              commission,
+              tutorEarning,
             });
 
             await this.bookingModel.findByIdAndUpdate(
@@ -117,16 +124,19 @@ export class PaymentsController {
         const currency = event.data.object.currency;
         if (bookingId) {
           try {
-            // Create payment record
+            const amt = Number(amount) || 0;
+            // For failed payments, commission and tutor earnings are zero
             await this.paymentModel.create({
               booking: bookingId,
               student: studentId,
               tutor: tutorId,
-              amount,
+              amount: amt,
               currency,
               method: 'stripe',
-              status: 'failed',
+              status: 'FAILED',
               transactionId: event.data.object.id,
+              commission: 0,
+              tutorEarning: 0,
             });
 
             await this.bookingModel.findByIdAndUpdate(

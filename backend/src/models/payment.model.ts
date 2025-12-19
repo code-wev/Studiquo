@@ -23,7 +23,7 @@ export class Payment extends Document {
 
   @Prop({
     type: String,
-    enum: ['succeeded', 'failed'],
+    enum: ['COMPLETED', 'FAILED'],
     required: true,
   })
   status: string;
