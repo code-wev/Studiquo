@@ -34,7 +34,6 @@ import { BookingsService } from './bookings.service';
       { name: User.name, schema: UserSchema },
     ]),
     JwtModule.register(jwtConfig),
-    // PaymentsModule provides PaymentsService used during booking creation
     PaymentsModule,
   ],
   controllers: [BookingsController],
