@@ -17,14 +17,50 @@ export const TutorApi = createApi({
   }),
   endpoints: (builder) => ({
     getTutor: builder.query({
-      query: () => "/tutors?page=1&limit=1",
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+
+        // Add pagination
+        queryParams.append("page", params?.page || "1");
+        queryParams.append("limit", params?.limit || "12");
+
+        // Add search
+        if (params?.search) {
+          queryParams.append("search", params.search);
+        }
+
+        // Add price filters
+        if (params?.minHourlyRate) {
+          queryParams.append("minHourlyRate", params.minHourlyRate.toString());
+        }
+
+        if (params?.maxHourlyRate) {
+          queryParams.append("maxHourlyRate", params.maxHourlyRate.toString());
+        }
+
+        // Add subject filter
+        if (params?.subject) {
+          queryParams.append("subject", params.subject);
+        }
+
+        return {
+          url: `/tutors?${queryParams.toString()}`,
+          method: "GET",
+        };
+      },
       providesTags: ["Tutor"],
     }),
 
     tutorProfile: builder.query({
       query: (id) => `/tutors/${id}`,
     }),
+
+    getSubjects: builder.query({
+      query: () => "/subjects",
+      providesTags: ["Tutor"],
+    }),
   }),
 });
 
-export const { useGetTutorQuery, useTutorProfileQuery } = TutorApi;
+export const { useGetTutorQuery, useTutorProfileQuery, useGetSubjectsQuery } =
+  TutorApi;
