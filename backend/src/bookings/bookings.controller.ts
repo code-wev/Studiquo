@@ -1,15 +1,15 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { GetUser } from 'common/decorators/get-user.decorator';
+import { PaginationDto } from 'common/dto/pagination.dto';
 import { UserRole } from 'src/models/user.model';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { BookingsService } from './bookings.service';
-import { CreateBookingDto } from './dto/booking.dto';
+import { CreateBookingDto, CreatePaymentLinkDto } from './dto/booking.dto';
 
 @Controller('bookings')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.Student)
 export class BookingsController {
   /**
    * BookingsController
@@ -28,8 +28,41 @@ export class BookingsController {
    * Stripe Checkout URL to complete payment.
    */
   @Post()
+  @Roles(UserRole.Student)
   async createBooking(@GetUser() user: any, @Body() dto: CreateBookingDto) {
     return this.bookingsService.createBooking(user, dto);
+  }
+
+  /**
+   * Create a payment link for an existing booking for a child.
+   *
+   * @param user - authenticated parent user
+   * @param dto - DTO containing bookingId and studentId
+   * @return payment link details
+   */
+  @Post('create-payment-link')
+  @Roles(UserRole.Parent)
+  async createPaymentLinkForBooking(
+    @GetUser() user: any,
+    @Body() dto: CreatePaymentLinkDto,
+  ) {
+    return this.bookingsService.createPaymentLinkForBooking(
+      user,
+      dto.bookingId,
+      dto.studentId,
+    );
+  }
+
+  /**
+   * Get all bookings for the authenticated student's children.
+   *
+   * @param user - authenticated student user
+   * @return list of bookings for the student's children
+   */
+  @Get('children-bookings')
+  @Roles(UserRole.Parent)
+  async getChildrenBookings(@GetUser() user: any, pagination: PaginationDto) {
+    return this.bookingsService.getChildrenBookings(user, pagination);
   }
 
   // @Put(':bookingId/cancel')

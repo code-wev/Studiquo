@@ -1,9 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { PaginationDto } from 'common/dto/pagination.dto';
 import { Model, Types } from 'mongoose';
 import { TimeSlot } from 'src/models/timeSlot.model';
 import { TutorAvailability } from 'src/models/tutorAvailability.model';
 import { TutorProfile } from 'src/models/tutorProfile.model';
+import { User } from 'src/models/user.model';
 import { PaymentsService } from 'src/payments/payments.service';
 import { Booking } from '../models/booking.model';
 import { BookingStudents } from '../models/bookingStudents.model';
@@ -31,7 +33,8 @@ export class BookingsService {
     private availabilityModel: Model<TutorAvailability>,
     @InjectModel(TutorProfile.name)
     private tutorProfileModel: Model<TutorProfile>,
-    private paymentsService?: PaymentsService,
+    private paymentsService: PaymentsService,
+    @InjectModel(User.name) private userModel: Model<User>,
   ) {}
 
   /**
@@ -101,22 +104,120 @@ export class BookingsService {
       submitted: false,
     });
 
-    // Create payment intent immediately if PaymentsService is available
-    if (!this.paymentsService) {
-      // PaymentsService not injected; return booking and let client create payment
-      return { booking };
-    }
+    // Students create bookings but should NOT be able to complete payment.
+    // Return the booking record; parents will later generate a payment link.
+    return {
+      message:
+        'Booking created successfully. Please ask your parent to complete the payment.',
+      booking,
+    };
+  }
 
-    // tutor info to compute amount
-    const tutorAvailability = await this.availabilityModel.findById(
-      new Types.ObjectId(slot.tutorAvailability),
+  /**
+   * Get all bookings for the authenticated student's children.
+   *
+   * @param user - authenticated parent user
+   * @return list of bookings for the student's children
+   */
+  async getChildrenBookings(user: any, pagination: PaginationDto) {
+    const { page = 1, limit = 10 } = pagination;
+
+    // Load children of the parent
+    const childrenIds = await this.userModel.findOne(
+      { _id: new Types.ObjectId(user.userId) },
+      { children: 1 },
     );
 
-    if (!tutorAvailability) {
-      throw new BadRequestException('Tutor availability not found');
+    // Find bookings for each child
+    const bookings = await this.bookingStudentsModel
+      .find({ student: { $in: childrenIds?.children || [] } })
+      .populate('booking')
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    return {
+      message: 'Children bookings retrieved successfully',
+      bookings: bookings.map((b) => b.booking),
+    };
+  }
+
+  /**
+   * Create a payment link (Stripe Checkout Session) for an existing booking.
+   *
+   * @param user - authenticated parent user
+   * @param bookingId - ID of the booking to pay for
+   * @param studentId - ID of the child/student for whom the booking was made
+   * @return payment link details
+   * @throws BadRequestException for various validation errors
+   */
+  async createPaymentLinkForBooking(
+    user: any,
+    bookingId: string,
+    studentId: string,
+  ) {
+    // Validate booking exists
+    const booking = await this.bookingModel.findById(bookingId);
+
+    if (!booking) {
+      throw new BadRequestException('Invalid booking ID');
     }
+
+    // Load parent and ensure they have the specified student as a child
+    const parentAndChild = await this.userModel.find({
+      _id: new Types.ObjectId(user.userId),
+      student: { $in: [new Types.ObjectId(studentId)] },
+    });
+
+    const parent = parentAndChild[0];
+
+    if (!parent) {
+      throw new BadRequestException(
+        'You do not have a child with the specified student ID',
+      );
+    }
+
+    // Ensure booking belongs to one of the parent's children
+    const isChildBooking = await this.bookingStudentsModel.findOne({
+      booking: new Types.ObjectId(bookingId),
+      student: new Types.ObjectId(studentId),
+    });
+
+    if (!isChildBooking) {
+      throw new BadRequestException(
+        'This booking does not belong to your child',
+      );
+    }
+
+    // Ensure booking is still pending payment
+    if (booking.status !== 'PENDING') {
+      throw new BadRequestException(
+        'Payment can only be made for bookings with PENDING status',
+      );
+    }
+
+    // Gather timeslot and tutor info to compute amount
+    const slot = await this.timeSlotModel.findById(booking.timeSlot);
+
+    if (!slot) {
+      throw new BadRequestException(
+        'Invalid time slot associated with booking',
+      );
+    }
+
+    // Load tutor availability to get tutor user ID
+    const availability = await this.availabilityModel.findOne({
+      user: new Types.ObjectId(slot.tutorAvailability),
+    });
+
+    if (!availability) {
+      throw new BadRequestException(
+        'Invalid tutor availability associated with time slot',
+      );
+    }
+
+    // Ensure tutor profile exists to get hourly rates
     const tutorProfile = await this.tutorProfileModel.findOne({
-      user: new Types.ObjectId(tutorAvailability.user),
+      user: new Types.ObjectId(availability.user),
     });
 
     if (!tutorProfile) {
@@ -129,38 +230,41 @@ export class BookingsService {
     const hours = Math.max(0.25, (end - start) / (1000 * 60 * 60));
 
     const amount = Number(
-      (dto.type === 'ONE_TO_ONE'
+      (booking.type === 'ONE_TO_ONE'
         ? tutorProfile.oneOnOneHourlyRate
         : tutorProfile.groupHourlyRate * hours
       ).toFixed(2),
     );
 
-    // Create Stripe Checkout Session and attach bookingId metadata
+    // Build success/cancel URLs
     const successUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-success?bookingId=${booking._id}`;
     const cancelUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-cancel?bookingId=${booking._id}`;
 
+    // Create Checkout Session
     const session = await this.paymentsService.createCheckoutSession({
       amount,
-      currency: 'eur', // euro only
+      currency: 'eur',
       successUrl,
       cancelUrl,
       metadata: {
         bookingId: String(booking._id),
-        studentId: String(user.userId),
-        tutorId: String(tutorAvailability.user),
+        studentId: String(studentId),
+        parentId: String(user.userId),
       },
-      customerEmail: (user && user.email) || undefined,
+      customerEmail: parent?.email || undefined,
       description: `Lesson with tutor ${String(tutorProfile.user)}`,
     });
 
+    // Persist session info on booking for later webhook reconciliation
+    await this.bookingModel.findByIdAndUpdate(booking._id, {
+      paymentSessionId: session.id,
+      paymentUrl: session.url,
+    });
+
     return {
-      message: 'Booking successful, proceed to payment',
-      booking,
-      payment: {
-        checkoutUrl: session.url,
-        sessionId: session.id,
-        amount,
-      },
+      checkoutUrl: session.url,
+      sessionId: session.id,
+      amount,
     };
   }
 

@@ -374,17 +374,10 @@ export default function Page() {
       toast.dismiss(loadingToastId);
 
       // Show success toast
-      toast.success(
-        `Booking created successfully!\nDate: ${formatDate(
-          selectedDate
-        )}\nTime: ${formatTimeDisplay(selectedTimeSlot)}\nType: ${
-          selectedTimeSlot.type === "ONE_TO_ONE" ? "One-to-One" : "Group"
-        }\nTotal: $${totalPrice?.toFixed(2) || "0.00"}`,
-        {
-          duration: 5000,
-          position: "top-center",
-        }
-      );
+      toast.success(response.message || "Booking created successfully!", {
+        duration: 5000,
+        position: "top-center",
+      });
 
       // Check if there's a payment URL in the response and redirect
       if (response?.payment?.checkoutUrl) {

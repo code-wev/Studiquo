@@ -11,6 +11,7 @@ import {
   TutorProfile,
   TutorProfileSchema,
 } from 'src/models/tutorProfile.model';
+import { User, UserSchema } from 'src/models/user.model';
 import { PaymentsModule } from 'src/payments/payments.module';
 import { Booking, BookingSchema } from '../models/booking.model';
 import {
@@ -20,6 +21,7 @@ import {
 import { LessonReport, LessonReportSchema } from '../models/lessonReport.model';
 import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
+import { ParentBookingsController } from './parent-bookings.controller';
 
 @Module({
   imports: [
@@ -30,12 +32,13 @@ import { BookingsService } from './bookings.service';
       { name: TimeSlot.name, schema: TimeSlotSchema },
       { name: TutorAvailability.name, schema: TutorAvailabilitySchema },
       { name: TutorProfile.name, schema: TutorProfileSchema },
+      { name: User.name, schema: UserSchema },
     ]),
     JwtModule.register(jwtConfig),
     // PaymentsModule provides PaymentsService used during booking creation
     PaymentsModule,
   ],
-  controllers: [BookingsController],
+  controllers: [BookingsController, ParentBookingsController],
   providers: [BookingsService],
   exports: [BookingsService],
 })

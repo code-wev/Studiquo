@@ -17,3 +17,13 @@ export class CreateBookingDto {
   })
   type: string;
 }
+
+export class CreatePaymentLinkDto {
+  @IsMongoId({ message: 'Booking ID must be a valid Mongo ID' })
+  @IsNotEmpty({ message: 'Booking ID is required' })
+  bookingId: string;
+
+  @IsMongoId({ message: 'Student ID must be a valid Mongo ID' })
+  @IsNotEmpty({ message: 'Student ID is required' })
+  studentId: string;
+}
