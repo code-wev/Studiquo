@@ -261,20 +261,20 @@ export class UsersService extends BaseService<User> {
     if (parent.role !== UserRole.Parent)
       throw new ForbiddenException('Only parents can search for students');
 
-    const q = search?.trim() || '';
-    const regex = new RegExp(q, 'i');
+    // Build regex for case-insensitive partial match
+    const regex = new RegExp(search ?? '', 'i');
 
     const results = await this.model
       .find({
         role: UserRole.Student,
         $or: [
-          { studentId: q },
+          { studentId: regex },
           { firstName: regex },
           { lastName: regex },
           { email: regex },
         ],
       })
-      .select('firstName lastName studentId email')
+      .select('firstName lastName studentId email avatar')
       .limit(20)
       .lean();
 
@@ -290,7 +290,7 @@ export class UsersService extends BaseService<User> {
   async listPendingParentRequests(studentId: MongoIdDto['id']) {
     const student = await this.model
       .findById(studentId)
-      .populate('pendingParents', 'firstName lastName email')
+      .populate('pendingParents', 'firstName lastName email avatar')
       .lean();
     if (!student) throw new NotFoundException('Student not found');
     if (student.role !== UserRole.Student)

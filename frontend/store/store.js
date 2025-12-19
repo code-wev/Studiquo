@@ -1,3 +1,4 @@
+import { ParentApi } from "@/feature/parent/ParentApi";
 import { AuthApi } from "@/feature/shared/AuthApi";
 import { AvailabilityApi } from "@/feature/shared/AvailabilityApi";
 import { TutorApi } from "@/feature/shared/TutorApi";
@@ -19,6 +20,7 @@ export const store = configureStore({
     [TutorApi.reducerPath]: TutorApi.reducer,
     [StudentApi.reducerPath]: StudentApi.reducer,
     [BookingApi.reducerPath]: BookingApi.reducer,
+    [ParentApi.reducerPath]: ParentApi.reducer,
   },
 
   middleware: (getDefaultMiddleware) =>
@@ -28,6 +30,7 @@ export const store = configureStore({
       TutorApi.middleware,
       StudentApi.middleware,
       BookingApi.middleware,
+      ParentApi.middleware,
     ]),
 });
 
