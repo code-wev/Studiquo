@@ -287,7 +287,7 @@ export class UsersService extends BaseService<User> {
           },
         ],
       })
-      .select('firstName lastName studentId email avatar pendingParents')
+      .select('-password')
       .limit(20)
       .lean();
 
@@ -299,7 +299,7 @@ export class UsersService extends BaseService<User> {
       );
 
       return {
-        id: r._id,
+        _id: r._id,
         firstName: r.firstName,
         lastName: r.lastName,
         studentId: r.studentId,
