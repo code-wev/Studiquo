@@ -21,7 +21,6 @@ import {
 import { LessonReport, LessonReportSchema } from '../models/lessonReport.model';
 import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
-import { ParentBookingsController } from './parent-bookings.controller';
 
 @Module({
   imports: [
@@ -38,7 +37,7 @@ import { ParentBookingsController } from './parent-bookings.controller';
     // PaymentsModule provides PaymentsService used during booking creation
     PaymentsModule,
   ],
-  controllers: [BookingsController, ParentBookingsController],
+  controllers: [BookingsController],
   providers: [BookingsService],
   exports: [BookingsService],
 })

@@ -10,7 +10,7 @@ import { PaymentsService } from 'src/payments/payments.service';
 import { Booking } from '../models/booking.model';
 import { BookingStudents } from '../models/bookingStudents.model';
 import { LessonReport } from '../models/lessonReport.model';
-import { CreateBookingDto } from './dto/booking.dto';
+import { CreateBookingDto, CreatePaymentLinkDto } from './dto/booking.dto';
 
 @Injectable()
 export class BookingsService {
@@ -152,8 +152,7 @@ export class BookingsService {
    */
   async createPaymentLinkForBooking(
     user: any,
-    bookingId: string,
-    studentId: string,
+    { bookingId, studentId }: CreatePaymentLinkDto,
   ) {
     // Validate booking exists
     const booking = await this.bookingModel.findById(bookingId);

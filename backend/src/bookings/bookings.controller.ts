@@ -46,11 +46,7 @@ export class BookingsController {
     @GetUser() user: any,
     @Body() dto: CreatePaymentLinkDto,
   ) {
-    return this.bookingsService.createPaymentLinkForBooking(
-      user,
-      dto.bookingId,
-      dto.studentId,
-    );
+    return this.bookingsService.createPaymentLinkForBooking(user, dto);
   }
 
   /**
