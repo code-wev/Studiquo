@@ -52,8 +52,19 @@ export class BookingsService {
   async createBooking(user: any, dto: CreateBookingDto) {
     // Load timeslot first and ensure it exists
     const slot = await this.timeSlotModel.findById(dto.timeSlot);
+
     if (!slot) {
       throw new BadRequestException('Invalid time slot');
+    }
+
+    // Enforce minimum advance booking window: must book at least 3 days before the lesson
+    const now = Date.now();
+    const slotStart = new Date(slot.startTime).getTime();
+    const minAdvanceMs = 3 * 24 * 60 * 60 * 1000; // 3 days
+    if (slotStart - now < minAdvanceMs) {
+      throw new BadRequestException(
+        'Bookings must be made at least 3 days before the lesson',
+      );
     }
 
     // Ensure the timeslot isn't already booked (pending or scheduled)
