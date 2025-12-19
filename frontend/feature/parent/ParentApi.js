@@ -18,7 +18,28 @@ export const ParentApi = createApi({
     childrenSearch: builder.query({
       query: (search) => `/users/children/search?search=${search}`,
     }),
+
+    childrenList: builder.query({
+      query: () => `/users/my/children`,
+    }),
+
+    addMyChild: builder.mutation({
+      query: (studentId) => ({
+        url: `/users/my/children`,
+        method: "POST",
+        body: { studentId },
+      }),
+    }),
+
+    getMyChildren: builder.query({
+      query: () => `/users/my/children`,
+    }),
   }),
 });
 
-export const { useChildrenSearchQuery } = ParentApi;
+export const {
+  useChildrenSearchQuery,
+  useChildrenListQuery,
+  useAddMyChildMutation,
+  useGetMyChildrenQuery,
+} = ParentApi;

@@ -66,9 +66,9 @@ export class UsersController {
    * @param body - object containing the `studentId` of the child to add
    * @returns the updated parent user document (without password)
    */
-  @Post('me/children')
+  @Post('my/children')
   @Roles(UserRole.Parent)
-  async addChild(
+  async addMyChild(
     @GetUser() user: any,
     @Body('studentId') studentId: MongoIdDto['id'],
   ) {
@@ -79,13 +79,25 @@ export class UsersController {
    * Search students (for parents) by query (studentId, name or email).
    *
    * @param req - the request object containing `user` set by the auth guard
-   * @param q - the search query string
+   * @param search - the search query string
    * @returns array of matching student user documents (without passwords)
    */
   @Get('children/search')
   @Roles(UserRole.Parent)
   async searchChildren(@GetUser() user: any, @Query() { search }: SearchDto) {
     return this.usersService.searchStudentsForParent(user.userId, search);
+  }
+
+  /**
+   * Parent: list connected children (students).
+   *
+   * @param req - the request object containing `user` set by the auth guard
+   * @returns array of student user documents who are children of the parent
+   */
+  @Get('my/children')
+  @Roles(UserRole.Parent)
+  async listChildren(@GetUser() user: any) {
+    return this.usersService.listChildrenOfParent(user.userId);
   }
 
   /**

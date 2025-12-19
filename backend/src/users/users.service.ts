@@ -186,10 +186,6 @@ export class UsersService extends BaseService<User> {
     const parent = await this.model.findById(parentId);
     if (!parent) throw new NotFoundException('Parent not found');
 
-    if (parent.role !== UserRole.Parent) {
-      throw new ForbiddenException('Only parents can add children');
-    }
-
     // Find student by studentId
     const student = await this.model.findOne({
       studentId,
@@ -222,7 +218,7 @@ export class UsersService extends BaseService<User> {
     // If already requested, inform
     const alreadyRequested = await this.model.findOne({
       _id: student._id,
-      pendingParents: new Types.ObjectId(parent._id),
+      pendingParents: { $in: [new Types.ObjectId(parent._id)] },
     });
     if (alreadyRequested) {
       return { message: 'Request already sent and awaiting approval' };
@@ -264,21 +260,76 @@ export class UsersService extends BaseService<User> {
     // Build regex for case-insensitive partial match
     const regex = new RegExp(search ?? '', 'i');
 
+    // Include students who have no pending requests OR already have a
+    // pending request from THIS parent. For each result we return a
+    // `requestSent` boolean so the frontend can show the correct UI
+    // (e.g., disable the add button or show "Requested").
+    const parentObjId = new Types.ObjectId(parentId);
+
     const results = await this.model
       .find({
         role: UserRole.Student,
-        $or: [
-          { studentId: regex },
-          { firstName: regex },
-          { lastName: regex },
-          { email: regex },
+        $and: [
+          {
+            $or: [
+              { pendingParents: { $exists: false } },
+              { pendingParents: { $size: 0 } },
+              { pendingParents: parentObjId },
+            ],
+          },
+          {
+            $or: [
+              { studentId: regex },
+              { firstName: regex },
+              { lastName: regex },
+              { email: regex },
+            ],
+          },
         ],
       })
-      .select('firstName lastName studentId email avatar')
+      .select('firstName lastName studentId email avatar pendingParents')
       .limit(20)
       .lean();
 
-    return { message: 'Search completed', results };
+    // Map results to include `requestSent` and strip `pendingParents`
+    const mapped = results.map((r: any) => {
+      const pending = r.pendingParents || [];
+      const requestSent = pending.some((p: any) =>
+        new Types.ObjectId(p).equals(parentObjId),
+      );
+
+      return {
+        id: r._id,
+        firstName: r.firstName,
+        lastName: r.lastName,
+        studentId: r.studentId,
+        email: r.email,
+        avatar: r.avatar,
+        requestSent,
+      };
+    });
+
+    return { message: 'Search completed', results: mapped };
+  }
+
+  /**
+   * List connected children (students) for a parent.
+   *
+   * @param parentId - the MongoDB ID of the parent user
+   * @return array of student user documents who are children of the parent
+   */
+  async listChildrenOfParent(parentId: MongoIdDto['id']) {
+    const parent = await this.model
+      .findById(parentId)
+      .populate('children', 'firstName lastName email avatar studentId')
+      .lean();
+
+    if (!parent) throw new NotFoundException('Parent not found');
+
+    return {
+      message: 'Children list retrieved',
+      children: parent.children || [],
+    };
   }
 
   /**
