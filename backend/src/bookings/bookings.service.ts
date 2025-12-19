@@ -163,14 +163,12 @@ export class BookingsService {
     }
 
     // Load parent and ensure they have the specified student as a child
-    const parentAndChild = await this.userModel.find({
+    const parentAndChild = await this.userModel.findOne({
       _id: new Types.ObjectId(user.userId),
       student: { $in: [new Types.ObjectId(studentId)] },
     });
 
-    const parent = parentAndChild[0];
-
-    if (!parent) {
+    if (!parentAndChild) {
       throw new BadRequestException(
         'You do not have a child with the specified student ID',
       );
@@ -216,9 +214,11 @@ export class BookingsService {
     }
 
     // Ensure tutor profile exists to get hourly rates
-    const tutorProfile = await this.tutorProfileModel.findOne({
-      user: new Types.ObjectId(availability.user),
-    });
+    const tutorProfile = await this.tutorProfileModel
+      .findOne({
+        user: new Types.ObjectId(availability.user),
+      })
+      .populate('user');
 
     if (!tutorProfile) {
       throw new BadRequestException('Tutor profile not found');
@@ -251,7 +251,7 @@ export class BookingsService {
         studentId: String(studentId),
         parentId: String(user.userId),
       },
-      customerEmail: parent?.email || undefined,
+      customerEmail: parentAndChild?.email || undefined,
       description: `Lesson with tutor ${String(tutorProfile.user)}`,
     });
 
