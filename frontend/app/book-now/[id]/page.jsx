@@ -42,8 +42,19 @@ export default function Page() {
 
   const tutorData = availabilityData?.data?.tutor;
 
-  // Pricing - Fixed for all sessions
-  const totalPrice = tutorData?.hourlyRate;
+  // Calculate price based on selected time slot type
+  const calculatePrice = () => {
+    if (!selectedTimeSlot || !tutorData) return 0;
+
+    if (selectedTimeSlot.type === "ONE_TO_ONE") {
+      return tutorData.oneOnOneHourlyRate || 0;
+    } else if (selectedTimeSlot.type === "GROUP") {
+      return tutorData.groupHourlyRate || 0;
+    }
+    return 0;
+  };
+
+  const totalPrice = calculatePrice();
 
   // Initialize with today's date
   useEffect(() => {
@@ -304,6 +315,38 @@ export default function Page() {
 
     const dateKey = formatDateKey(selectedDate);
     return availabilityMap[dateKey]?.slots || [];
+  };
+
+  // Get rate type display
+  const getRateTypeDisplay = () => {
+    if (!selectedTimeSlot || !tutorData) return "Session Price";
+
+    if (selectedTimeSlot.type === "ONE_TO_ONE") {
+      return "One-to-One Session Price";
+    } else if (selectedTimeSlot.type === "GROUP") {
+      return "Group Session Price";
+    }
+    return "Session Price";
+  };
+
+  // Get rate type badge
+  const getRateTypeBadge = () => {
+    if (!selectedTimeSlot || !tutorData) return null;
+
+    if (selectedTimeSlot.type === "ONE_TO_ONE") {
+      return (
+        <span className='ml-2 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full'>
+          1:1 Rate
+        </span>
+      );
+    } else if (selectedTimeSlot.type === "GROUP") {
+      return (
+        <span className='ml-2 px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full'>
+          Group Rate
+        </span>
+      );
+    }
+    return null;
   };
 
   // Handle confirm booking
@@ -636,6 +679,25 @@ export default function Page() {
                                 ? "One-to-One"
                                 : "Group"}
                             </p>
+                            {/* Show price for this slot */}
+                            <div className='mt-2'>
+                              <span className='text-xs font-medium text-gray-700'>
+                                Price: $
+                                {slot.type === "ONE_TO_ONE"
+                                  ? tutorData?.oneOnOneHourlyRate?.toFixed(2) ||
+                                    "0.00"
+                                  : tutorData?.groupHourlyRate?.toFixed(2) ||
+                                    "0.00"}
+                              </span>
+                              <span
+                                className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${
+                                  slot.type === "ONE_TO_ONE"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-green-100 text-green-700"
+                                }`}>
+                                {slot.type === "ONE_TO_ONE" ? "1:1" : "Group"}
+                              </span>
+                            </div>
                           </div>
                           <span
                             className={`px-2 py-1 rounded text-xs font-medium ${
@@ -661,23 +723,6 @@ export default function Page() {
                     {bookingType !== "all" &&
                       " Try selecting 'All' booking type or choose a different date."}
                   </p>
-                </div>
-              )}
-
-              {/* Selected date info */}
-              {selectedDate && (
-                <div className='mt-4 text-sm text-gray-600'>
-                  <p>
-                    <span className='font-medium'>Selected Date:</span>{" "}
-                    {formatDate(selectedDate)}
-                  </p>
-                  {selectedTimeSlot && (
-                    <p className='mt-1'>
-                      <span className='font-medium'>Selected Slot:</span>{" "}
-                      {selectedTimeSlot.startTimeLabel} -{" "}
-                      {selectedTimeSlot.endTimeLabel}
-                    </p>
-                  )}
                 </div>
               )}
             </div>
@@ -778,13 +823,16 @@ export default function Page() {
                     <span className='text-purple-500'>👥</span>
                     <p className='text-xs text-gray-500 ml-2'>Class Type</p>
                   </div>
-                  <p className='text-sm font-medium text-gray-900'>
-                    {selectedTimeSlot?.type === "ONE_TO_ONE"
-                      ? "One-to-One Session"
-                      : selectedTimeSlot?.type === "GROUP"
-                      ? "Group Session"
-                      : "Select slot"}
-                  </p>
+                  <div className='flex items-center'>
+                    <p className='text-sm font-medium text-gray-900'>
+                      {selectedTimeSlot?.type === "ONE_TO_ONE"
+                        ? "One-to-One Session"
+                        : selectedTimeSlot?.type === "GROUP"
+                        ? "Group Session"
+                        : "Select slot"}
+                    </p>
+                    {getRateTypeBadge()}
+                  </div>
                 </div>
               </div>
 
@@ -803,12 +851,40 @@ export default function Page() {
                 </div>
               )}
 
-              {/* Pricing - Fixed for all session types */}
+              {/* Pricing - Dynamic based on session type */}
               <div className='py-4 space-y-2'>
-                <div className='flex justify-between text-sm text-gray-700'>
-                  <p>Session Price</p>
+                <div className='flex justify-between items-center text-sm text-gray-700'>
+                  <div className='flex items-center'>
+                    <p>{getRateTypeDisplay()}</p>
+                  </div>
                   <p>${totalPrice?.toFixed(2) || "0.00"}</p>
                 </div>
+
+                {/* Show both rates for comparison when no slot selected */}
+                {!selectedTimeSlot && tutorData && (
+                  <>
+                    <div className='flex justify-between text-sm text-gray-500 border-t pt-2'>
+                      <div className='flex items-center'>
+                        <p>One-to-One Rate</p>
+                        <span className='ml-2 px-1.5 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 rounded-full'>
+                          1:1
+                        </span>
+                      </div>
+                      <p>
+                        ${tutorData.oneOnOneHourlyRate?.toFixed(2) || "0.00"}
+                      </p>
+                    </div>
+                    <div className='flex justify-between text-sm text-gray-500'>
+                      <div className='flex items-center'>
+                        <p>Group Rate</p>
+                        <span className='ml-2 px-1.5 py-0.5 text-xs font-medium bg-green-100 text-green-700 rounded-full'>
+                          Group
+                        </span>
+                      </div>
+                      <p>${tutorData.groupHourlyRate?.toFixed(2) || "0.00"}</p>
+                    </div>
+                  </>
+                )}
 
                 <div className='flex justify-between font-semibold text-lg mt-3 pt-3 border-t border-gray-100'>
                   <p className='text-gray-900'>Total</p>

@@ -543,6 +543,8 @@ export class AvailabilityService {
             },
             avatar: '$user.avatar',
             subjects: '$tutorProfile.subjects',
+            groupHourlyRate: '$tutorProfile.groupHourlyRate',
+            oneOnOneHourlyRate: '$tutorProfile.oneOnOneHourlyRate',
             hourlyRate: '$tutorProfile.hourlyRate',
             averageRating: {
               $ifNull: ['$ratingStats.averageRating', 0],

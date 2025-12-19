@@ -1,7 +1,6 @@
 "use client";
 
 import { useGetTutorQuery } from "@/feature/shared/TutorApi";
-import image from "@/public/hiw/Logo.png";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -37,14 +36,11 @@ const FIndTutorPage = () => {
   const [sort, setSort] = useState("");
   const [priceRange, setPriceRange] = useState([0, 100]);
   const [ratingFilter, setRatingFilter] = useState(0);
-  const {data:tutor} = useGetTutorQuery();
+  const { data: tutor } = useGetTutorQuery();
 
-  
-    const tutors = tutor?.data?.data;
+  const tutors = tutor?.data?.data;
 
-
-    console.log(tutors, "tutors is here, ");
-  
+  console.log(tutors, "tutors is here, ");
 
   // const filteredTutors = tutorsData
   //   .filter(
@@ -217,15 +213,17 @@ const FIndTutorPage = () => {
                   className='bg-white rounded-lg p-4 flex flex-col'>
                   <div className='flex justify-between gap-3 mb-2'>
                     <div>
-                      <h4 className='font-semibold'>{tutor?.user?.firstName}</h4>
-                           <p className="text-gray-500 text-sm mb-2">
-  {tutor.subjects.map((s, index) => (
-    <span key={index}>
-      {s}
-      {index !== tutor.subjects.length - 1 && ", "}
-    </span>
-  ))}
-</p>
+                      <h4 className='font-semibold'>
+                        {tutor?.user?.firstName}
+                      </h4>
+                      <p className='text-gray-500 text-sm mb-2'>
+                        {tutor.subjects.map((s, index) => (
+                          <span key={index}>
+                            {s}
+                            {index !== tutor.subjects.length - 1 && ", "}
+                          </span>
+                        ))}
+                      </p>
                     </div>
 
                     <Image
@@ -240,7 +238,8 @@ const FIndTutorPage = () => {
                     {tutor?.user?.bio}
                   </p>
                   <p className='font-semibold text-[20px] mb-2 pt-6 pb-4'>
-                    ${tutor?.hourlyRate}
+                    €{tutor?.groupHourlyRate} - {tutor?.oneOnOneHourlyRate} /
+                    hour
                   </p>
                   <Link href={`/find-tutor/${tutor?.user?._id}`}>
                     <button className='mt-auto max-w-35 cursor-pointer flex items-center gap-4  bg-[#CCB7F8]  py-2 whitespace-nowrap px-6 rounded text-[#3A0E95]'>
