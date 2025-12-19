@@ -22,7 +22,8 @@ const TutorProfilePage = () => {
     email: "",
     subjects: [],
     bio: "",
-    hourlyRate: "",
+    groupHourlyRate: "",
+    oneOnOneHourlyRate: "",
     avatar: "",
   });
 
@@ -46,7 +47,10 @@ const TutorProfilePage = () => {
         email: userData.email || "",
         subjects: uppercaseSubjects, // Store as uppercase
         bio: userData.bio || "",
-        hourlyRate: profileInfo?.hourlyRate || "",
+        groupHourlyRate:
+          profileInfo?.groupHourlyRate || profileInfo?.hourlyRate || "",
+        oneOnOneHourlyRate:
+          profileInfo?.oneOnOneHourlyRate || profileInfo?.hourlyRate || "",
         avatar: userData.avatar || "",
       });
     }
@@ -166,7 +170,9 @@ const TutorProfilePage = () => {
         lastName: profileData.lastName,
         bio: profileData.bio,
         subjects: uppercaseSubjects, // Send uppercase subjects array
-        hourlyRate: profileData.hourlyRate,
+        hourlyRate: profileData.hourlyRate, // Keep for backward compatibility
+        groupHourlyRate: profileData.groupHourlyRate,
+        oneOnOneHourlyRate: profileData.oneOnOneHourlyRate,
       };
 
       console.log(updateData, "update data with subjects in uppercase");
@@ -205,6 +211,10 @@ const TutorProfilePage = () => {
         subjects: uppercaseSubjects,
         bio: userData.bio || "",
         hourlyRate: profileInfo?.hourlyRate || "",
+        groupHourlyRate:
+          profileInfo?.groupHourlyRate || profileInfo?.hourlyRate || "",
+        oneOnOneHourlyRate:
+          profileInfo?.oneOnOneHourlyRate || profileInfo?.hourlyRate || "",
         avatar: userData.avatar || "",
       });
     }
@@ -371,63 +381,109 @@ const TutorProfilePage = () => {
               />
             </div>
 
-            {/* Hourly Rate */}
+            {/*  Subjects */}
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
-                Hourly Rate ($)
+                Subjects
               </label>
-              <input
-                type='number'
-                value={profileData.hourlyRate}
-                onChange={(e) =>
-                  handleInputChange("hourlyRate", e.target.value)
-                }
-                disabled={!isEditing}
-                min='0'
-                step='0.01'
-                className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600'
-              />
+              <div className='relative'>
+                <select
+                  multiple
+                  value={profileData.subjects}
+                  onChange={handleSubjectChange}
+                  disabled={!isEditing}
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600 min-h-[100px]'
+                  size={5}>
+                  {subjectOptions.map((subject) => (
+                    <option
+                      key={subject.value}
+                      value={subject.value}
+                      className='px-2 py-1 hover:bg-purple-50'>
+                      {subject.label}
+                    </option>
+                  ))}
+                </select>
+                {!isEditing && profileData.subjects.length === 0 && (
+                  <span className='absolute left-4 top-2 text-gray-500'>
+                    No subjects selected
+                  </span>
+                )}
+              </div>
+              <p className='mt-2 text-sm text-gray-500'>
+                {isEditing
+                  ? "Hold Ctrl (Windows) or Cmd (Mac) to select multiple subjects"
+                  : ""}
+                {!isEditing && profileData.subjects.length > 0 && (
+                  <span className='font-medium ml-2'>
+                    Selected: {profileData.subjects.length} subject(s)
+                  </span>
+                )}
+              </p>
             </div>
           </div>
 
-          {/* Subjects (Multi-select) */}
+          {/* Hourly Rates Section */}
           <div className='mb-6'>
-            <label className='block text-sm font-medium text-gray-700 mb-2'>
-              Subjects
-            </label>
-            <div className='relative'>
-              <select
-                multiple
-                value={profileData.subjects}
-                onChange={handleSubjectChange}
-                disabled={!isEditing}
-                className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600 min-h-[100px]'
-                size={5}>
-                {subjectOptions.map((subject) => (
-                  <option
-                    key={subject.value}
-                    value={subject.value}
-                    className='px-2 py-1 hover:bg-purple-50'>
-                    {subject.label}
-                  </option>
-                ))}
-              </select>
-              {!isEditing && profileData.subjects.length === 0 && (
-                <span className='absolute left-4 top-2 text-gray-500'>
-                  No subjects selected
-                </span>
-              )}
+            <h3 className='text-lg font-semibold text-gray-800 mb-4'>
+              Hourly Rates
+            </h3>
+            <div className='grid grid-cols-2 gap-6'>
+              {/* One-on-One Rate */}
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  One-on-One Session Rate (€)
+                </label>
+                <div className='relative'>
+                  <span className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500'>
+                    €
+                  </span>
+                  <input
+                    type='number'
+                    value={profileData.oneOnOneHourlyRate}
+                    onChange={(e) =>
+                      handleInputChange("oneOnOneHourlyRate", e.target.value)
+                    }
+                    disabled={!isEditing}
+                    min='0'
+                    step='0.01'
+                    className='w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600'
+                    placeholder='0.00'
+                  />
+                </div>
+                <p className='mt-1 text-xs text-gray-500 flex items-center'>
+                  <span className='inline-block w-3 h-3 bg-blue-500 rounded-full mr-2'></span>
+                  Rate for individual tutoring sessions
+                </p>
+              </div>
+
+              {/* Group Rate */}
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  Group Session Rate (€)
+                </label>
+                <div className='relative'>
+                  <span className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500'>
+                    €
+                  </span>
+                  <input
+                    type='number'
+                    value={profileData.groupHourlyRate}
+                    onChange={(e) =>
+                      handleInputChange("groupHourlyRate", e.target.value)
+                    }
+                    disabled={!isEditing}
+                    min='0'
+                    step='0.01'
+                    className='w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600'
+                    placeholder='0.00'
+                  />
+                </div>
+                <p className='mt-1 text-xs text-gray-500 flex items-center'>
+                  <span className='inline-block w-3 h-3 bg-green-500 rounded-full mr-2'></span>
+                  Rate for group tutoring sessions
+                </p>
+              </div>
             </div>
-            <p className='mt-2 text-sm text-gray-500'>
-              {isEditing
-                ? "Hold Ctrl (Windows) or Cmd (Mac) to select multiple subjects"
-                : ""}
-              {!isEditing && profileData.subjects.length > 0 && (
-                <span className='font-medium ml-2'>
-                  Selected: {profileData.subjects.length} subject(s)
-                </span>
-              )}
-            </p>
           </div>
 
           {/* Bio */}
