@@ -241,77 +241,94 @@ export class UsersService extends BaseService<User> {
   }
 
   /**
-   * Search students for a parent to add.
+   * Search students for a parent to add (aggregation-based).
    *
-   * @param parentId - the MongoDB ID of the parent user
-   * @param query - the search query string
-   * @return array of matching student user documents (limited fields)
+   * @param parentId - MongoDB ID of the parent
+   * @param search - search query string
+   * @returns matching students with requestSent flag
    */
   async searchStudentsForParent(
     parentId: MongoIdDto['id'],
     search: SearchDto['search'],
   ) {
-    // ensure parent exists and is allowed
+    // Ensure parent exists & is allowed
     const parent = await this.model.findById(parentId);
     if (!parent) throw new NotFoundException('Parent not found');
-    if (parent.role !== UserRole.Parent)
+    if (parent.role !== UserRole.Parent) {
       throw new ForbiddenException('Only parents can search for students');
+    }
 
-    // Build regex for case-insensitive partial match
+    const parentObjId = new Types.ObjectId(parentId);
     const regex = new RegExp(search ?? '', 'i');
 
-    // Include students who have no pending requests OR already have a
-    // pending request from THIS parent. For each result we return a
-    // `requestSent` boolean so the frontend can show the correct UI
-    // (e.g., disable the add button or show "Requested").
-    const parentObjId = new Types.ObjectId(parentId);
+    const results = await this.model.aggregate([
+      // 1️. Match students only
+      {
+        $match: {
+          role: UserRole.Student,
+        },
+      },
 
-    const results = await this.model
-      .find({
-        role: UserRole.Student,
-        $and: [
-          {
-            $or: [
-              { pendingParents: { $exists: false } },
-              { pendingParents: { $size: 0 } },
-              { pendingParents: parentObjId },
+      // 2️. Search by studentId / name / email
+      {
+        $match: {
+          $or: [
+            { studentId: { $regex: regex } },
+            { firstName: { $regex: regex } },
+            { lastName: { $regex: regex } },
+            { email: { $regex: regex } },
+          ],
+        },
+      },
+
+      // 3️. Ensure pendingParents logic
+      {
+        $match: {
+          $or: [
+            { pendingParents: { $exists: false } },
+            { pendingParents: { $size: 0 } },
+            { pendingParents: parentObjId },
+          ],
+        },
+      },
+
+      // 4️. Compute requestSent flag
+      {
+        $addFields: {
+          requestSent: {
+            $cond: [
+              {
+                $in: [parentObjId, { $ifNull: ['$pendingParents', []] }],
+              },
+              true,
+              false,
             ],
           },
-          {
-            $or: [
-              { studentId: regex },
-              { firstName: regex },
-              { lastName: regex },
-              { email: regex },
-            ],
-          },
-        ],
-      })
-      .select(
-        '-password firstName lastName studentId email avatar pendingParents',
-      )
-      .limit(20)
-      .lean();
+        },
+      },
 
-    // Map results to include `requestSent` and strip `pendingParents`
-    const mapped = results.map((r: any) => {
-      const pending = r.pendingParents || [];
-      const requestSent = pending.some((p: any) =>
-        new Types.ObjectId(p).equals(parentObjId),
-      );
+      // 5️. Shape response
+      {
+        $project: {
+          _id: 0,
+          id: { $toString: '$_id' },
+          firstName: 1,
+          lastName: 1,
+          studentId: 1,
+          email: 1,
+          avatar: 1,
+          requestSent: 1,
+        },
+      },
 
-      return {
-        id: r._id,
-        firstName: r.firstName,
-        lastName: r.lastName,
-        studentId: r.studentId,
-        email: r.email,
-        avatar: r.avatar,
-        requestSent,
-      };
-    });
+      // 6️. Limit results
+      { $limit: 20 },
+    ]);
 
-    return { message: 'Search completed', results: mapped };
+    return {
+      message: 'Search completed',
+      results,
+    };
   }
 
   /**
