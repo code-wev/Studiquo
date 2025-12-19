@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { LessonReport, LessonReportSchema } from '../models/lessonReport.model';
+import { LessonReport, LessonReportSchema } from '../models/LessonReport.model';
 import { LessonReportController } from './lesson-report.controller';
 import { LessonReportService } from './lesson-report.service';
 

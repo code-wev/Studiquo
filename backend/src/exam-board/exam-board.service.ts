@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { StudentProfile } from 'src/models/studentProfile.model';
+import { StudentProfile } from 'src/models/StudentProfile.model';
 import { CreateExamBoardDto } from './dto/exam-board.dto';
 
 @Injectable()

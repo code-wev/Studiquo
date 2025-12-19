@@ -4,7 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
 import { MailService } from 'src/mail/mail.service';
-import { User } from '../models/user.model';
+import { User } from '../models/User.model';
 import {
   ChangePasswordDto,
   ForgotPasswordDto,

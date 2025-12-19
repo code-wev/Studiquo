@@ -5,12 +5,12 @@ import { jwtConfig } from 'common/jwt.config';
 import {
   TutorProfile,
   TutorProfileSchema,
-} from 'src/models/tutorProfile.model';
-import { TimeSlot, TimeSlotSchema } from '../models/timeSlot.model';
+} from 'src/models/TutorProfile.model';
+import { TimeSlot, TimeSlotSchema } from '../models/TimeSlot.model';
 import {
   TutorAvailability,
   TutorAvailabilitySchema,
-} from '../models/tutorAvailability.model';
+} from '../models/TutorAvailability.model';
 import { AvailabilityController } from './availability.controller';
 import { AvailabilityService } from './availability.service';
 

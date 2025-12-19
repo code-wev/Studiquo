@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Put, UseGuards } from '@nestjs/common';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
-import { UserRole } from 'src/models/user.model';
+import { UserRole } from 'src/models/User.model';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { AdminService } from './admin.service';

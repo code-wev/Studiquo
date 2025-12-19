@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import { GetUser } from 'common/decorators/get-user.decorator';
 import { PaginationDto } from 'common/dto/pagination.dto';
-import { UserRole } from 'src/models/user.model';
+import { UserRole } from 'src/models/User.model';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';

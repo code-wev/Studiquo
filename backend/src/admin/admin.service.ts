@@ -2,11 +2,11 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model } from 'mongoose';
-import { Booking } from '../models/booking.model';
-import { Payment } from '../models/payment.model';
-import { Payout } from '../models/payout.model';
-import { TutorProfile } from '../models/tutorProfile.model';
-import { User } from '../models/user.model';
+import { Booking } from '../models/Booking.model';
+import { Payment } from '../models/Payment.model';
+import { Payout } from '../models/Payout.model';
+import { TutorProfile } from '../models/TutorProfile.model';
+import { User } from '../models/User.model';
 
 @Injectable()
 export class AdminService {

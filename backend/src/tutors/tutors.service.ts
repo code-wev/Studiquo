@@ -6,13 +6,13 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model, Types } from 'mongoose';
-import { Booking } from 'src/models/booking.model';
-import { Payment } from 'src/models/payment.model';
-import { Payout } from 'src/models/payout.model';
-import { Review } from 'src/models/review.model';
-import { Wallet } from 'src/models/wallet.model';
+import { Booking } from 'src/models/Booking.model';
+import { Payment } from 'src/models/Payment.model';
+import { Payout } from 'src/models/Payout.model';
+import { Review } from 'src/models/Review.model';
+import { Wallet } from 'src/models/Wallet.model';
 import { ReviewQueryDto } from 'src/reviews/dto/review.dto';
-import { TutorProfile } from '../models/tutorProfile.model';
+import { TutorProfile } from '../models/TutorProfile.model';
 import { PaymentRequestDto, TutorSearchPaginationDto } from './dto/tutor.dto';
 
 @Injectable()

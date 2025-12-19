@@ -13,7 +13,7 @@ import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { JwtAuthGuard } from 'common/guards/jwt-auth.guard';
 import { RolesGuard } from 'common/guards/roles.guard';
 import { AvailabilityService } from 'src/availability/availability.service';
-import { UserRole } from 'src/models/user.model';
+import { UserRole } from 'src/models/User.model';
 import { ReviewQueryDto } from 'src/reviews/dto/review.dto';
 import { PaymentRequestDto, TutorSearchPaginationDto } from './dto/tutor.dto';
 import { TutorsService } from './tutors.service';
@@ -69,7 +69,7 @@ export class TutorsController {
 
   /**
    * Request a payout from the wallet
-   * 
+   *
    * @param user - authenticated tutor user
    * @param body - payout request details
    * @returns payout request confirmation

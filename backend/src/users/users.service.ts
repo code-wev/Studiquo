@@ -12,10 +12,10 @@ import * as bcrypt from 'bcryptjs';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { SearchDto } from 'common/dto/search.dto';
 import { Model, Types } from 'mongoose';
-import { StudentProfile } from 'src/models/studentProfile.model';
-import { TutorProfile } from 'src/models/tutorProfile.model';
+import { StudentProfile } from 'src/models/StudentProfile.model';
+import { TutorProfile } from 'src/models/TutorProfile.model';
 import { BaseService } from '../../common/base.service';
-import { User, UserRole } from '../models/user.model';
+import { User, UserRole } from '../models/User.model';
 import { RespondToParentRequestDto, UpdateProfileDto } from './dto/user.dto';
 
 @Injectable()

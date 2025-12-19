@@ -7,7 +7,7 @@ import {
 import {
   StudentProfile,
   StudentProfileSchema,
-} from 'src/models/studentProfile.model';
+} from 'src/models/StudentProfile.model';
 import { ExamBoardController } from './exam-board.controller';
 import { ExamBoardService } from './exam-board.service';
 

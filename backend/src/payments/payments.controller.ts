@@ -9,9 +9,9 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { Payment } from 'src/models/payment.model';
-import { Wallet } from 'src/models/wallet.model';
-import { Booking } from '../models/booking.model';
+import { Payment } from 'src/models/Payment.model';
+import { Wallet } from 'src/models/Wallet.model';
+import { Booking } from '../models/Booking.model';
 import { PaymentsService } from './payments.service';
 
 @Controller('payments')

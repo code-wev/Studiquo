@@ -7,9 +7,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { formatAmPm } from 'common/utils/time.util';
 import { Model, Types } from 'mongoose';
-import { TutorProfile } from 'src/models/tutorProfile.model';
-import { TimeSlot } from '../models/timeSlot.model';
-import { TutorAvailability } from '../models/tutorAvailability.model';
+import { TutorProfile } from 'src/models/TutorProfile.model';
+import { TimeSlot } from '../models/TimeSlot.model';
+import { TutorAvailability } from '../models/TutorAvailability.model';
 import {
   CreateAvailabilityDto,
   CreateTimeSlotDto,

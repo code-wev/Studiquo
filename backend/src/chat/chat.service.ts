@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model } from 'mongoose';
-import { ChatGroup } from '../models/chatGroup.model';
-import { Message } from '../models/message.model';
+import { ChatGroup } from '../models/ChatGroup.model';
+import { Message } from '../models/Message.model';
 import { SendMessageDto } from './dto/chat.dto';
 
 @Injectable()

@@ -8,7 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
-import { UserRole } from 'src/models/user.model';
+import { UserRole } from 'src/models/User.model';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
