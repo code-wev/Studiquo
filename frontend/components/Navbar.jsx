@@ -19,6 +19,21 @@ export default function Navbar() {
   const { data: profile } = useMyProfileQuery();
   const user = profile?.data?.user;
 
+  // Validate avatar src for Next/Image — only allow absolute http(s) or root-relative paths
+  const avatarSrc = (() => {
+    const val = user?.avatar;
+    if (!val || typeof val !== "string") return null;
+    const s = val.trim();
+    if (!s) return null;
+    if (
+      s.startsWith("http://") ||
+      s.startsWith("https://") ||
+      s.startsWith("/")
+    )
+      return s;
+    return null;
+  })();
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -135,13 +150,14 @@ export default function Navbar() {
                 onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
                 className='flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200'>
                 {/* Avatar */}
-                {user?.avatar ? (
+                {avatarSrc ? (
                   <Image
-                    src={user?.avatar || "/default-avatar.png"}
+                    src={avatarSrc}
                     alt='profile'
                     width={30}
                     height={30}
                     className='rounded-full '
+                    unoptimized
                   />
                 ) : (
                   <div className='w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold'>
