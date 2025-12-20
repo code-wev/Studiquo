@@ -15,14 +15,12 @@ export class ChatGroup extends Document {
   @Prop({ type: [Types.ObjectId], ref: 'User', required: true })
   parentIds: Types.ObjectId[];
 
-  @Prop({ required: true })
+  @Prop({ required: true, enum: ['MATH', 'SCIENCE', 'ENGLISH'] })
   subject: string;
 
-  /**
-   * Chat will be auto-deleted by MongoDB TTL
-   */
+  // Chat can start after this time in this group
   @Prop({ required: true })
-  expiresAt: Date;
+  startsAt: Date;
 }
 
 export const ChatGroupSchema = SchemaFactory.createForClass(ChatGroup);
@@ -31,8 +29,3 @@ export const ChatGroupSchema = SchemaFactory.createForClass(ChatGroup);
  * One booking = one chat group
  */
 ChatGroupSchema.index({ booking: 1 }, { unique: true });
-
-/**
- * TTL index → auto delete chat group at expiresAt
- */
-ChatGroupSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });

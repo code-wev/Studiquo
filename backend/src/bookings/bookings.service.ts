@@ -53,6 +53,15 @@ export class BookingsService {
    * @throws BadRequestException when slot/tutor/profile are missing
    */
   async createBooking(user: any, dto: CreateBookingDto) {
+    // If the students is not have any connected parents throw error
+    const student = await this.userModel.findById(user.userId);
+
+    if (!student || !student.parents || student.parents.length === 0) {
+      throw new BadRequestException(
+        'You must have at least one connected parent to create a booking',
+      );
+    }
+
     // Load timeslot first and ensure it exists
     const slot = await this.timeSlotModel.findById(dto.timeSlot);
 
@@ -162,10 +171,12 @@ export class BookingsService {
     }
 
     // Load parent and ensure they have the specified student as a child
-    const parentAndChild = await this.userModel.findOne({
-      _id: new Types.ObjectId(user.userId),
-      student: { $in: [new Types.ObjectId(studentId)] },
-    });
+    const parentAndChild = await this.userModel
+      .findOne({
+        _id: new Types.ObjectId(user.userId),
+        children: { $in: [new Types.ObjectId(studentId)] },
+      })
+      .populate('children', '-password');
 
     if (!parentAndChild) {
       throw new BadRequestException(
@@ -247,6 +258,11 @@ export class BookingsService {
     const successUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-success?bookingId=${booking._id}`;
     const cancelUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-cancel?bookingId=${booking._id}`;
 
+    // Ensure parentIds is a string (Stripe metadata values must be strings)
+    const parentIds = parentAndChild?.children
+      ? parentAndChild.children.map((id) => String(id)).join(',')
+      : '';
+
     // Create Checkout Session
     const session = await this.paymentsService.createCheckoutSession({
       amount,
@@ -254,18 +270,15 @@ export class BookingsService {
       successUrl,
       cancelUrl,
       metadata: {
+        tutorId: String(tutorProfile.user),
         bookingId: String(booking._id),
         studentId: String(studentId),
-        parentId: String(user.userId),
+        parentIds,
+        slotEndTime: new Date(slot.endTime).toISOString(),
+        subject: booking.subject,
       },
       customerEmail: parentAndChild?.email || undefined,
       description: `Lesson with tutor ${String(tutorProfile.user)}`,
-    });
-
-    // Persist session info on booking for later webhook reconciliation
-    await this.bookingModel.findByIdAndUpdate(booking._id, {
-      paymentSessionId: session.id,
-      paymentUrl: session.url,
     });
 
     return {

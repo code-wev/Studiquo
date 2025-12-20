@@ -8,7 +8,8 @@ import {
   Post,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import mongoose, { Model, Types } from 'mongoose';
+import { ChatGroup } from 'src/models/ChatGroup.model';
 import { Payment } from 'src/models/Payment.model';
 import { Wallet } from 'src/models/Wallet.model';
 import { Booking } from '../models/Booking.model';
@@ -23,6 +24,7 @@ export class PaymentsController {
     @InjectModel(Booking.name) private bookingModel: Model<Booking>,
     @InjectModel(Payment.name) private paymentModel: Model<Payment>,
     @InjectModel(Wallet.name) private walletModel: Model<Wallet>,
+    @InjectModel(ChatGroup.name) private chatGroupModel: Model<ChatGroup>,
   ) {}
 
   /**
@@ -81,6 +83,9 @@ export class PaymentsController {
         const bookingId = event.data.object.metadata?.bookingId;
         const studentId = event.data.object.metadata?.studentId;
         const tutorId = event.data.object.metadata?.tutorId;
+        const parentIds = event.data.object.metadata?.parentIds;
+        const slotEndTime = event.data.object.metadata?.slotEndTime;
+        const subject = event.data.object.metadata?.subject;
         const amount = event.data.object.amount_received;
         const currency = event.data.object.currency;
         if (bookingId) {
@@ -130,7 +135,43 @@ export class PaymentsController {
               { new: true },
             );
 
-            this.logger.log(`Booking ${bookingId} updated to SCHEDULED`);
+            // check the chat group exist or not with the same tutor, student and booking
+            const existingChatGroup = await this.chatGroupModel.findOne({
+              tutorId: new mongoose.Types.ObjectId(tutorId),
+              studentId: new mongoose.Types.ObjectId(studentId),
+              // Single parentId or multiple parentIds if one parent is matched then okay
+              parentIds: {
+                $in: parentIds
+                  ? parentIds
+                      .split(',')
+                      .map((id: string) => new mongoose.Types.ObjectId(id))
+                  : [],
+              },
+              subject: subject,
+            });
+
+            if (existingChatGroup) {
+              this.logger.log(
+                `Chat group already exists for subject: ${subject}, tutor ${tutorId}, student ${studentId}`,
+              );
+              return { received: true };
+            }
+
+            // Create chat group for the booking
+            await this.chatGroupModel.create({
+              booking: new mongoose.Types.ObjectId(bookingId),
+              tutorId: new mongoose.Types.ObjectId(tutorId),
+              studentId: new mongoose.Types.ObjectId(studentId),
+              parentIds: parentIds
+                ? parentIds
+                    .split(',')
+                    .map((id: string) => new mongoose.Types.ObjectId(id))
+                : [],
+              subject: event.data.object.metadata?.subject,
+              startsAt: new Date(slotEndTime),
+            });
+
+            await this.logger.log(`Booking ${bookingId} updated to SCHEDULED`);
           } catch (e: any) {
             this.logger.error('Failed to update booking status', e.message);
           }
