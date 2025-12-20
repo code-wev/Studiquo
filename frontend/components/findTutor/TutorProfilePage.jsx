@@ -55,7 +55,7 @@ const TutorProfilePage = () => {
           <h2 className='font-semibold text-lg'>Tutor Profile</h2>
           <div className='flex flex-col md:flex-row gap-6'>
             <Image
-              src={tutorData?.user?.avatar}
+              src={tutorData?.user?.avatar || "./default-avatar.png"}
               width={200}
               height={200}
               alt={tutor?.user?.firstName}

@@ -14,7 +14,7 @@ import { FaArrowRight, FaStar } from "react-icons/fa";
 const FindTutorPage = () => {
   const [search, setSearch] = useState("");
   const [subject, setSubject] = useState("");
-  const [priceRange, setPriceRange] = useState([0, 1000]);
+  const [priceRange, setPriceRange] = useState([0, 0]);
   const [currentPage, setCurrentPage] = useState(1);
   const limit = 12;
 
@@ -142,8 +142,8 @@ const FindTutorPage = () => {
                   Price Range
                 </label>
                 <div className='flex justify-between mt-2 text-sm mb-1'>
-                  <span>${priceRange[0]}</span>
-                  <span>${priceRange[1]}</span>
+                  <span>€{priceRange[0]}</span>
+                  <span>€{priceRange[1]}</span>
                 </div>
                 <input
                   type='range'
@@ -154,7 +154,7 @@ const FindTutorPage = () => {
                   className='w-full h-2 bg-[#CCB7F8] rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#3A0E95]'
                 />
                 <div className='text-xs text-gray-500 text-center mt-1'>
-                  Up to ${priceRange[1]}/hour
+                  Up to €{priceRange[1]}/hour
                 </div>
               </div>
 
@@ -278,7 +278,7 @@ const FindTutorPage = () => {
                           </span>
                         </div>
                         <p className='font-semibold text-xl text-purple-700'>
-                          ${tutor?.hourlyRate}/hour
+                          €{tutor?.minHourlyRate} - €{tutor?.maxHourlyRate}/hour
                         </p>
                       </div>
 

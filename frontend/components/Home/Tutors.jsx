@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef } from "react";
 import { FaRegStar, FaStar } from "react-icons/fa";
-import { FiArrowLeft, FiArrowRight, FiStar } from "react-icons/fi";
+import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
 
 // const tutors = [
 //   { name: "Eleanor Pena", role: "Mathematics Expert", img: "/home/tutor1.jpg" },
@@ -18,7 +18,7 @@ import { FiArrowLeft, FiArrowRight, FiStar } from "react-icons/fi";
 
 export default function TutorsSection() {
   const sliderRef = useRef(null);
-  const {data:tutor} = useGetTutorQuery();
+  const { data: tutor } = useGetTutorQuery();
   console.log(tutor?.data?.data, "You are my personal tutor");
 
   const tutors = tutor?.data?.data;
@@ -46,11 +46,11 @@ export default function TutorsSection() {
               Lorem ipsum dolor sit amet, consectetur adipiscing elit.
             </p>
           </div>
-        <Link href={'/find-tutor'}>
-        
-          <button className='bg-[#CCB7F8] text-[#3A0E95] px-5 py-3 rounded-lg flex items-center gap-2 hover:bg-white transition'>
-            View All <FiArrowRight />
-          </button></Link>
+          <Link href={"/find-tutor"}>
+            <button className='bg-[#CCB7F8] text-[#3A0E95] px-5 py-3 rounded-lg flex items-center gap-2 hover:bg-white transition'>
+              View All <FiArrowRight />
+            </button>
+          </Link>
         </div>
 
         {/* SLIDER */}
@@ -73,8 +73,8 @@ export default function TutorsSection() {
                 {/* Image */}
                 <div className='w-full h-44 relative'>
                   <Image
-                    src={tutor?.user?.avatar}
-                    alt={tutor.name}
+                    src={tutor?.user?.avatar || "./default-avatar.png"}
+                    alt={tutor?.user?.firstName}
                     fill
                     className='rounded-t-xl object-cover'
                   />
@@ -82,32 +82,33 @@ export default function TutorsSection() {
 
                 {/* Content */}
                 <div className='p-5'>
-                     <div className="flex items-center gap-2 text-yellow-400">
-                               <div className="flex items-center gap-1 text-yellow-500">
-                   {Array.from({ length: 5 }, (_, i) =>
-                     i < Math.round(tutor?.averageRating) ? (
-                       <FaStar key={i} />
-                     ) : (
-                       <FaRegStar key={i} />
-                     )
-                   )}
-                 </div>
-                 
-                                   <span className="text-gray-500 text-sm">
-                                     {tutor?.averageRating}  review
-                                   </span>
-                                 </div>
+                  <div className='flex items-center gap-2 text-yellow-400'>
+                    <div className='flex items-center gap-1 text-yellow-500'>
+                      {Array.from({ length: 5 }, (_, i) =>
+                        i < Math.round(tutor?.averageRating) ? (
+                          <FaStar key={i} />
+                        ) : (
+                          <FaRegStar key={i} />
+                        )
+                      )}
+                    </div>
 
-                  <h3 className='mt-3 font-bold text-gray-900'>{tutor?.user?.firstName + ' ' + tutor?.user?.lastName }</h3>
-               <p className="text-gray-500 text-sm mb-2">
-  {tutor.subjects.map((s, index) => (
-    <span key={index}>
-      {s}
-      {index !== tutor.subjects.length - 1 && ", "}
-    </span>
-  ))}
-</p>
+                    <span className='text-gray-500 text-sm'>
+                      {tutor?.averageRating} review
+                    </span>
+                  </div>
 
+                  <h3 className='mt-3 font-bold text-gray-900'>
+                    {tutor?.user?.firstName + " " + tutor?.user?.lastName}
+                  </h3>
+                  <p className='text-gray-500 text-sm mb-2'>
+                    {tutor.subjects.map((s, index) => (
+                      <span key={index}>
+                        {s}
+                        {index !== tutor.subjects.length - 1 && ", "}
+                      </span>
+                    ))}
+                  </p>
 
                   <button className='bg-[#CCB7F8] text-[#3A0E95] px-6 py-2 font-medium rounded-lg flex items-center gap-2 hover:bg-white hover:border hover:border-[#D8D8D8] transition'>
                     Book Tutor <FiArrowRight />

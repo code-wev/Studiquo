@@ -25,7 +25,16 @@ export const BookingApi = createApi({
       }),
       invalidatesTags: ["Booking"],
     }),
+
+    getMyChildrenBookings: builder.query({
+      query: () => ({
+        url: "/bookings/children-bookings",
+        method: "GET",
+      }),
+      providesTags: ["Booking"],
+    }),
   }),
 });
 
-export const { useCreateBookingMutation } = BookingApi;
+export const { useCreateBookingMutation, useGetMyChildrenBookingsQuery } =
+  BookingApi;
