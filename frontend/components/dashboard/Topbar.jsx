@@ -31,7 +31,7 @@ const Topbar = () => {
         </span>
 
         {/* Avatar */}
-        <div className='w-8 h-8 rounded-full bg-gray-300 overflow-hidden'>
+        <div className='w-10 h-10 rounded-full bg-gray-300 overflow-hidden'>
           {user?.avatar ? (
             <Image
               src={user?.avatar}
