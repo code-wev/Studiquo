@@ -201,6 +201,16 @@ export class BookingsService {
       );
     }
 
+    // Enforce payment can only be made at least 3 days before the lesson
+    const now = Date.now();
+    const slotStart = new Date(slot.startTime).getTime();
+    const minAdvanceMs = 3 * 24 * 60 * 60 * 1000; // 3 days
+    if (slotStart - now < minAdvanceMs) {
+      throw new BadRequestException(
+        'Payment can only be made at least 3 days before the lesson',
+      );
+    }
+
     // Load tutor availability to get tutor user ID
     const availability = await this.availabilityModel.findOne({
       user: new Types.ObjectId(slot.tutorAvailability),
