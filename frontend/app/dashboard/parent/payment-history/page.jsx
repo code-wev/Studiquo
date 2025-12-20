@@ -63,6 +63,8 @@ export default function PaymentHistory() {
     limit: 10,
   });
 
+  console.log(paymentsData);
+
   const bookings = paymentsData?.data?.bookings || [];
   const total = paymentsData?.data?.total || 0;
   const page = paymentsData?.data?.page || 1;

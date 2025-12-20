@@ -36,6 +36,14 @@ export const BookingApi = createApi({
       },
       providesTags: ["Booking"],
     }),
+
+    makePayment: builder.mutation({
+      query: (data) => ({
+        url: "/bookings/create-payment-link",
+        method: "POST",
+        body: data,
+      }),
+    }),
   }),
 });
 

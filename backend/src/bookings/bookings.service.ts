@@ -182,6 +182,7 @@ export class BookingsService {
         $project: {
           _id: 0,
           bookingId: '$booking._id',
+          studentId: '$bookingStudent.student',
           status: '$booking.status',
           subject: '$booking.subject',
           type: '$booking.type',
