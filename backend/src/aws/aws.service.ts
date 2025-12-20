@@ -32,8 +32,8 @@ export class AwsService {
         Body: stream,
         ContentType: contentType,
       },
-      queueSize: 4, // optional concurrency configuration
-      partSize: 5 * 1024 * 1024, // 5 MB
+      queueSize: 5, // concurrency
+      partSize: 1024 * 1024 * 5, // 5MB
     });
 
     try {
@@ -56,8 +56,8 @@ export class AwsService {
         Body: buffer,
         ContentType: contentType,
       },
-      queueSize: 4, // optional concurrency configuration
-      partSize: 5 * 1024 * 1024, // 5 MB
+      queueSize: 5, // concurrency
+      partSize: 1024 * 1024 * 5, // 5MB
     });
 
     try {
