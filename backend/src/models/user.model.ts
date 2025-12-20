@@ -13,6 +13,9 @@ export class User extends Document {
   @Prop()
   avatar: string;
 
+  @Prop({})
+  avatarKey: string; // S3 object key
+
   @Prop()
   googleId: string;
 

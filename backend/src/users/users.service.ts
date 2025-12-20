@@ -12,7 +12,6 @@ import * as bcrypt from 'bcryptjs';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { SearchDto } from 'common/dto/search.dto';
 import { Model, Types } from 'mongoose';
-import { AwsService } from 'src/aws/aws.service';
 import { StudentProfile } from 'src/models/StudentProfile.model';
 import { TutorProfile } from 'src/models/TutorProfile.model';
 import { BaseService } from '../../common/base.service';
@@ -39,7 +38,6 @@ export class UsersService extends BaseService<User> {
     private readonly studentProfileModel: Model<StudentProfile>,
 
     private jwtService: JwtService,
-    private awsService: AwsService,
   ) {
     super(userModel);
   }
@@ -107,11 +105,7 @@ export class UsersService extends BaseService<User> {
     if (firstName !== undefined) userUpdate.firstName = firstName;
     if (lastName !== undefined) userUpdate.lastName = lastName;
     if (bio !== undefined) userUpdate.bio = bio;
-    // Avatar upload via AwsService
-    if (avatar !== undefined) {
-      const avatarUrl = await this.awsService.uploadAvatar(user.userId, avatar);
-      if (avatarUrl) userUpdate.avatar = avatarUrl;
-    }
+    if (avatar !== undefined) userUpdate.avatar = avatar;
     if (dbsLink !== undefined) userUpdate.dbsLink = dbsLink;
 
     if (Object.keys(userUpdate).length > 0) {
@@ -167,7 +161,6 @@ export class UsersService extends BaseService<User> {
       email: user.email,
       role: user.role,
     });
-
     /**
      * Return merged response
      */
@@ -211,7 +204,6 @@ export class UsersService extends BaseService<User> {
       _id: parent._id,
       children: new Types.ObjectId(student._id),
     });
-
     if (alreadyChild) {
       return {
         message: 'This child is already linked to you',
@@ -228,7 +220,6 @@ export class UsersService extends BaseService<User> {
       _id: student._id,
       pendingParents: { $in: [new Types.ObjectId(parent._id)] },
     });
-
     if (alreadyRequested) {
       return { message: 'Request already sent and awaiting approval' };
     }
@@ -372,6 +363,8 @@ export class UsersService extends BaseService<User> {
       .populate('pendingParents', 'firstName lastName email avatar')
       .lean();
     if (!student) throw new NotFoundException('Student not found');
+    if (student.role !== UserRole.Student)
+      throw new ForbiddenException('Only students can view parent requests');
 
     return {
       message: 'Pending parent requests retrieved',

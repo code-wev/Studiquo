@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { jwtConfig } from 'common/jwt.config';
+import { AwsService } from 'src/aws/aws.service';
 import {
   StudentProfile,
   StudentProfileSchema,
@@ -30,7 +31,7 @@ import { UsersService } from './users.service';
     JwtModule.register(jwtConfig),
   ],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [UsersService, AwsService],
   exports: [UsersService],
 })
 export class UsersModule {}
