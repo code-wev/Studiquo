@@ -223,11 +223,9 @@ export class BookingsService {
     }
 
     // Ensure tutor profile exists to get hourly rates
-    const tutorProfile = await this.tutorProfileModel
-      .findOne({
-        user: new Types.ObjectId(availability.user),
-      })
-      .populate('user');
+    const tutorProfile = await this.tutorProfileModel.findOne({
+      user: new Types.ObjectId(availability.user),
+    });
 
     if (!tutorProfile) {
       throw new BadRequestException('Tutor profile not found');
