@@ -38,9 +38,13 @@ export class AwsService {
 
     try {
       await parallelUploads3.done();
-      return this.getPublicUrl(key);
-    } catch (err) {
-      this.logger.error('S3 upload failed', err as any);
+      return {
+        message: 'File uploaded successfully',
+        url: this.getPublicUrl(key),
+        key: key,
+      };
+    } catch (err: unknown) {
+      this.logger.error('S3 upload failed', err);
       throw err;
     }
   }
@@ -62,9 +66,13 @@ export class AwsService {
 
     try {
       await parallelUploads3.done();
-      return this.getPublicUrl(key);
-    } catch (err) {
-      this.logger.error('S3 upload failed', err as any);
+      return {
+        message: 'File uploaded successfully',
+        url: this.getPublicUrl(key),
+        key: key,
+      };
+    } catch (err: unknown) {
+      this.logger.error('S3 upload failed', err);
       throw err;
     }
   }
