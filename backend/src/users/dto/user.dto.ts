@@ -5,9 +5,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  Validate,
 } from 'class-validator';
-import { IsValidAvatarConstraint } from 'common/avatar.validator';
 
 export class UpdateProfileDto {
   // User fields
@@ -26,14 +24,10 @@ export class UpdateProfileDto {
   bio?: string;
 
   /**
-   * Avatar:
-   * - image URL
-   * - base64 image
-   * - multer image file
+   * Avatar image (validated in controller)
    */
   @IsOptional()
-  @Validate(IsValidAvatarConstraint)
-  avatar?: any;
+  avatar?: Express.Multer.File;
 
   @IsOptional()
   @IsString({ message: 'DBS must be a string' })
