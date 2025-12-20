@@ -55,11 +55,21 @@ const TutorProfilePage = () => {
           <h2 className='font-semibold text-lg'>Tutor Profile</h2>
           <div className='flex flex-col md:flex-row gap-6'>
             <Image
-              src={tutorData?.user?.avatar || "./default-avatar.png"}
+              src={
+                tutorData?.user?.avatar &&
+                tutorData.user.avatar.startsWith("http")
+                  ? tutorData.user.avatar
+                  : "/default-avatar.png"
+              }
               width={200}
               height={200}
-              alt={tutor?.user?.firstName}
-              className='w-48  object-cover '
+              alt={
+                `${tutorData?.user?.firstName || "Tutor"} ${
+                  tutorData?.user?.lastName || ""
+                }`.trim() || "Tutor avatar"
+              }
+              className='w-48 object-cover'
+              unoptimized
             />
             <div className='flex-1 flex flex-col justify-between'>
               <div className='space-y-2'>

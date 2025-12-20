@@ -27,10 +27,13 @@ export const BookingApi = createApi({
     }),
 
     getMyChildrenBookings: builder.query({
-      query: ({ page = 1, limit = 10 }) => ({
-        url: `bookings/children-bookings?page=${page}&limit=${limit}`,
-        method: "GET",
-      }),
+      query: (arg) => {
+        const { page = 1, limit = 10 } = arg || {};
+        return {
+          url: `bookings/children-bookings?page=${page}&limit=${limit}`,
+          method: "GET",
+        };
+      },
       providesTags: ["Booking"],
     }),
   }),
