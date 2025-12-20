@@ -1,5 +1,6 @@
 "use client";
 
+import { CiCirclePlus } from "react-icons/ci";
 import { FiSearch, FiSend } from "react-icons/fi";
 
 const messages = [
@@ -125,6 +126,7 @@ export default function ChatInterface() {
 
         <div className='bg-white border-t border-gray-200 p-4'>
           <div className='flex items-center gap-4'>
+            <CiCirclePlus className='text-4xl text-purple-500/50' />
             <input
               type='text'
               placeholder='Type your message'
