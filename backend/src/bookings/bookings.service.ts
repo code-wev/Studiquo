@@ -173,11 +173,33 @@ export class BookingsService {
       },
       { $unwind: '$timeSlot' },
 
-      // 6. Pagination
+      // 6. TutorAvailability
+      {
+        $lookup: {
+          from: 'tutoravailabilities',
+          localField: 'timeSlot.tutorAvailability',
+          foreignField: '_id',
+          as: 'availability',
+        },
+      },
+      { $unwind: '$availability' },
+
+      // 7. TutorProfile
+      {
+        $lookup: {
+          from: 'tutorprofiles',
+          localField: 'availability.user',
+          foreignField: 'user',
+          as: 'tutorProfile',
+        },
+      },
+      { $unwind: '$tutorProfile' },
+
+      // 8. Pagination
       { $skip: (page - 1) * limit },
       { $limit: limit },
 
-      // 7. Final Projection (FIXED)
+      // 9. Final Projection (FIXED)
       {
         $project: {
           _id: 0,
@@ -186,6 +208,14 @@ export class BookingsService {
           status: '$booking.status',
           subject: '$booking.subject',
           type: '$booking.type',
+
+          price: {
+            $cond: {
+              if: { $eq: ['$booking.type', 'GROUP'] },
+              then: '$tutorProfile.groupHourlyRate',
+              else: '$tutorProfile.oneOnOneHourlyRate',
+            },
+          },
 
           slot: {
             id: '$timeSlot._id',
@@ -297,9 +327,9 @@ export class BookingsService {
     }
 
     // Load tutor availability to get tutor user ID
-    const availability = await this.availabilityModel.findOne({
-      user: new Types.ObjectId(slot.tutorAvailability),
-    });
+    const availability = await this.availabilityModel.findById(
+      new Types.ObjectId(slot.tutorAvailability),
+    );
 
     if (!availability) {
       throw new BadRequestException(

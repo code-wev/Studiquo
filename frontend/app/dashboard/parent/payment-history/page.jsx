@@ -1,17 +1,12 @@
 "use client";
 
 import TitleSection from "@/components/dashboard/shared/TitleSection";
-import { useGetMyChildrenBookingsQuery } from "@/feature/student/BookingApi";
-import { useState } from "react";
+import {
+  useGetMyChildrenBookingsQuery,
+  useMakePaymentMutation,
+} from "@/feature/student/BookingApi";
 
-const formatDate = (dateString) => {
-  const date = new Date(dateString);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-};
+import { useState } from "react";
 
 const getSubjectColor = (subject) => {
   switch (subject?.toUpperCase()) {
@@ -63,7 +58,10 @@ export default function PaymentHistory() {
     limit: 10,
   });
 
-  console.log(paymentsData);
+  const [createPayment, { isLoading: isPaymentLoading }] =
+    useMakePaymentMutation();
+
+  console.log("Bookings Data:", paymentsData);
 
   const bookings = paymentsData?.data?.bookings || [];
   const total = paymentsData?.data?.total || 0;
@@ -71,10 +69,43 @@ export default function PaymentHistory() {
   const limit = paymentsData?.data?.limit || 10;
   const totalPages = Math.ceil(total / limit);
 
-  const handlePayBill = (bookingId, tutorName) => {
-    // Implement payment logic here
-    console.log(`Paying bill for booking ${bookingId} with tutor ${tutorName}`);
-    alert(`Processing payment for booking ID: ${bookingId}`);
+  const handlePayBill = async (bookingId, studentId) => {
+    try {
+      const paymentData = {
+        bookingId,
+        studentId: studentId,
+      };
+
+      const result = await createPayment(paymentData).unwrap();
+
+      console.log("Payment API Response:", result);
+
+      if (result?.success) {
+        console.log("Payment link created successfully:", result.data);
+        alert(`Payment initiated! Check console for details.`);
+
+        // If there's a payment URL, you could redirect to it
+        if (result.data?.paymentUrl) {
+          console.log("Redirecting to payment URL:", result.data.paymentUrl);
+          // window.location.href = result.data.paymentUrl;
+        }
+      } else {
+        console.error("Payment failed:", result?.message);
+        alert(`Payment failed: ${result?.message || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Payment error:", error);
+      console.error("Error details:", {
+        data: error?.data,
+        status: error?.status,
+        message: error?.message,
+      });
+      alert(
+        `Payment error: ${
+          error?.data?.message || error?.message || "Something went wrong"
+        }`
+      );
+    }
   };
 
   const handlePreviousPage = () => {
@@ -148,6 +179,9 @@ export default function PaymentHistory() {
                 <th className='text-left p-4 text-sm font-medium text-gray-600 w-[15%]'>
                   Type
                 </th>
+                <th className='text-left p-4 text-sm font-medium text-gray-600 w-[15%]'>
+                  Price
+                </th>
                 <th className='text-left p-4 text-sm font-medium text-gray-600 w-[20%]'>
                   Time Slot
                 </th>
@@ -158,82 +192,110 @@ export default function PaymentHistory() {
             </thead>
             <tbody>
               {bookings.length > 0 ? (
-                bookings.map((booking, index) => (
-                  <tr
-                    key={booking.bookingId}
-                    className={`border-b border-gray-200 text-sm ${
-                      index === bookings.length - 1 ? "border-b-0" : ""
-                    }`}>
-                    <td className='p-4'>
-                      <div className='flex items-center gap-3'>
-                        <span className='text-gray-800 font-mono text-xs'>
-                          {booking.bookingId || "N/A"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className='p-4'>
-                      <span
-                        className={`inline-block px-3 py-1 rounded text-sm font-medium ${getStatusBadge(
-                          booking.status
-                        )}`}>
-                        {booking.status || "Unknown"}
-                      </span>
-                    </td>
-                    <td className='p-4'>
-                      <span
-                        className={`inline-block px-3 py-1 rounded text-sm font-medium ${getSubjectColor(
-                          booking.subject
-                        )}`}>
-                        {getSubjectName(booking.subject)}
-                      </span>
-                    </td>
-                    <td className='p-4 text-gray-800'>
-                      <span
-                        className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${
-                          booking.type === "ONE_TO_ONE"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-green-100 text-green-700"
-                        }`}>
-                        {booking.type === "ONE_TO_ONE" ? "1:1" : "Group"}
-                      </span>
-                    </td>
-                    <td className='p-4'>
-                      {booking.slot ? (
-                        <div className='space-y-1'>
-                          <div className='text-gray-800'>
-                            {booking.slot.startTime} - {booking.slot.endTime}
-                          </div>
-                          <div className='text-xs text-blue-600 truncate max-w-[200px]'>
-                            {booking.slot.meetLink ||
-                              "Meet link available after payment"}
-                          </div>
+                bookings.map((booking, index) => {
+                  return (
+                    <tr
+                      key={booking.bookingId}
+                      className={`border-b border-gray-200 text-sm ${
+                        index === bookings.length - 1 ? "border-b-0" : ""
+                      }`}>
+                      <td className='p-4'>
+                        <div className='flex flex-col gap-1'>
+                          <span className='text-gray-800 font-mono text-xs'>
+                            {booking.bookingId || "N/A"}
+                          </span>
                         </div>
-                      ) : (
-                        <span className='text-gray-500'>No time slot</span>
-                      )}
-                    </td>
-                    <td className='p-4'>
-                      {booking.status?.toUpperCase() === "PENDING" ? (
-                        <button
-                          onClick={() =>
-                            handlePayBill(
-                              booking.bookingId,
-                              booking.tutorName || "Unknown Tutor"
-                            )
-                          }
-                          className='text-blue-600 hover:text-blue-700 font-medium text-sm px-3 py-1 rounded hover:bg-blue-50 transition-colors cursor-pointer'>
-                          Pay Bill
-                        </button>
-                      ) : (
-                        <span className='text-gray-500 text-sm'>
-                          {booking.status?.toLowerCase() === "confirmed"
-                            ? "Paid"
-                            : "Not Available"}
+                      </td>
+                      <td className='p-4'>
+                        <span
+                          className={`inline-block px-3 py-1 rounded text-sm font-medium ${getStatusBadge(
+                            booking.status
+                          )}`}>
+                          {booking.status || "Unknown"}
                         </span>
-                      )}
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className='p-4'>
+                        <span
+                          className={`inline-block px-3 py-1 rounded text-sm font-medium ${getSubjectColor(
+                            booking.subject
+                          )}`}>
+                          {getSubjectName(booking.subject)}
+                        </span>
+                      </td>
+                      <td className='p-4 text-gray-800'>
+                        <span
+                          className={`ml-2 px-2 py-0.5 text-xs font-medium rounded-full ${
+                            booking.type === "ONE_TO_ONE"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-green-100 text-green-700"
+                          }`}>
+                          {booking.type === "ONE_TO_ONE" ? "1:1" : "Group"}
+                        </span>
+                      </td>
+                      <td className='p-4'>
+                        <div className='flex flex-col gap-1'>
+                          <span className='text-gray-800 font-mono text-xs'>
+                            £{booking.price?.toFixed(2) || "N/A"}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className='p-4'>
+                        {booking.slot ? (
+                          <div className='space-y-1'>
+                            <div className='text-gray-800'>
+                              {booking.slot.startTime} - {booking.slot.endTime}
+                            </div>
+                            <div className='text-xs text-blue-600 truncate max-w-[200px]'>
+                              {booking.slot.meetLink ||
+                                "Meet link available after payment"}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className='text-gray-500'>No time slot</span>
+                        )}
+                      </td>
+                      <td className='p-4'>
+                        {booking.status?.toUpperCase() === "PENDING" ? (
+                          <button
+                            onClick={() =>
+                              handlePayBill(
+                                booking.bookingId,
+                                booking.studentId
+                              )
+                            }
+                            disabled={isPaymentLoading}
+                            className={`text-blue-600 hover:text-blue-700 font-medium text-sm px-3 py-1 rounded hover:bg-blue-50 transition-colors ${
+                              isPaymentLoading
+                                ? "opacity-50 cursor-not-allowed"
+                                : "cursor-pointer"
+                            }`}>
+                            {isPaymentLoading ? "Processing..." : "Pay Bill"}
+                          </button>
+                        ) : booking.status?.toUpperCase() === "SCHEDULED" ? (
+                          <button
+                            onClick={() => {
+                              console.log(
+                                "Scheduled booking details:",
+                                booking
+                              );
+                              alert(
+                                `Booking ${booking.bookingId} is already scheduled and paid.`
+                              );
+                            }}
+                            className='text-green-600 hover:text-green-700 font-medium text-sm px-3 py-1 rounded hover:bg-green-50 transition-colors cursor-pointer'>
+                            View Details
+                          </button>
+                        ) : (
+                          <span className='text-gray-500 text-sm'>
+                            {booking.status?.charAt(0).toUpperCase() +
+                              booking.status?.slice(1).toLowerCase()}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={6} className='p-8 text-center text-gray-500'>

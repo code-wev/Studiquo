@@ -576,7 +576,7 @@ export class AvailabilityService {
         type: s.type,
         startTime: s.startTime,
         endTime: s.endTime,
-        meetLink: user.role === UserRole.Tutor ? s.meetLink : null,
+        meetLink: user?.role === UserRole.Tutor ? s.meetLink : null,
         subject: s.subject,
         startTimeLabel: formatAmPm(s.startTime, 'Europe/London'),
         endTimeLabel: formatAmPm(s.endTime, 'Europe/London'),

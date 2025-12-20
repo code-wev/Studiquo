@@ -38,14 +38,17 @@ export const BookingApi = createApi({
     }),
 
     makePayment: builder.mutation({
-      query: (data) => ({
+      query: ({ bookingId, studentId }) => ({
         url: "/bookings/create-payment-link",
         method: "POST",
-        body: data,
+        body: { bookingId, studentId },
       }),
     }),
   }),
 });
 
-export const { useCreateBookingMutation, useGetMyChildrenBookingsQuery } =
-  BookingApi;
+export const {
+  useCreateBookingMutation,
+  useGetMyChildrenBookingsQuery,
+  useMakePaymentMutation,
+} = BookingApi;
