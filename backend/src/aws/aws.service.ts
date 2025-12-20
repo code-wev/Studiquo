@@ -1,4 +1,8 @@
-import { S3Client } from '@aws-sdk/client-s3';
+import {
+  DeleteObjectCommand,
+  DeleteObjectsCommand,
+  S3Client,
+} from '@aws-sdk/client-s3';
 import { Upload } from '@aws-sdk/lib-storage';
 import { Injectable, Logger } from '@nestjs/common';
 
@@ -165,6 +169,50 @@ export class AwsService {
     return `https://${this.bucket}.s3.${this.region}.amazonaws.com/${encodeURIComponent(
       key,
     )}`;
+  }
+
+  /**
+   * Delete a single object from S3 by key.
+   * @param key - S3 object key to delete
+   */
+  async deleteObject(key: string) {
+    if (!this.bucket) {
+      throw new Error('S3 bucket not configured');
+    }
+
+    try {
+      await this.s3Client.send(
+        new DeleteObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+      return { message: 'Deleted', key };
+    } catch (err: unknown) {
+      this.logger.error('S3 deleteObject failed', err);
+      throw err;
+    }
+  }
+
+  /**
+   * Delete multiple objects from S3 by keys.
+   * @param keys - array of S3 object keys to delete
+   */
+  async deleteObjects(keys: string[]) {
+    if (!this.bucket) {
+      throw new Error('S3 bucket not configured');
+    }
+    if (!keys || keys.length === 0) return { deleted: [] };
+
+    try {
+      const resp = await this.s3Client.send(
+        new DeleteObjectsCommand({
+          Bucket: this.bucket,
+          Delete: { Objects: keys.map((k) => ({ Key: k })) },
+        }),
+      );
+      return { message: 'Batch delete complete', resp };
+    } catch (err: unknown) {
+      this.logger.error('S3 deleteObjects failed', err);
+      throw err;
+    }
   }
 
   /**
