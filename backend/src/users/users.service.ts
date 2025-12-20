@@ -13,7 +13,6 @@ import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { SearchDto } from 'common/dto/search.dto';
 import { Model, Types } from 'mongoose';
 import { AwsService } from 'src/aws/aws.service';
-import { uploadSingle } from 'src/common/utils/upload.util';
 import { StudentProfile } from 'src/models/StudentProfile.model';
 import { TutorProfile } from 'src/models/TutorProfile.model';
 import { BaseService } from '../../common/base.service';
@@ -127,18 +126,9 @@ export class UsersService extends BaseService<User> {
           err as any,
         );
       }
-
       // Upload new avatar using util
       try {
-        const res = await uploadSingle(
-          this.awsService,
-          user.userId,
-          avatarPayload,
-        );
-        if (res) {
-          if (res.url) userUpdate.avatar = res.url;
-          if (res.key) userUpdate.avatarKey = res.key;
-        }
+        // TODO: complete the avatar upload process
       } catch (err) {
         this.logger.warn('Avatar upload failed', err as any);
       }
