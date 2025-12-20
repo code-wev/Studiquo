@@ -112,7 +112,10 @@ export class TutorsController {
    * GET /api/tutors/:tutorId/availability
    */
   @Get(':tutorId/availability')
-  async tutorAvailability(@Param('tutorId') tutorId: MongoIdDto['id']) {
-    return this.availabilityService.getTutorAvailability(tutorId);
+  async tutorAvailability(
+    @GetUser() user: any,
+    @Param('tutorId') tutorId: MongoIdDto['id'],
+  ) {
+    return this.availabilityService.getTutorAvailability(user, tutorId);
   }
 }

@@ -8,6 +8,7 @@ import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { formatAmPm } from 'common/utils/time.util';
 import { Model, Types } from 'mongoose';
 import { TutorProfile } from 'src/models/TutorProfile.model';
+import { UserRole } from 'src/models/User.model';
 import { TimeSlot } from '../models/TimeSlot.model';
 import { TutorAvailability } from '../models/TutorAvailability.model';
 import {
@@ -403,10 +404,11 @@ export class AvailabilityService {
   /**
    * Return all available time slots for a given tutor, grouped by date.
    *
+   * @param user - Authenticated user object (optional)
    * @param tutorId - ID of the tutor (user)
    * @returns Tutor availability with profile + rating
    */
-  async getTutorAvailability(tutorId: MongoIdDto['id']) {
+  async getTutorAvailability(user?: any, tutorId?: MongoIdDto['id']) {
     const now = new Date();
 
     const startOfMonth = new Date(
@@ -574,7 +576,7 @@ export class AvailabilityService {
         type: s.type,
         startTime: s.startTime,
         endTime: s.endTime,
-        meetLink: s.meetLink,
+        meetLink: user.role === UserRole.Tutor ? s.meetLink : null,
         subject: s.subject,
         startTimeLabel: formatAmPm(s.startTime, 'Europe/London'),
         endTimeLabel: formatAmPm(s.endTime, 'Europe/London'),

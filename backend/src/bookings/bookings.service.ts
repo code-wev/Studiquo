@@ -134,13 +134,13 @@ export class BookingsService {
     const parentId = new Types.ObjectId(user.userId);
 
     const bookings = await this.userModel.aggregate([
-      // 1️⃣ Match parent
+      // 1️. Match parent
       { $match: { _id: parentId } },
 
-      // 2️⃣ Project children
+      // 2️. Project children
       { $project: { children: 1 } },
 
-      // 3️⃣ Lookup bookingStudents
+      // 3️. Lookup bookingStudents
       {
         $lookup: {
           from: 'bookingstudents',
@@ -151,7 +151,7 @@ export class BookingsService {
       },
       { $unwind: '$bookingStudent' },
 
-      // 4️⃣ Lookup booking
+      // 4️. Lookup booking
       {
         $lookup: {
           from: 'bookings',
@@ -162,7 +162,7 @@ export class BookingsService {
       },
       { $unwind: '$booking' },
 
-      // 5️⃣ Lookup timeSlot (SINGLE DOC)
+      // 5. Lookup timeSlot (SINGLE DOC)
       {
         $lookup: {
           from: 'timeslots',
@@ -173,11 +173,11 @@ export class BookingsService {
       },
       { $unwind: '$timeSlot' },
 
-      // 6️⃣ Pagination
+      // 6. Pagination
       { $skip: (page - 1) * limit },
       { $limit: limit },
 
-      // 7️⃣ Final Projection (FIXED)
+      // 7. Final Projection (FIXED)
       {
         $project: {
           _id: 0,
@@ -190,7 +190,14 @@ export class BookingsService {
             id: '$timeSlot._id',
             subject: '$timeSlot.subject',
             type: '$timeSlot.type',
-            meetLink: '$timeSlot.meetLink',
+            // Conditional meetLink
+            meetLink: {
+              $cond: {
+                if: { $in: ['$booking.status', ['PENDING', 'CANCELLED']] },
+                then: null,
+                else: '$timeSlot.meetLink',
+              },
+            },
             startTime: '$timeSlot.startTime',
             endTime: '$timeSlot.endTime',
           },

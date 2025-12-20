@@ -202,7 +202,8 @@ export default function PaymentHistory() {
                             {booking.slot.startTime} - {booking.slot.endTime}
                           </div>
                           <div className='text-xs text-blue-600 truncate max-w-[200px]'>
-                            {booking.slot.meetLink || "No meeting link"}
+                            {booking.slot.meetLink ||
+                              "Meet link available after payment"}
                           </div>
                         </div>
                       ) : (
