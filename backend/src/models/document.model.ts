@@ -7,7 +7,19 @@ export class DocumentUpload extends Document {
   user: Types.ObjectId;
 
   @Prop({ required: true })
-  dbs: string; // file path or url
+  url: string; // file path or url
+
+  @Prop({ required: true })
+  key: string; // S3 object key
+
+  @Prop({ required: true })
+  contentType: string;
+
+  @Prop({ required: true })
+  filename: string;
+
+  @Prop({ required: true })
+  size: number; // in bytes
 
   @Prop({ default: Date.now })
   uploadedAt: Date;
