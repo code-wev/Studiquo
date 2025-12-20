@@ -6,11 +6,15 @@ import {
   Post,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { GetUser } from 'common/decorators/get-user.decorator';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { SearchDto } from 'common/dto/search.dto';
+import * as multer from 'multer';
 import { UserRole } from 'src/models/User.model';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -54,9 +58,16 @@ export class UsersController {
    * @returns the updated user document (without password)
    */
   @Put('me')
+  @UseInterceptors(
+    FileInterceptor('avatar', { storage: multer.memoryStorage() }),
+  )
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
-  async updateMe(@GetUser() user: any, @Body() body: UpdateProfileDto) {
-    return this.usersService.updateMe(user, body);
+  async updateMe(
+    @GetUser() user: any,
+    @Body() body: UpdateProfileDto,
+    @UploadedFile() avatar?: Express.Multer.File,
+  ) {
+    return this.usersService.updateMe(user, body, avatar);
   }
 
   /**

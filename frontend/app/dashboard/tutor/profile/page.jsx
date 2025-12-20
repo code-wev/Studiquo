@@ -68,35 +68,6 @@ const TutorProfilePage = () => {
     handleInputChange("subjects", selectedOptions);
   };
 
-  // Image upload to imgbb
-  const uploadImageToImgBB = async (file) => {
-    const formData = new FormData();
-    formData.append("image", file);
-    formData.append("key", "f119187269ac7e77ca4097bbbcb47457"); // Your imgbb API key
-
-    try {
-      setUploading(true);
-      const response = await fetch("https://api.imgbb.com/1/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        return data.data.url; // Return the image URL
-      } else {
-        throw new Error(data.error?.message || "Image upload failed");
-      }
-    } catch (error) {
-      console.error("Image upload error:", error);
-      toast.error("Failed to upload image");
-      return null;
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -113,32 +84,34 @@ const TutorProfilePage = () => {
       return;
     }
 
-    const imageUrl = await uploadImageToImgBB(file);
+    // Upload to backend via PUT /users/me as multipart/form-data
+    const formData = new FormData();
+    formData.append("avatar", file);
 
-    if (imageUrl) {
-      // Update local state
-      setProfileData((prev) => ({ ...prev, avatar: imageUrl }));
+    try {
+      setUploading(true);
+      const result = await updateProfile(formData);
 
-      // Update in backend
-      try {
-        const result = await updateProfile({ avatar: imageUrl });
-
-        if (result.error) {
-          toast.error("Failed to save avatar");
-        } else {
-          toast.success("Avatar updated successfully");
-          refetch(); // Refresh profile data
-        }
-      } catch (error) {
-        console.error("Avatar update error:", error);
+      if (result.error) {
         toast.error("Failed to save avatar");
+      } else {
+        toast.success("Avatar updated successfully");
+        refetch(); // Refresh profile data
       }
+    } catch (error) {
+      console.error("Avatar update error:", error);
+      toast.error("Failed to save avatar");
+    } finally {
+      setUploading(false);
     }
   };
 
   const handleRemoveAvatar = async () => {
     try {
-      const result = await updateProfile({ avatar: "" });
+      const formData = new FormData();
+      // send empty string to indicate removal
+      formData.append("avatar", "");
+      const result = await updateProfile(formData);
 
       if (result.error) {
         toast.error("Failed to remove avatar");

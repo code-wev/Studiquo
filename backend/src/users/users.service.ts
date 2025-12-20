@@ -12,6 +12,8 @@ import * as bcrypt from 'bcryptjs';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { SearchDto } from 'common/dto/search.dto';
 import { Model, Types } from 'mongoose';
+import { AwsService } from 'src/aws/aws.service';
+import { uploadSingle } from 'src/common/utils/upload.util';
 import { StudentProfile } from 'src/models/StudentProfile.model';
 import { TutorProfile } from 'src/models/TutorProfile.model';
 import { BaseService } from '../../common/base.service';
@@ -38,9 +40,11 @@ export class UsersService extends BaseService<User> {
     private readonly studentProfileModel: Model<StudentProfile>,
 
     private jwtService: JwtService,
+    private awsService: AwsService,
   ) {
     super(userModel);
   }
+
   /**
    * Return the authenticated user's profile without the password field.
    *
@@ -74,7 +78,11 @@ export class UsersService extends BaseService<User> {
    * @param req - the request object that contains `user` (set by auth guard)
    * @param data - partial user fields to update
    */
-  async updateMe(user: any, data: UpdateProfileDto) {
+  async updateMe(
+    user: any,
+    data: UpdateProfileDto,
+    avatar?: Express.Multer.File,
+  ) {
     // Check user exists
     const userDoc = await this.model.findById(user.userId);
     if (!userDoc) throw new UnauthorizedException('User not found');
@@ -89,14 +97,13 @@ export class UsersService extends BaseService<User> {
       firstName,
       lastName,
       bio,
-      avatar,
       dbsLink,
 
       // tutor fields
       subjects,
       groupHourlyRate,
       oneOnOneHourlyRate,
-    } = data;
+    } = data as any;
 
     /**
      * Update USER collection
@@ -105,7 +112,38 @@ export class UsersService extends BaseService<User> {
     if (firstName !== undefined) userUpdate.firstName = firstName;
     if (lastName !== undefined) userUpdate.lastName = lastName;
     if (bio !== undefined) userUpdate.bio = bio;
-    if (avatar !== undefined) userUpdate.avatar = avatar;
+
+    // Avatar handling: accept uploaded file `avatar` (multer) or data URL in `data.avatar`
+    const avatarPayload = avatar || (data as any).avatar;
+    if (avatarPayload !== undefined) {
+      // Delete previous avatar from S3 if present (use avatarKey field on User)
+      try {
+        if (userDoc.avatarKey) {
+          await this.awsService.deleteObject(userDoc.avatarKey);
+        }
+      } catch (err) {
+        this.logger.warn(
+          'Failed to delete previous avatar from S3',
+          err as any,
+        );
+      }
+
+      // Upload new avatar using util
+      try {
+        const res = await uploadSingle(
+          this.awsService,
+          user.userId,
+          avatarPayload,
+        );
+        if (res) {
+          if (res.url) userUpdate.avatar = res.url;
+          if (res.key) userUpdate.avatarKey = res.key;
+        }
+      } catch (err) {
+        this.logger.warn('Avatar upload failed', err as any);
+      }
+    }
+
     if (dbsLink !== undefined) userUpdate.dbsLink = dbsLink;
 
     if (Object.keys(userUpdate).length > 0) {
@@ -161,6 +199,7 @@ export class UsersService extends BaseService<User> {
       email: user.email,
       role: user.role,
     });
+
     /**
      * Return merged response
      */
@@ -204,6 +243,7 @@ export class UsersService extends BaseService<User> {
       _id: parent._id,
       children: new Types.ObjectId(student._id),
     });
+
     if (alreadyChild) {
       return {
         message: 'This child is already linked to you',
@@ -220,6 +260,7 @@ export class UsersService extends BaseService<User> {
       _id: student._id,
       pendingParents: { $in: [new Types.ObjectId(parent._id)] },
     });
+
     if (alreadyRequested) {
       return { message: 'Request already sent and awaiting approval' };
     }
@@ -363,8 +404,6 @@ export class UsersService extends BaseService<User> {
       .populate('pendingParents', 'firstName lastName email avatar')
       .lean();
     if (!student) throw new NotFoundException('Student not found');
-    if (student.role !== UserRole.Student)
-      throw new ForbiddenException('Only students can view parent requests');
 
     return {
       message: 'Pending parent requests retrieved',
