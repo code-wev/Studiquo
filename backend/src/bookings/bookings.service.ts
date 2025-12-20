@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { PaginationDto } from 'common/dto/pagination.dto';
+import { formatAmPm } from 'common/utils/time.util';
 import { Model, Types } from 'mongoose';
 import { TimeSlot } from 'src/models/TimeSlot.model';
 import { TutorAvailability } from 'src/models/TutorAvailability.model';
@@ -130,23 +131,88 @@ export class BookingsService {
    */
   async getChildrenBookings(user: any, pagination: PaginationDto) {
     const { page = 1, limit = 10 } = pagination;
+    const parentId = new Types.ObjectId(user.userId);
 
-    // Load children of the parent
-    const childrenIds = await this.userModel.findOne(
-      { _id: new Types.ObjectId(user.userId) },
-      { children: 1 },
-    );
+    const bookings = await this.userModel.aggregate([
+      // 1️⃣ Match parent
+      { $match: { _id: parentId } },
 
-    // Find bookings for each child
-    const bookings = await this.bookingStudentsModel
-      .find({ student: { $in: childrenIds?.children || [] } })
-      .populate('booking')
-      .skip((page - 1) * limit)
-      .limit(limit);
+      // 2️⃣ Project children
+      { $project: { children: 1 } },
+
+      // 3️⃣ Lookup bookingStudents
+      {
+        $lookup: {
+          from: 'bookingstudents',
+          localField: 'children',
+          foreignField: 'student',
+          as: 'bookingStudent',
+        },
+      },
+      { $unwind: '$bookingStudent' },
+
+      // 4️⃣ Lookup booking
+      {
+        $lookup: {
+          from: 'bookings',
+          localField: 'bookingStudent.booking',
+          foreignField: '_id',
+          as: 'booking',
+        },
+      },
+      { $unwind: '$booking' },
+
+      // 5️⃣ Lookup timeSlot (SINGLE DOC)
+      {
+        $lookup: {
+          from: 'timeslots',
+          localField: 'booking.timeSlot',
+          foreignField: '_id',
+          as: 'timeSlot',
+        },
+      },
+      { $unwind: '$timeSlot' },
+
+      // 6️⃣ Pagination
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+
+      // 7️⃣ Final Projection (FIXED)
+      {
+        $project: {
+          _id: 0,
+          bookingId: '$booking._id',
+          status: '$booking.status',
+          subject: '$booking.subject',
+          type: '$booking.type',
+
+          slot: {
+            id: '$timeSlot._id',
+            subject: '$timeSlot.subject',
+            type: '$timeSlot.type',
+            meetLink: '$timeSlot.meetLink',
+            startTime: '$timeSlot.startTime',
+            endTime: '$timeSlot.endTime',
+          },
+        },
+      },
+    ]);
+
+    const result = bookings.map((b) => ({
+      ...b,
+      slot: {
+        ...b.slot,
+        startTime: formatAmPm(b.slot.startTime),
+        endTime: formatAmPm(b.slot.endTime),
+      },
+    }));
 
     return {
       message: 'Children bookings retrieved successfully',
-      bookings: bookings.map((b) => b.booking),
+      page,
+      limit,
+      total: bookings.length,
+      bookings: result,
     };
   }
 

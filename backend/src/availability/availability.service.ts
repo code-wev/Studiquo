@@ -117,7 +117,6 @@ export class AvailabilityService {
 
     const bookedSlots = await this.timeSlotModel.find({
       tutorAvailability: availability._id,
-      isBooked: true,
     });
 
     if (bookedSlots.length > 0) {
@@ -241,7 +240,6 @@ export class AvailabilityService {
      */
     const overlappingSlot = await this.timeSlotModel.findOne({
       tutorAvailability: new Types.ObjectId(availability._id),
-      isBooked: false,
       startTime: { $lt: endTime },
       endTime: { $gt: startTime },
     });
@@ -576,7 +574,6 @@ export class AvailabilityService {
         type: s.type,
         startTime: s.startTime,
         endTime: s.endTime,
-        isBooked: s.isBooked,
         meetLink: s.meetLink,
         subject: s.subject,
         startTimeLabel: formatAmPm(s.startTime, 'Europe/London'),
