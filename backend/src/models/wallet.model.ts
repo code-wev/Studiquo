@@ -6,11 +6,11 @@ export class Wallet extends Document {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   tutorId: Types.ObjectId;
 
-  // stored in smallest currency unit (cents)
+  // stored in smallest currency unit (Pound sterling GBP not supported in Stripe test mode)
   @Prop({ required: true, default: 0 })
   balance: number;
 
-  @Prop({ required: true, default: 'eur' })
+  @Prop({ required: true, default: 'gbp' })
   currency: string;
 
   @Prop({ required: true, default: Date.now })

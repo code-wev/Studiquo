@@ -359,7 +359,7 @@ export class BookingsService {
     // 12. Create Stripe Checkout Session
     const session = await this.paymentsService.createCheckoutSession({
       amount,
-      currency: 'eur',
+      currency: process.env.STRIPE_CURRENCY || 'gbp', // Pound sterling GBP not supported in Stripe test mode
       successUrl,
       cancelUrl,
       customerEmail: parent.email,

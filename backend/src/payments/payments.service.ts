@@ -13,7 +13,7 @@ export class PaymentsService {
 
   async createPaymentIntent(
     amount: number,
-    currency: string = 'eur',
+    currency: string = process.env.STRIPE_CURRENCY || 'gbp', // Pound sterling GBP not supported in Stripe test mode
     metadata?: Record<string, string>,
   ) {
     // eru payment intent

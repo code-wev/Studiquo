@@ -15,7 +15,8 @@ export class Payment extends Document {
   @Prop({ required: true })
   amount: number;
 
-  @Prop({ required: true })
+  // Pound sterling GBP not supported in Stripe test mode
+  @Prop({ required: true, default: 'gbp' })
   currency: string;
 
   @Prop({ required: true })

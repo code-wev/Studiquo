@@ -389,7 +389,8 @@ export class TutorsService {
     const wallet = await this.walletModel.findOne({ tutorId: userId }).lean();
     return {
       balance: (wallet && wallet.balance) || 0,
-      currency: (wallet && wallet.currency) || 'eur',
+      currency:
+        (wallet && wallet.currency) || process.env.STRIPE_CURRENCY || 'gbp', // Pound sterling GBP not supported in Stripe test mode
     };
   }
 
