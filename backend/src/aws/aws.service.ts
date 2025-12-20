@@ -47,6 +47,37 @@ export class AwsService {
   }
 
   /**
+   * Upload multiple files to S3. Each item should contain a unique `key`
+   * and either a `buffer` or a `stream`, plus optional `contentType`.
+   * Returns an array of upload results in the same order.
+   */
+  async uploadMultiple(
+    files: Array<{
+      key: string;
+      buffer?: Buffer;
+      stream?: any;
+      contentType?: string;
+    }>,
+  ) {
+    if (!this.bucket) {
+      throw new Error('S3 bucket not configured');
+    }
+
+    if (!files || files.length === 0) return [];
+
+    const tasks = files.map((f) => {
+      if (f.buffer) return this.uploadBuffer(f.key, f.buffer, f.contentType);
+      if (f.stream) return this.uploadStream(f.key, f.stream, f.contentType);
+      return Promise.reject(
+        new Error('Each file must include buffer or stream'),
+      );
+    });
+
+    // Run uploads in parallel and propagate errors.
+    return Promise.all(tasks);
+  }
+
+  /**
    * Uploads a readable stream to Amazon S3 using multipart upload.
    *
    * This method is memory-efficient and recommended for large files
