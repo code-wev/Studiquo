@@ -204,6 +204,7 @@ export class UsersService extends BaseService<User> {
       _id: parent._id,
       children: new Types.ObjectId(student._id),
     });
+
     if (alreadyChild) {
       return {
         message: 'This child is already linked to you',
@@ -220,6 +221,7 @@ export class UsersService extends BaseService<User> {
       _id: student._id,
       pendingParents: { $in: [new Types.ObjectId(parent._id)] },
     });
+
     if (alreadyRequested) {
       return { message: 'Request already sent and awaiting approval' };
     }
@@ -363,8 +365,6 @@ export class UsersService extends BaseService<User> {
       .populate('pendingParents', 'firstName lastName email avatar')
       .lean();
     if (!student) throw new NotFoundException('Student not found');
-    if (student.role !== UserRole.Student)
-      throw new ForbiddenException('Only students can view parent requests');
 
     return {
       message: 'Pending parent requests retrieved',
