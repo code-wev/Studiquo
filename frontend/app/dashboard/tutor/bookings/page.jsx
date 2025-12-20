@@ -2,7 +2,7 @@
 
 import TitleSection from "@/components/dashboard/shared/TitleSection";
 import Image from "next/image";
-import Link from "next/link";
+import { useState } from "react";
 import { BiChevronRight, BiX } from "react-icons/bi";
 
 const classes = [
@@ -69,6 +69,134 @@ const students = [
 ];
 
 export default function Bookings() {
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState({
+    "12:00pm – 02:00pm": true,
+    "06:00pm – 06:00pm": false,
+  });
+
+  // Calendar functions
+  const getDaysInMonth = (year, month) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (year, month) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  const goToPreviousMonth = () => {
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
+    );
+  };
+
+  const goToNextMonth = () => {
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
+    );
+  };
+
+  const handleDayClick = (day) => {
+    const newSelectedDate = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      day
+    );
+    setSelectedDate(newSelectedDate);
+  };
+
+  const handleTimeSlotToggle = (timeSlot) => {
+    setSelectedTimeSlots((prev) => ({
+      ...prev,
+      [timeSlot]: !prev[timeSlot],
+    }));
+  };
+
+  // Format date for display
+  const formatSelectedDate = () => {
+    const options = {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    };
+    return selectedDate.toLocaleDateString("en-US", options);
+  };
+
+  // Get month and year for display
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  const currentYear = currentDate.getFullYear();
+  const currentMonth = currentDate.getMonth();
+  const monthName = monthNames[currentMonth];
+  const daysInMonth = getDaysInMonth(currentYear, currentMonth);
+  const firstDayOfMonth = getFirstDayOfMonth(currentYear, currentMonth);
+
+  // Generate days array
+  const days = [];
+
+  // Previous month days
+  const prevMonthDays = getDaysInMonth(currentYear, currentMonth - 1);
+  for (let i = firstDayOfMonth - 1; i >= 0; i--) {
+    days.push({
+      day: prevMonthDays - i,
+      isCurrentMonth: false,
+      isSelected: false,
+    });
+  }
+
+  // Current month days
+  const today = new Date();
+  for (let i = 1; i <= daysInMonth; i++) {
+    const isToday =
+      today.getDate() === i &&
+      today.getMonth() === currentMonth &&
+      today.getFullYear() === currentYear;
+    const isSelected =
+      selectedDate.getDate() === i &&
+      selectedDate.getMonth() === currentMonth &&
+      selectedDate.getFullYear() === currentYear;
+
+    // Determine if this day should have special styling (matching the hardcoded days)
+    const hasClass =
+      i === 1 || i === 3 || i === 4 || i === 7 || i === 8 || i === 29;
+    const isTodayWithDot = i === 25; // The 25th has a special dot in original design
+
+    days.push({
+      day: i,
+      isCurrentMonth: true,
+      isToday,
+      isSelected,
+      hasClass,
+      isTodayWithDot,
+    });
+  }
+
+  // Next month days
+  const totalCells = 42; // 6 rows * 7 days
+  const nextMonthDays = totalCells - days.length;
+  for (let i = 1; i <= nextMonthDays; i++) {
+    days.push({
+      day: i,
+      isCurrentMonth: false,
+      isSelected: false,
+    });
+  }
+
   const handleJoinChat = (studentId, studentName) => {
     // Implement your join chat logic here
     console.log(`Joining chat with ${studentName} (ID: ${studentId})`);
@@ -99,13 +227,17 @@ export default function Bookings() {
           <div className='border border-gray-200 rounded-2xl p-6 mb-6'>
             {/* Month Header */}
             <div className='flex justify-between items-center mb-6'>
-              <button className='text-gray-400 hover:text-gray-600 text-xl'>
+              <button
+                onClick={goToPreviousMonth}
+                className='text-gray-400 hover:text-gray-600 text-xl cursor-pointer'>
                 &lt;
               </button>
               <p className='font-semibold text-gray-900 text-lg'>
-                October 2024
+                {monthName} {currentYear}
               </p>
-              <button className='text-gray-400 hover:text-gray-600 text-xl'>
+              <button
+                onClick={goToNextMonth}
+                className='text-gray-400 hover:text-gray-600 text-xl cursor-pointer'>
                 &gt;
               </button>
             </div>
@@ -123,128 +255,71 @@ export default function Bookings() {
 
             {/* Calendar Days */}
             <div className='grid grid-cols-7 gap-2 text-center text-sm'>
-              {/* Previous month days */}
-              <div className='py-3 text-orange-300'>30</div>
-              <div className='py-3 text-orange-300'>31</div>
+              {days.map((dayData, index) => {
+                const {
+                  day,
+                  isCurrentMonth,
+                  isToday,
+                  isSelected,
+                  hasClass,
+                  isTodayWithDot,
+                } = dayData;
 
-              {/* October days */}
-              <div className='py-3 rounded-xl bg-purple-200 text-purple-700 font-semibold'>
-                1
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                2
-              </div>
-              <div className='py-3 rounded-xl bg-purple-200 text-purple-700 font-semibold'>
-                3
-              </div>
-              <div className='py-3 rounded-xl bg-purple-200 text-purple-700 font-semibold'>
-                4
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                5
-              </div>
+                if (!isCurrentMonth) {
+                  return (
+                    <div key={index} className='py-3 text-orange-300'>
+                      {day}
+                    </div>
+                  );
+                }
 
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                6
-              </div>
-              <div className='py-3 rounded-xl bg-purple-200 text-purple-700 font-semibold'>
-                7
-              </div>
-              <div className='py-3 rounded-xl bg-purple-200 text-purple-700 font-semibold'>
-                8
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                9
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                10
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                11
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                12
-              </div>
-
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                13
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                14
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                15
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                16
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                17
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                18
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                19
-              </div>
-
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                20
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                21
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                22
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                23
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                24
-              </div>
-              <div className='py-3 rounded-xl bg-purple-100 text-purple-700 font-semibold relative'>
-                25
-                <div className='absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-400 rounded-full'></div>
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                26
-              </div>
-
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                27
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                28
-              </div>
-              <div className='py-3 rounded-xl bg-purple-200 text-purple-700 font-semibold'>
-                29
-              </div>
-              <div className='py-3 hover:bg-gray-100 rounded-xl cursor-pointer'>
-                30
-              </div>
-              <div className='py-3 text-orange-300'>01</div>
-              <div className='py-3 text-orange-300'>02</div>
-              <div className='py-3 text-orange-300'>03</div>
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handleDayClick(day)}
+                    className={`
+                      py-3 rounded-xl transition-all duration-200 cursor-pointer relative
+                      ${
+                        isSelected
+                          ? "bg-purple-600 text-white font-semibold"
+                          : ""
+                      }
+                      ${
+                        !isSelected && hasClass
+                          ? "bg-purple-200 text-purple-700 font-semibold"
+                          : ""
+                      }
+                      ${!isSelected && !hasClass ? "hover:bg-gray-100" : ""}
+                    `}>
+                    {day}
+                    {isTodayWithDot && !isSelected && (
+                      <div className='absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-400 rounded-full'></div>
+                    )}
+                    {isToday && !isSelected && !isTodayWithDot && (
+                      <div className='absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-400 rounded-full'></div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Time Slot Checkboxes */}
             <div className='mt-6 space-y-2'>
-              <label className='flex items-center gap-2 cursor-pointer'>
-                <input
-                  type='checkbox'
-                  defaultChecked
-                  className='w-4 h-4 rounded border-gray-300'
-                />
-                <span className='text-sm text-gray-700'>12:00pm – 02:00pm</span>
-              </label>
-              <label className='flex items-center gap-2 cursor-pointer'>
-                <input
-                  type='checkbox'
-                  className='w-4 h-4 rounded border-gray-300'
-                />
-                <span className='text-sm text-gray-700'>06:00pm – 06:00pm</span>
-              </label>
+              {Object.entries(selectedTimeSlots).map(
+                ([timeSlot, isChecked]) => (
+                  <label
+                    key={timeSlot}
+                    className='flex items-center gap-2 cursor-pointer'>
+                    <input
+                      type='checkbox'
+                      checked={isChecked}
+                      onChange={() => handleTimeSlotToggle(timeSlot)}
+                      className='w-4 h-4 rounded border-gray-300'
+                    />
+                    <span className='text-sm text-gray-700'>{timeSlot}</span>
+                  </label>
+                )
+              )}
             </div>
           </div>
         </div>
@@ -255,7 +330,7 @@ export default function Bookings() {
             {/* Toggle Buttons */}
             <div className='flex flex-col gap-y-9 justify-between mb-6'>
               <div className='text-xl font-semibold text-gray-900'>
-                Friday October,25
+                {formatSelectedDate()}
               </div>
               <div className='bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden'>
                 {/* Table Header */}
@@ -377,11 +452,13 @@ export default function Bookings() {
                     </span>
                   </td>
                   <td className='px-6 py-4 whitespace-nowrap'>
-                    <Link
-                      href='#'
-                      className='inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-green-800  transition-colors'>
+                    <button
+                      onClick={() =>
+                        handleJoinChat(student.id, student.studentName)
+                      }
+                      className='inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-green-800  transition-colors hover:bg-green-50 cursor-pointer'>
                       Join Chat
-                    </Link>
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -392,10 +469,10 @@ export default function Bookings() {
         {/* Pagination */}
         <div className='flex items-center justify-between mt-6 px-4 py-3 bg-gray-50 sm:px-6'>
           <div className='flex-1 flex justify-between sm:hidden'>
-            <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50'>
+            <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'>
               Previous
             </button>
-            <button className='ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50'>
+            <button className='ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'>
               Next
             </button>
           </div>
@@ -411,32 +488,32 @@ export default function Bookings() {
               <nav
                 className='relative z-0 inline-flex rounded-md shadow-sm -space-x-px'
                 aria-label='Pagination'>
-                <button className='relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50'>
+                <button className='relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 cursor-pointer'>
                   <span className='sr-only'>Previous</span>
                   Previous
                 </button>
-                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50'>
+                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer'>
                   1
                 </button>
-                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50'>
+                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer'>
                   2
                 </button>
-                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50'>
+                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer'>
                   3
                 </button>
-                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50'>
+                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer'>
                   4
                 </button>
-                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50'>
+                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer'>
                   5
                 </button>
-                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50'>
+                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer'>
                   6
                 </button>
                 <span className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700'>
                   ...
                 </span>
-                <button className='relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50'>
+                <button className='relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 cursor-pointer'>
                   Next
                   <span className='sr-only'>Next</span>
                 </button>
