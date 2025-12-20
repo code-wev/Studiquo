@@ -8,6 +8,12 @@ import { ChatController } from './chat.controller';
 import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
 
+/**
+ * Chat feature module.
+ *
+ * Registers the `ChatGroup` and `Message` schemas and
+ * exposes the `ChatService` and `ChatController` for the app.
+ */
 @Module({
   imports: [
     MongooseModule.forFeature([

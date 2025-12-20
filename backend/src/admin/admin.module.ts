@@ -8,6 +8,12 @@ import { User, UserSchema } from '../models/User.model';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
 
+/**
+ * Admin feature module.
+ *
+ * Registers the `User`, `Booking`, `Payment`, `Payout`, and `TutorProfile` schemas and
+ * exposes the `AdminService` and `AdminController` for the app.
+ */
 @Module({
   imports: [
     MongooseModule.forFeature([

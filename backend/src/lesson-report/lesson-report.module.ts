@@ -4,6 +4,12 @@ import { LessonReport, LessonReportSchema } from '../models/LessonReport.model';
 import { LessonReportController } from './lesson-report.controller';
 import { LessonReportService } from './lesson-report.service';
 
+/**
+ * Lesson Report feature module.
+ *
+ * Registers the `LessonReport` schema and
+ * exposes the `LessonReportService` and `LessonReportController` for the app.
+ */
 @Module({
   imports: [
     MongooseModule.forFeature([

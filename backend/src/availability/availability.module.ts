@@ -17,9 +17,8 @@ import { AvailabilityService } from './availability.service';
 /**
  * Availability feature module.
  *
- * Manages tutor availability dates and time slots. Exports the
- * `AvailabilityService` so other modules (for example `TutorsModule`)
- * can query availability.
+ * Registers the `TutorAvailability`, `TimeSlot`, and `TutorProfile` schemas and
+ * exposes the `AvailabilityService` and `AvailabilityController` for the app.
  */
 @Module({
   imports: [

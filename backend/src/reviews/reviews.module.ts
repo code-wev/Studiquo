@@ -6,6 +6,12 @@ import { Review, ReviewSchema } from '../models/Review.model';
 import { ReviewsController } from './reviews.controller';
 import { ReviewsService } from './reviews.service';
 
+/**
+ * Reviews feature module.
+ *
+ * Registers the `Review` schema and
+ * exposes the `ReviewsService` and `ReviewsController` for the app.
+ */
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Review.name, schema: ReviewSchema }]),

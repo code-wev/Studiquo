@@ -11,7 +11,7 @@ import { GoogleStrategy } from './google.strategy';
 import { JwtStrategy } from './jwt.strategy';
 
 /**
- * Authentication module.
+ * Authentication feature module.
  *
  * Registers the `User` schema and provides the `AuthService` and
  * `AuthController`. Also wires in the `JwtModule` and `MailModule`.

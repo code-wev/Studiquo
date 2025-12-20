@@ -7,6 +7,12 @@ import { DocumentUpload, DocumentUploadSchema } from '../models/Document.model';
 import { DocumentsController } from './documents.controller';
 import { DocumentsService } from './documents.service';
 
+/**
+ * Documents feature module.
+ *
+ * Registers the `DocumentUpload` schema and
+ * exposes the `DocumentsService` and `DocumentsController` for the app.
+ */
 @Module({
   imports: [
     MongooseModule.forFeature([

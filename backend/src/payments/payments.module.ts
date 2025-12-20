@@ -7,6 +7,12 @@ import { Wallet, WalletSchema } from 'src/models/Wallet.model';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
 
+/**
+ * Payments feature module.
+ *
+ * Registers the `Booking`, `Payment`, `Wallet` and `ChatGroup` schemas and
+ * exposes the `PaymentsService` and `PaymentsController` for the app.
+ */
 @Module({
   imports: [
     MongooseModule.forFeature([

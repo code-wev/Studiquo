@@ -22,6 +22,12 @@ import { LessonReport, LessonReportSchema } from '../models/LessonReport.model';
 import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
 
+/**
+ * Bookings feature module.
+ *
+ * Registers the `Booking`, `BookingStudents`, `LessonReport`, `TimeSlot`, `TutorAvailability`, `TutorProfile`, and `User` schemas and
+ * exposes the `BookingsService` and `BookingsController` for the app.
+ */
 @Module({
   imports: [
     MongooseModule.forFeature([
