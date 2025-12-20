@@ -260,35 +260,30 @@ export class BookingsService {
    * @param user - authenticated parent user
    * @param bookingId - ID of the booking to pay for
    * @param studentId - ID of the child/student for whom the booking was made
-   * @return payment link details
-   * @throws BadRequestException for various validation errors
    */
   async createPaymentLinkForBooking(
     user: any,
     { bookingId, studentId }: CreatePaymentLinkDto,
   ) {
-    // Validate booking exists
+    // 1. Validate booking
     const booking = await this.bookingModel.findById(bookingId);
-
     if (!booking) {
       throw new BadRequestException('Invalid booking ID');
     }
 
-    // Load parent and ensure they have the specified student as a child
-    const parentAndChild = await this.userModel
-      .findOne({
-        _id: new Types.ObjectId(user.userId),
-        children: { $in: [new Types.ObjectId(studentId)] },
-      })
-      .populate('children', '-password');
+    // 2. Validate parent-child relationship
+    const parent = await this.userModel.findOne({
+      _id: new Types.ObjectId(user.userId),
+      children: { $in: [new Types.ObjectId(studentId)] },
+    });
 
-    if (!parentAndChild) {
+    if (!parent) {
       throw new BadRequestException(
         'You do not have a child with the specified student ID',
       );
     }
 
-    // Ensure booking belongs to one of the parent's children
+    // 3. Ensure booking belongs to this child
     const isChildBooking = await this.bookingStudentsModel.findOne({
       booking: new Types.ObjectId(bookingId),
       student: new Types.ObjectId(studentId),
@@ -300,95 +295,100 @@ export class BookingsService {
       );
     }
 
-    // Ensure booking is still pending payment
+    // 4. Booking must be pending
     if (booking.status !== 'PENDING') {
       throw new BadRequestException(
-        'Payment can only be made for bookings with PENDING status',
+        'Payment can only be made for PENDING bookings',
       );
     }
 
-    // Gather timeslot and tutor info to compute amount
+    // 5. Load timeslot
     const slot = await this.timeSlotModel.findById(booking.timeSlot);
-
     if (!slot) {
+      throw new BadRequestException('Invalid time slot');
+    }
+
+    // 6. Enforce 3-day advance payment rule
+    const minAdvanceMs = 3 * 24 * 60 * 60 * 1000;
+    if (new Date(slot.startTime).getTime() - Date.now() < minAdvanceMs) {
       throw new BadRequestException(
-        'Invalid time slot associated with booking',
+        'Payment must be completed at least 3 days before the lesson',
       );
     }
 
-    // Enforce payment can only be made at least 3 days before the lesson
-    const now = Date.now();
-    const slotStart = new Date(slot.startTime).getTime();
-    const minAdvanceMs = 3 * 24 * 60 * 60 * 1000; // 3 days
-    if (slotStart - now < minAdvanceMs) {
-      throw new BadRequestException(
-        'Payment can only be made at least 3 days before the lesson',
-      );
-    }
-
-    // Load tutor availability to get tutor user ID
+    // 7. Load tutor availability
     const availability = await this.availabilityModel.findById(
-      new Types.ObjectId(slot.tutorAvailability),
+      slot.tutorAvailability,
     );
-
     if (!availability) {
-      throw new BadRequestException(
-        'Invalid tutor availability associated with time slot',
-      );
+      throw new BadRequestException('Tutor availability not found');
     }
 
-    // Ensure tutor profile exists to get hourly rates
-    const tutorProfile = await this.tutorProfileModel.findOne({
-      user: new Types.ObjectId(availability.user),
-    });
+    // 8. Load tutor profile + tutor user
+    const tutorProfile = await this.tutorProfileModel
+      .findOne({ user: availability.user })
+      .populate('user', 'firstName lastName email');
 
-    if (!tutorProfile) {
+    if (!tutorProfile || !tutorProfile.user) {
       throw new BadRequestException('Tutor profile not found');
     }
 
-    // Compute duration in hours
-    const start = new Date(slot.startTime).getTime();
-    const end = new Date(slot.endTime).getTime();
-    const hours = Math.max(0.25, (end - start) / (1000 * 60 * 60));
+    const tutorUser = tutorProfile.user as any;
 
+    // 9. Calculate duration
+    const hours = Math.max(
+      0.25,
+      (new Date(slot.endTime).getTime() - new Date(slot.startTime).getTime()) /
+        (1000 * 60 * 60),
+    );
+
+    // 10. Calculate price
     const amount = Number(
       (booking.type === 'ONE_TO_ONE'
-        ? tutorProfile.oneOnOneHourlyRate
+        ? tutorProfile.oneOnOneHourlyRate * hours
         : tutorProfile.groupHourlyRate * hours
       ).toFixed(2),
     );
 
-    // Build success/cancel URLs
-    const successUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-success?bookingId=${booking._id}`;
-    const cancelUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment-cancel?bookingId=${booking._id}`;
+    // 11. Stripe URLs
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
-    // Ensure parentIds is a string (Stripe metadata values must be strings)
-    const parentIds = parentAndChild?.children
-      ? parentAndChild.children.map((id) => String(id)).join(',')
-      : '';
+    const successUrl = `${frontendUrl}/payment-success?bookingId=${booking._id}`;
+    const cancelUrl = `${frontendUrl}/payment-cancel?bookingId=${booking._id}`;
 
-    // Create Checkout Session
+    // 12. Create Stripe Checkout Session
     const session = await this.paymentsService.createCheckoutSession({
       amount,
       currency: 'eur',
       successUrl,
       cancelUrl,
+      customerEmail: parent.email,
+      description: `Lesson with ${tutorUser.firstName} ${tutorUser.lastName}`,
       metadata: {
-        tutorId: String(tutorProfile.user),
         bookingId: String(booking._id),
         studentId: String(studentId),
-        parentIds,
-        slotEndTime: new Date(slot.endTime).toISOString(),
+        tutorId: String(tutorUser._id),
+        tutorName: `${tutorUser.firstName} ${tutorUser.lastName}`,
         subject: booking.subject,
+        slotEndTime: new Date(slot.endTime).toISOString(),
       },
-      customerEmail: parentAndChild?.email || undefined,
-      description: `Lesson with tutor ${String(tutorProfile.user)}`,
     });
 
+    // 13. Final response
     return {
       checkoutUrl: session.url,
       sessionId: session.id,
       amount,
+      tutor: {
+        id: tutorUser._id,
+        firstName: tutorUser.firstName,
+        lastName: tutorUser.lastName,
+      },
+      booking: {
+        id: booking._id,
+        subject: booking.subject,
+        type: booking.type,
+      },
     };
   }
 
