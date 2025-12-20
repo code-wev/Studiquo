@@ -27,8 +27,8 @@ export const BookingApi = createApi({
     }),
 
     getMyChildrenBookings: builder.query({
-      query: () => ({
-        url: "/bookings/children-bookings",
+      query: ({ page = 1, limit = 10 }) => ({
+        url: `bookings/children-bookings?page=${page}&limit=${limit}`,
         method: "GET",
       }),
       providesTags: ["Booking"],

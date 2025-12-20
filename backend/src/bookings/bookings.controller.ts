@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { GetUser } from 'common/decorators/get-user.decorator';
 import { PaginationDto } from 'common/dto/pagination.dto';
 import { UserRole } from 'src/models/User.model';
@@ -57,7 +57,10 @@ export class BookingsController {
    */
   @Get('children-bookings')
   @Roles(UserRole.Parent)
-  async getChildrenBookings(@GetUser() user: any, pagination: PaginationDto) {
+  async getChildrenBookings(
+    @GetUser() user: any,
+    @Query() pagination: PaginationDto,
+  ) {
     return this.bookingsService.getChildrenBookings(user, pagination);
   }
 
