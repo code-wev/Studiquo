@@ -1,15 +1,14 @@
 "use client";
 
-import { getAuthUser } from "@/action/auth.action";
+import { useMyProfileQuery } from "@/feature/shared/AuthApi";
+import { logOut } from "@/utils/utils";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useRef } from "react";
-import { FiArrowRight, FiMenu, FiX, FiLogOut, FiUser } from "react-icons/fi";
+import { useEffect, useRef, useState } from "react";
 import { FaChevronDown } from "react-icons/fa";
+import { FiArrowRight, FiLogOut, FiMenu, FiUser, FiX } from "react-icons/fi";
 import logo from "../public/dashboardlogo.png";
-import { useMyProfileQuery } from "@/feature/shared/AuthApi";
-import { logOut } from "@/utils/utils";
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -19,7 +18,6 @@ export default function Navbar() {
 
   const { data: profile } = useMyProfileQuery();
   const user = profile?.data?.user;
-
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -38,7 +36,7 @@ export default function Navbar() {
   // Handle logout click
   const handleLogout = () => {
     console.log("logout clicked.");
-    logOut()
+    logOut();
     setIsUserDropdownOpen(false);
     // Here you can add your actual logout logic
   };
@@ -53,8 +51,8 @@ export default function Navbar() {
       dashboardUrl = "/dashboard/tutor/";
     } else if (user?.role === "Student") {
       dashboardUrl = "/dashboard/student/upcoming-class";
-    } else if (user?.role === "Parent"){
-           dashboardUrl = "/dashboard/parent/payment-history";
+    } else if (user?.role === "Parent") {
+      dashboardUrl = "/dashboard/parent/payment-history";
     }
     window.location.href = dashboardUrl;
     setIsUserDropdownOpen(false);
@@ -80,7 +78,9 @@ export default function Navbar() {
   // Get user initials for avatar
   const getUserInitials = () => {
     if (user?.firstName && user?.lastName) {
-      return `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.toUpperCase();
+      return `${user.firstName.charAt(0)}${user.lastName.charAt(
+        0
+      )}`.toUpperCase();
     }
     return user?.firstName?.charAt(0)?.toUpperCase() || "U";
   };
@@ -133,13 +133,22 @@ export default function Navbar() {
               {/* User Avatar with Dropdown */}
               <button
                 onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
-                className='flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200'
-              >
+                className='flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-all duration-200'>
                 {/* Avatar */}
-    {    user?.avatar ?     <Image src={user?.avatar} alt="profile" width={30} height={30} className="rounded-full "/> :        <div className='w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold'>
-                  {getUserInitials()}
-                </div>}
-                
+                {user?.avatar ? (
+                  <Image
+                    src={user?.avatar || "/default-avatar.png"}
+                    alt='profile'
+                    width={30}
+                    height={30}
+                    className='rounded-full '
+                  />
+                ) : (
+                  <div className='w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold'>
+                    {getUserInitials()}
+                  </div>
+                )}
+
                 {/* User Name and Arrow */}
                 <div className='flex flex-col items-start'>
                   <span className='text-sm font-medium text-gray-700'>
@@ -149,11 +158,11 @@ export default function Navbar() {
                     {user?.role || "User"}
                   </span>
                 </div>
-                
+
                 {/* Dropdown Arrow */}
-                <FaChevronDown 
+                <FaChevronDown
                   className={`ml-2 text-gray-500 transition-transform duration-200 ${
-                    isUserDropdownOpen ? 'rotate-180' : ''
+                    isUserDropdownOpen ? "rotate-180" : ""
                   }`}
                 />
               </button>
@@ -164,17 +173,15 @@ export default function Navbar() {
                   {/* Dashboard Button */}
                   <button
                     onClick={handleDashboard}
-                    className='w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center text-gray-700'
-                  >
+                    className='w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center text-gray-700'>
                     <FiUser className='mr-3 text-gray-500' />
                     <span>Dashboard</span>
                   </button>
-                  
+
                   {/* Logout Button */}
                   <button
                     onClick={handleLogout}
-                    className='w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center text-red-600'
-                  >
+                    className='w-full px-4 py-3 text-left hover:bg-gray-50 flex items-center text-red-600'>
                     <FiLogOut className='mr-3' />
                     <span>Logout</span>
                   </button>
@@ -262,9 +269,19 @@ export default function Navbar() {
                   {/* User Info */}
                   <div className='flex items-center space-x-3 p-3 bg-gray-50 rounded-lg'>
                     <div className='w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold'>
-    {    user?.avatar ?     <Image src={user?.avatar} alt="profile" width={64} height={64} className="rounded-full "/> :        <div className='w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold'>
-                  {getUserInitials()}
-                </div>}
+                      {user?.avatar ? (
+                        <Image
+                          src={user?.avatar}
+                          alt='profile'
+                          width={64}
+                          height={64}
+                          className='rounded-full '
+                        />
+                      ) : (
+                        <div className='w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-semibold'>
+                          {getUserInitials()}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <p className='font-medium text-gray-700'>
@@ -275,27 +292,25 @@ export default function Navbar() {
                       </p>
                     </div>
                   </div>
-                  
+
                   {/* Mobile Dashboard Button */}
                   <button
                     onClick={() => {
                       handleDashboard();
                       handleLinkClick();
                     }}
-                    className='w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 transition-all duration-300 font-medium'
-                  >
+                    className='w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 transition-all duration-300 font-medium'>
                     <FiUser />
                     <span>Dashboard</span>
                   </button>
-                  
+
                   {/* Mobile Logout Button */}
                   <button
                     onClick={() => {
                       handleLogout();
                       handleLinkClick();
                     }}
-                    className='w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-300 font-medium'
-                  >
+                    className='w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-300 font-medium'>
                     <FiLogOut />
                     <span>Logout</span>
                   </button>
