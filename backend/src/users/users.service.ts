@@ -12,6 +12,7 @@ import * as bcrypt from 'bcryptjs';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { SearchDto } from 'common/dto/search.dto';
 import { Model, Types } from 'mongoose';
+import { AwsService } from 'src/aws/aws.service';
 import { StudentProfile } from 'src/models/StudentProfile.model';
 import { TutorProfile } from 'src/models/TutorProfile.model';
 import { BaseService } from '../../common/base.service';
@@ -38,6 +39,7 @@ export class UsersService extends BaseService<User> {
     private readonly studentProfileModel: Model<StudentProfile>,
 
     private jwtService: JwtService,
+    private awsService: AwsService,
   ) {
     super(userModel);
   }
@@ -105,7 +107,11 @@ export class UsersService extends BaseService<User> {
     if (firstName !== undefined) userUpdate.firstName = firstName;
     if (lastName !== undefined) userUpdate.lastName = lastName;
     if (bio !== undefined) userUpdate.bio = bio;
-    if (avatar !== undefined) userUpdate.avatar = avatar;
+    // Avatar upload via AwsService
+    if (avatar !== undefined) {
+      const avatarUrl = await this.awsService.uploadAvatar(user.userId, avatar);
+      if (avatarUrl) userUpdate.avatar = avatarUrl;
+    }
     if (dbsLink !== undefined) userUpdate.dbsLink = dbsLink;
 
     if (Object.keys(userUpdate).length > 0) {
@@ -161,6 +167,7 @@ export class UsersService extends BaseService<User> {
       email: user.email,
       role: user.role,
     });
+
     /**
      * Return merged response
      */

@@ -166,4 +166,64 @@ export class AwsService {
       key,
     )}`;
   }
+
+  /**
+   * Handles avatar upload using AwsService.
+   * Supports:
+   * - base64 data URL
+   * - multer buffer
+   * - readable stream
+   * - direct URL (no upload)
+   */
+  async uploadAvatar(userId: string, avatar: any): Promise<string | undefined> {
+    if (!avatar) return undefined;
+
+    try {
+      // Case 1: Base64 data URL
+      if (typeof avatar === 'string' && avatar.startsWith('data:')) {
+        const matches = avatar.match(/^data:(.+);base64,(.+)$/);
+        if (!matches) return avatar;
+
+        const contentType = matches[1];
+        const buffer = Buffer.from(matches[2], 'base64');
+        const ext = contentType.split('/')[1]?.split('+')[0] || 'png';
+
+        const key = `avatars/${userId}-${Date.now()}.${ext}`;
+        const upload = await this.uploadBuffer(key, buffer, contentType);
+
+        return upload.url;
+      }
+
+      // Case 2: Multer file (buffer)
+      if (avatar?.buffer) {
+        const contentType = avatar.mimetype || 'application/octet-stream';
+        const ext = contentType.split('/')[1]?.split('+')[0] || 'png';
+        const key = `avatars/${userId}-${Date.now()}.${ext}`;
+
+        const upload = await this.uploadBuffer(key, avatar.buffer, contentType);
+
+        return upload.url;
+      }
+
+      // Case 3: Stream upload
+      if (avatar?.stream) {
+        const contentType = avatar.mimetype || 'application/octet-stream';
+        const ext = contentType.split('/')[1]?.split('+')[0] || 'png';
+        const key = `avatars/${userId}-${Date.now()}.${ext}`;
+
+        const upload = await this.uploadStream(key, avatar.stream, contentType);
+
+        return upload.url;
+      }
+
+      // Case 4: Already a URL
+      if (typeof avatar === 'string') {
+        return avatar;
+      }
+    } catch (err) {
+      this.logger.warn('Avatar upload failed', err as any);
+    }
+
+    return undefined;
+  }
 }

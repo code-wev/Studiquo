@@ -5,8 +5,9 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
+  Validate,
 } from 'class-validator';
+import { IsValidAvatarConstraint } from 'common/avatar.validator';
 
 export class UpdateProfileDto {
   // User fields
@@ -24,9 +25,15 @@ export class UpdateProfileDto {
   @IsString({ message: 'Bio must be a string' })
   bio?: string;
 
+  /**
+   * Avatar:
+   * - image URL
+   * - base64 image
+   * - multer image file
+   */
   @IsOptional()
-  @IsUrl({}, { message: 'Avatar link must be a valid URL' })
-  avatar?: string;
+  @Validate(IsValidAvatarConstraint)
+  avatar?: any;
 
   @IsOptional()
   @IsString({ message: 'DBS must be a string' })
