@@ -27,7 +27,10 @@ import { ChatService } from './chat.service';
 @WebSocketGateway({
   cors: {
     // Allow frontend application to connect via WebSocket
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin:
+      process.env.FRONTEND_URL ||
+      'http://localhost:3000' ||
+      'https://brhgvvsz-3000.inc1.devtunnels.ms',
   },
 })
 @Injectable()

@@ -47,29 +47,24 @@ export default function ChatInterface() {
   // Get appropriate avatar for the group based on current user role
   const getGroupAvatar = (group) => {
     if (currentUserRole === "Student" || currentUserRole === "Parent") {
-      // If current user is student or parent, show tutor's avatar
       return (
         group.tutor?.avatar ||
         `https://ui-avatars.com/api/?name=${group.tutor?.firstName}+${group.tutor?.lastName}&background=7C3AED&color=fff`
       );
     } else if (currentUserRole === "Tutor") {
-      // If current user is tutor, show student's avatar
       return (
         group.student?.avatar ||
         `https://ui-avatars.com/api/?name=${group.student?.firstName}+${group.student?.lastName}&background=7C3AED&color=fff`
       );
     }
-    // Default fallback
     return `https://ui-avatars.com/api/?name=${group.subject}&background=7C3AED&color=fff`;
   };
 
   // Get appropriate name for the group based on current user role
   const getGroupName = (group) => {
     if (currentUserRole === "Student" || currentUserRole === "Parent") {
-      // If current user is student or parent, show tutor's name
       return `${group.tutor?.firstName} ${group.tutor?.lastName}`;
     } else if (currentUserRole === "Tutor") {
-      // If current user is tutor, show student's name
       return `${group.student?.firstName} ${group.student?.lastName}`;
     }
     return group.subject;
@@ -140,12 +135,10 @@ export default function ChatInterface() {
         return;
 
       setLocalMessages((prev) => {
-        // try to match a pending optimistic message by content
         const pendingIndex = prev.findIndex(
           (m) => m.pending && String(m.content) === String(msg.content)
         );
         if (pendingIndex !== -1) {
-          // replace pending with server message
           const copy = [...prev];
           copy[pendingIndex] = msg;
           return copy;
@@ -159,7 +152,6 @@ export default function ChatInterface() {
       setTypingUsers((prev) => ({ ...prev, [userId]: isTyping }));
     });
 
-    // Join the room when a group is selected
     if (selectedGroup) {
       s.emit("joinRoom", selectedGroup._id);
     }
@@ -184,7 +176,6 @@ export default function ChatInterface() {
   async function handleSend() {
     if (!selectedGroup || !messageText?.trim()) return;
     const content = messageText.trim();
-    // optimistic UI message
     const temp = {
       _id: `temp-${Date.now()}`,
       chatGroup: selectedGroup._id,
@@ -225,6 +216,26 @@ export default function ChatInterface() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  // Helper to get sender display info
+  const getSenderInfo = (msg) => {
+    const sender =
+      msg.sender && typeof msg.sender === "object"
+        ? msg.sender
+        : msg.senderId
+        ? { _id: msg.senderId }
+        : null;
+
+    const firstName = sender?.firstName || "";
+    const lastName = sender?.lastName || "";
+    const fullName = `${firstName} ${lastName}`.trim();
+    const initials = fullName ? fullName.charAt(0).toUpperCase() : "U";
+
+    return {
+      avatar: sender?.avatar,
+      initials,
+    };
   };
 
   return (
@@ -272,7 +283,6 @@ export default function ChatInterface() {
                   }`}>
                   <div className='flex items-center gap-3'>
                     <div className='relative'>
-                      {/* Avatar with fallback */}
                       <div className='w-12 h-12 rounded-full flex items-center justify-center overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500'>
                         {avatarUrl ? (
                           <img
@@ -280,7 +290,6 @@ export default function ChatInterface() {
                             alt={groupName}
                             className='w-full h-full object-cover'
                             onError={(e) => {
-                              // Fallback to initials if image fails to load
                               e.target.style.display = "none";
                               e.target.parentElement.innerHTML = `
                                 <span class="text-white font-bold text-lg">
@@ -408,29 +417,47 @@ export default function ChatInterface() {
               )}
 
               {localMessages.map((msg) => {
-                // derive sender id and object safely
                 const msgSenderId =
-                  (msg && msg.sender && (msg.sender._id || msg.sender.id)) ||
+                  (msg.sender && (msg.sender._id || msg.sender.id)) ||
                   msg.senderId ||
                   (typeof msg.sender === "string" ? msg.sender : undefined);
-
-                const senderObj =
-                  msg.sender ||
-                  (msg.senderId ? { _id: msg.senderId } : undefined);
 
                 const isOwnMessage =
                   String(msgSenderId) === String(currentUserId);
 
+                const { avatar, initials } = getSenderInfo(msg);
+
                 return (
                   <div
                     key={msg._id || msg.content}
-                    className={`flex ${
-                      isOwnMessage ? "justify-end" : "justify-start"
+                    className={`flex items-end gap-2 ${
+                      isOwnMessage ? "flex-row-reverse" : "flex-row"
                     }`}>
-                    <div
-                      className={`max-w-[70%] ${
-                        isOwnMessage ? "ml-auto" : ""
-                      }`}>
+                    {/* Avatar */}
+                    <div className='w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500'>
+                      {avatar ? (
+                        <img
+                          src={avatar}
+                          alt='sender'
+                          className='w-full h-full object-cover'
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            e.currentTarget.parentElement.querySelector(
+                              "span"
+                            ).style.display = "flex";
+                          }}
+                        />
+                      ) : null}
+                      <span
+                        className={`text-white font-bold text-sm ${
+                          avatar ? "hidden" : "flex"
+                        } items-center justify-center w-full h-full`}>
+                        {initials}
+                      </span>
+                    </div>
+
+                    {/* Message Bubble */}
+                    <div className={`max-w-[70%]`}>
                       <div
                         className={`px-4 py-3 rounded-2xl break-words ${
                           isOwnMessage
@@ -443,37 +470,13 @@ export default function ChatInterface() {
                       </div>
                       <div
                         className={`text-xs text-gray-500 mt-1 px-1 ${
-                          isOwnMessage ? "text-right" : ""
+                          isOwnMessage ? "text-right" : "text-left"
                         }`}>
                         {msg.createdAt
                           ? formatMessageTime(msg.createdAt)
                           : "Just now"}
                       </div>
                     </div>
-                    {/* my avatar */}
-                    {isOwnMessage && (
-                      <div className='w-8 h-8 rounded-full flex items-center justify-center overflow-hidden bg-gradient-to-br from-purple-500 to-pink-500 ml-2'>
-                        {senderObj?.avatar ? (
-                          <img
-                            src={senderObj.avatar}
-                            alt='Me'
-                            className='w-full h-full object-cover'
-                            onError={(e) => {
-                              e.target.style.display = "none";
-                              e.target.parentElement.innerHTML = `
-                                <span class="text-white font-bold">
-                                  ${senderObj?.firstName?.[0] || "M"}
-                                </span>
-                              `;
-                            }}
-                          />
-                        ) : (
-                          <span className='text-white font-bold'>
-                            {senderObj?.firstName?.[0] || "M"}
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
                 );
               })}
