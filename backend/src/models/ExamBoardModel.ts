@@ -1,14 +1,15 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document } from 'mongoose';
+import { TutorSubject } from './TutorProfile.model';
 
 @Schema({ _id: false })
 export class ExamBoardEntry extends Document {
   @Prop({
     type: String,
-    enum: ['MATH', 'SCIENCE', 'ENGLISH'],
+    enum: TutorSubject,
     required: true,
   })
-  subject: string;
+  subject: TutorSubject;
 
   @Prop({
     type: String,

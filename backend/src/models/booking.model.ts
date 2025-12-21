@@ -1,16 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { TimeSlotType } from './TimeSlot.model';
+import { TutorSubject } from './TutorProfile.model';
 
 @Schema()
 export class Booking extends Document {
   @Prop({ type: Types.ObjectId, ref: 'TimeSlot', required: true })
   timeSlot: Types.ObjectId;
 
-  @Prop({ required: true, enum: ['MATH', 'SCIENCE', 'ENGLISH'] })
-  subject: string;
+  @Prop({ required: true, enum: TutorSubject })
+  subject: TutorSubject;
 
-  @Prop({ required: true, enum: ['ONE_TO_ONE', 'GROUP'], default: 'GROUP' })
-  type: string;
+  @Prop({ required: true, enum: TimeSlotType, default: TimeSlotType.GROUP })
+  type: TimeSlotType;
 
   @Prop({
     required: true,

@@ -1,6 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
+export enum TutorSubject {
+  MATH = 'MATH',
+  SCIENCE = 'SCIENCE',
+  ENGLISH = 'ENGLISH',
+}
+
 @Schema()
 export class TutorProfile extends Document {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
@@ -8,10 +14,9 @@ export class TutorProfile extends Document {
 
   @Prop({
     type: [String],
-    enum: ['MATH', 'SCIENCE', 'ENGLISH'],
-    required: true,
+    enum: TutorSubject,
   })
-  subjects: string[];
+  subjects: TutorSubject[];
 
   // hourly rate in euros for group lessons
   @Prop({ required: true })

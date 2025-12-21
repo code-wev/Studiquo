@@ -23,9 +23,6 @@ export class ChatService {
       ? new mongoose.Types.ObjectId(String(id))
       : id;
 
-    // current time UTC
-    const now = new Date();
-
     const chatsGroup = await this.chatGroupModel.aggregate([
       {
         $match: {
@@ -34,7 +31,6 @@ export class ChatService {
             { studentId: objId },
             { parentIds: { $in: [objId] } },
           ],
-          startsAt: { $lte: now }, // only chats that have started
         },
       },
 
@@ -102,14 +98,10 @@ export class ChatService {
   async getMessages(chatGroupId: string, page = 1, limit = 20) {
     const skip = Math.max(0, page - 1) * limit;
 
-    // current time UTC
-    const now = new Date();
-
     const messages = await this.messageModel.aggregate([
       {
         $match: {
           chatGroup: new mongoose.Types.ObjectId(chatGroupId),
-          startsAt: { $lte: now },
         },
       },
       {
@@ -157,12 +149,8 @@ export class ChatService {
     fileName?: string;
     fileSize?: number;
   }) {
-    // current time UTC
-    const now = new Date();
-
     const chatGroup = await this.chatGroupModel.findOne({
       _id: new mongoose.Types.ObjectId(data.chatGroup),
-      startsAt: { $lte: now },
     });
 
     if (!chatGroup) {

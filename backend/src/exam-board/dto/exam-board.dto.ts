@@ -1,8 +1,9 @@
 import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
+import { TutorSubject } from 'src/models/TutorProfile.model';
 
 export class CreateExamBoardDto {
   @IsString({ message: 'Subject must be a string' })
-  @IsEnum(['MATH', 'SCIENCE', 'ENGLISH'], {
+  @IsEnum(TutorSubject, {
     message: 'Board must be one of MATH, SCIENCE, ENGLISH',
   })
   @IsNotEmpty({ message: 'Subject is required' })
