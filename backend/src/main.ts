@@ -30,7 +30,7 @@ async function bootstrap() {
   app.enableCors({
     origin:
       process.env.FRONTEND_URL ||
-      'http://localhost:3000 || https://brhgvvsz-3000.inc1.devtunnels.ms',
+      'http://localhost:3000' 
     credentials: true,
   });
 
