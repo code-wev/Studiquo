@@ -7,7 +7,7 @@ export enum TimeSlotType {
   GROUP = 'GROUP',
 }
 
-@Schema()
+@Schema({ timestamps: true })
 export class TimeSlot extends Document {
   @Prop({ type: Types.ObjectId, ref: 'TutorAvailability', required: true })
   tutorAvailability: Types.ObjectId;

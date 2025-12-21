@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 import { TimeSlotType } from './TimeSlot.model';
 import { TutorSubject } from './TutorProfile.model';
 
-@Schema()
+@Schema({ timestamps: true })
 export class Booking extends Document {
   @Prop({ type: Types.ObjectId, ref: 'TimeSlot', required: true })
   timeSlot: Types.ObjectId;

@@ -64,6 +64,12 @@ export class BookingsController {
     return this.bookingsService.getChildrenBookings(user, pagination);
   }
 
+  @Get('my-upcoming-bookings')
+  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent)
+  async myUpcomingBookings(@GetUser() user: any) {
+    return this.bookingsService.getMyUpcomingBookings(user);
+  }
+
   // @Put(':bookingId/cancel')
   // @Roles(UserRole.Student, UserRole.Tutor, UserRole.Admin)
   // async cancelBooking(@Param('bookingId') bookingId: MongoIdDto['id']) {
@@ -74,12 +80,6 @@ export class BookingsController {
   // @Roles(UserRole.Tutor, UserRole.Admin)
   // async completeBooking(@Param('bookingId') bookingId: MongoIdDto['id']) {
   //   return this.bookingsService.updateBookingStatus(bookingId, 'COMPLETED');
-  // }
-
-  // @Get('my-bookings')
-  // @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent)
-  // async myBookings(@GetUser() user: any) {
-  //   return this.bookingsService.getMyBookings(user);
   // }
 
   // @Get('my-schedule')

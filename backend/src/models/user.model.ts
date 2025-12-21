@@ -8,7 +8,7 @@ export enum UserRole {
   Admin = 'Admin',
 }
 
-@Schema()
+@Schema({ timestamps: true })
 export class User extends Document {
   @Prop()
   avatar: string;

@@ -392,19 +392,22 @@ export class BookingsService {
     };
   }
 
+  async getMyUpcomingBookings(user: any) {
+    const bookings = await this.bookingModel
+      .find({
+        student: new Types.ObjectId(user.userId),
+        status: { $in: ['SCHEDULED', 'COMPLETED'] },
+      })
+      .populate('timeSlot')
+      .exec();
+  }
+
   // async updateBookingStatus(bookingId: string, status: string) {
   //   return this.bookingModel.findByIdAndUpdate(
   //     bookingId,
   //     { status },
   //     { new: true },
   //   );
-  // }
-
-  // async getMyBookings(user: any) {
-  //   const bookings = await this.bookingStudentsModel
-  //     .find({ student: user.userId })
-  //     .populate('booking');
-  //   return bookings.map((b) => b.booking);
   // }
 
   // async getMySchedule(user: any) {
