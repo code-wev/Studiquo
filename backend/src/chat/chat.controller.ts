@@ -4,36 +4,71 @@ import {
   Get,
   Param,
   Post,
-  Req,
+  Query,
   UseGuards,
 } from '@nestjs/common';
-import { MongoIdDto } from 'common/dto/mongoId.dto';
-import { UserRole } from 'src/models/User.model';
-import { Roles } from '../../common/decorators/roles.decorator';
+import { GetUser } from '../../common/decorators/get-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
-import { SendMessageDto } from './dto/chat.dto';
 
 @Controller('chat')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly chatGateway: ChatGateway,
+  ) {}
 
-  @Get(':bookingId/messages')
-  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
-  async getChatHistory(@Param('bookingId') bookingId: MongoIdDto['id']) {
-    return this.chatService.getChatHistory(bookingId);
+  @Get('groups')
+  async getGroups(@GetUser() user: any) {
+    const userId = user?.sub || user?._id;
+    return this.chatService.getChatGroupsForUser(String(userId));
   }
 
-  @Post(':bookingId/messages')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
-  async sendMessage(
-    @Param('bookingId') bookingId: MongoIdDto['id'],
-    @Req() req,
-    @Body() dto: SendMessageDto,
+  @Get(':groupId/messages')
+  async getMessages(
+    @Param('groupId') groupId: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '20',
   ) {
-    return this.chatService.sendMessage(bookingId, req.user, dto);
+    const p = parseInt(String(page), 10) || 1;
+    const l = parseInt(String(limit), 10) || 20;
+    return this.chatService.getMessages(groupId, p, l);
+  }
+
+  @Post(':groupId/message')
+  async postMessage(
+    @Param('groupId') groupId: string,
+    @Body()
+    body: {
+      content: string;
+      type?: string;
+      fileUrl?: string;
+      fileName?: string;
+      fileSize?: number;
+    },
+    @GetUser() user: any,
+  ) {
+    const userId = String(user?.sub || user?._id);
+    const msg = await this.chatService.createMessage({
+      chatGroup: groupId,
+      senderId: userId,
+      content: body.content,
+      type: body.type,
+      fileUrl: body.fileUrl,
+      fileName: body.fileName,
+      fileSize: body.fileSize,
+    });
+
+    // emit to sockets if gateway is up
+    try {
+      this.chatGateway.server?.to(groupId).emit('newMessage', msg);
+    } catch (err) {
+      // noop
+    }
+
+    return msg;
   }
 }

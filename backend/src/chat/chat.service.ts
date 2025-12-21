@@ -1,10 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model } from 'mongoose';
 import { ChatGroup } from '../models/ChatGroup.model';
 import { Message } from '../models/Message.model';
-import { SendMessageDto } from './dto/chat.dto';
 
 @Injectable()
 export class ChatService {
@@ -13,25 +11,47 @@ export class ChatService {
     @InjectModel(Message.name) private messageModel: Model<Message>,
   ) {}
 
-  async getChatHistory(bookingId: MongoIdDto['id']) {
-    // Find chat group by bookingId (stub: assumes chatGroup._id === bookingId)
-    return this.messageModel
-      .find({ chatGroup: bookingId })
-      .sort({ createdAt: 1 });
+  async getChatGroupsForUser(userId: string) {
+    const id = userId as any;
+    return this.chatGroupModel
+      .find({
+        $or: [{ tutorId: id }, { studentId: id }, { parentIds: id }],
+      })
+      .lean()
+      .exec();
   }
 
-  async sendMessage(
-    bookingId: MongoIdDto['id'],
-    user: any,
-    dto: SendMessageDto,
-  ) {
-    // Find or create chat group (stub: assumes chatGroup._id === bookingId)
-    const message = new this.messageModel({
-      chatGroup: bookingId,
-      senderId: user.userId,
-      content: dto.content,
-    });
-    await message.save();
-    return message;
+  async getMessages(chatGroupId: string, page = 1, limit = 20) {
+    const skip = Math.max(0, page - 1) * limit;
+    return this.messageModel
+      .find({ chatGroup: chatGroupId })
+      .sort({ _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean()
+      .exec();
+  }
+
+  async createMessage(data: {
+    chatGroup: string;
+    senderId: string;
+    content: string;
+    type?: string;
+    fileUrl?: string;
+    fileName?: string;
+    fileSize?: number;
+  }) {
+    const msg = new this.messageModel({
+      chatGroup: data.chatGroup,
+      senderId: data.senderId,
+      content: data.content,
+      type: data.type,
+      fileUrl: data.fileUrl,
+      fileName: data.fileName,
+      fileSize: data.fileSize,
+    } as any);
+
+    await msg.save();
+    return msg.toObject();
   }
 }

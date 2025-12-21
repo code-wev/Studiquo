@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
@@ -38,7 +39,12 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly chatService: ChatService) {}
+  private onlineUsers = new Map<string, Set<string>>();
+
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   /**
    * Triggered automatically when a client connects to the WebSocket server.
@@ -46,10 +52,33 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @param client - Connected socket instance
    */
   handleConnection(client: Socket): void {
-    // Send a welcome message to the newly connected client
-    client.emit('connected', {
-      message: 'Welcome to the chat!',
-    });
+    // Attempt to identify the user from the token provided during handshake
+    try {
+      const token =
+        (client.handshake && (client.handshake.auth as any)?.token) ||
+        (client.handshake && (client.handshake.query as any)?.token);
+
+      if (token) {
+        const payload = this.jwtService.verify(token as string);
+        // store user info on socket for later use
+        (client as any).data = (client as any).data || {};
+        (client as any).data.user = payload;
+
+        const userId = String(payload.sub || payload._id);
+        const set = this.onlineUsers.get(userId) || new Set<string>();
+        set.add(client.id);
+        this.onlineUsers.set(userId, set);
+
+        // broadcast user's online status
+        this.server.emit('userOnline', { userId, sockets: set.size });
+        // send full online list to connecting client
+        client.emit('connected', { message: 'Welcome to the chat!', userId });
+      } else {
+        client.emit('connected', { message: 'Welcome to the chat!' });
+      }
+    } catch (err) {
+      client.emit('connected', { message: 'Welcome to the chat!' });
+    }
   }
 
   /**
@@ -58,10 +87,26 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
    * @param client - Disconnected socket instance
    */
   handleDisconnect(client: Socket): void {
-    // Notify all connected clients that a user has left
-    this.server.emit('userLeft', {
-      userId: client.id,
-    });
+    // If socket was associated with a user, remove it from online map
+    try {
+      const user = (client as any).data?.user;
+      if (user) {
+        const userId = String(user.sub || user._id);
+        const set = this.onlineUsers.get(userId);
+        if (set) {
+          set.delete(client.id);
+          if (set.size === 0) {
+            this.onlineUsers.delete(userId);
+            this.server.emit('userOffline', { userId });
+          } else {
+            this.onlineUsers.set(userId, set);
+            this.server.emit('userOnline', { userId, sockets: set.size });
+          }
+        }
+      }
+    } catch (err) {
+      // best-effort only
+    }
   }
 
   /**
@@ -114,24 +159,42 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody()
     data: { room: string; user: string; message: string },
     @ConnectedSocket() client: Socket,
-  ): Promise<{ event: string; data: any }> {
-    /**
-     * Construct DTO and request object to reuse
-     * existing ChatService logic (HTTP-like context)
-     */
-    const dto = { content: data.message };
-    const req = { user: { sub: data.user } };
+  ) {
+    const sender = (client as any).data?.user;
+    const senderId = sender ? String(sender.sub || sender._id) : data.user;
 
-    // Persist the message using the chat service
-    await this.chatService.sendMessage(data.room, req, dto);
+    // persist message
+    const msg = await this.chatService.createMessage({
+      chatGroup: data.room,
+      senderId,
+      content: data.message,
+    });
 
-    // Broadcast the message to all clients in the room
-    this.server.to(data.room).emit('newMessage', data);
+    // broadcast to room
+    this.server.to(data.room).emit('newMessage', msg);
 
-    // Send acknowledgement back to the sender
-    return {
-      event: 'messageSent',
-      data,
-    };
+    return { event: 'messageSent', data: msg };
+  }
+
+  @SubscribeMessage('typing')
+  handleTyping(
+    @MessageBody() data: { room: string; isTyping: boolean },
+    @ConnectedSocket() client: Socket,
+  ) {
+    const sender = (client as any).data?.user;
+    const userId = sender ? String(sender.sub || sender._id) : client.id;
+    this.server
+      .to(data.room)
+      .emit('userTyping', { userId, isTyping: !!data.isTyping });
+    return { event: 'typing', data: { userId, isTyping: !!data.isTyping } };
+  }
+
+  @SubscribeMessage('leaveRoom')
+  handleLeaveRoom(
+    @MessageBody() data: { room: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    client.leave(data.room);
+    return { event: 'leftRoom', data };
   }
 }
