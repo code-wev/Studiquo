@@ -24,8 +24,10 @@ const monthNames = [
 const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function UpcomingClass() {
-  const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
 
   // Fetch bookings from API
   const {
@@ -56,7 +58,7 @@ export default function UpcomingClass() {
     }
   }, [bookings]);
 
-  // Generate calendar days
+  // Generate calendar days for current month only
   const getDaysInMonth = (year, month) => {
     return new Date(year, month + 1, 0).getDate();
   };
@@ -65,24 +67,8 @@ export default function UpcomingClass() {
     return new Date(year, month, 1).getDay();
   };
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-    );
-  };
-
-  const goToNextMonth = () => {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
-    );
-  };
-
   const handleDayClick = (day) => {
-    const newSelectedDate = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      day
-    );
+    const newSelectedDate = new Date(currentYear, currentMonth, day);
     setSelectedDate(newSelectedDate);
   };
 
@@ -109,7 +95,6 @@ export default function UpcomingClass() {
 
   // Check if a date is today
   const isToday = (date) => {
-    const today = new Date();
     return (
       date.getDate() === today.getDate() &&
       date.getMonth() === today.getMonth() &&
@@ -143,27 +128,24 @@ export default function UpcomingClass() {
   };
 
   // Get month and year for display
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth();
   const monthName = monthNames[currentMonth];
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDayOfMonth = getFirstDayOfMonth(currentYear, currentMonth);
 
-  // Generate days array
+  // Generate days array - only current month
   const days = [];
 
-  // Previous month days
-  const prevMonthDays = getDaysInMonth(currentYear, currentMonth - 1);
-  for (let i = firstDayOfMonth - 1; i >= 0; i--) {
+  // Empty cells for days before the 1st of the month
+  for (let i = 0; i < firstDayOfMonth; i++) {
     days.push({
-      day: prevMonthDays - i,
+      day: "",
       isCurrentMonth: false,
       isSelected: false,
+      isEmpty: true,
     });
   }
 
   // Current month days
-  const today = new Date();
   for (let i = 1; i <= daysInMonth; i++) {
     const isTodayDate =
       today.getDate() === i &&
@@ -187,17 +169,7 @@ export default function UpcomingClass() {
       isToday: isTodayDate,
       isSelected,
       hasBooking,
-    });
-  }
-
-  // Next month days
-  const totalCells = 42; // 6 rows * 7 days
-  const nextMonthDays = totalCells - days.length;
-  for (let i = 1; i <= nextMonthDays; i++) {
-    days.push({
-      day: i,
-      isCurrentMonth: false,
-      isSelected: false,
+      isEmpty: false,
     });
   }
 
@@ -376,21 +348,11 @@ export default function UpcomingClass() {
 
           {/* Calendar Box */}
           <div className='border border-gray-200 rounded-2xl p-6 mb-6'>
-            {/* Month Header */}
-            <div className='flex justify-between items-center mb-6'>
-              <button
-                onClick={goToPreviousMonth}
-                className='text-gray-400 hover:text-gray-600 text-xl cursor-pointer'>
-                &lt;
-              </button>
+            {/* Month Header - Only current month, no navigation */}
+            <div className='flex justify-center items-center mb-6'>
               <p className='font-semibold text-gray-900 text-lg'>
                 {monthName} {currentYear}
               </p>
-              <button
-                onClick={goToNextMonth}
-                className='text-gray-400 hover:text-gray-600 text-xl cursor-pointer'>
-                &gt;
-              </button>
             </div>
 
             {/* Week Days */}
@@ -400,18 +362,20 @@ export default function UpcomingClass() {
               ))}
             </div>
 
-            {/* Calendar Days */}
+            {/* Calendar Days - Only current month */}
             <div className='grid grid-cols-7 gap-2 text-center text-sm'>
               {days.map((dayData, index) => {
-                const { day, isCurrentMonth, isToday, isSelected, hasBooking } =
-                  dayData;
+                const {
+                  day,
+                  isCurrentMonth,
+                  isToday,
+                  isSelected,
+                  hasBooking,
+                  isEmpty,
+                } = dayData;
 
-                if (!isCurrentMonth) {
-                  return (
-                    <div key={index} className='py-3 text-gray-300'>
-                      {day}
-                    </div>
-                  );
+                if (isEmpty) {
+                  return <div key={index} className='py-3'></div>;
                 }
 
                 return (
@@ -431,11 +395,9 @@ export default function UpcomingClass() {
                           : ""
                       }
                       ${!isSelected && !hasBooking ? "hover:bg-gray-100" : ""}
+                      ${isToday ? "ring-2 ring-purple-400" : ""}
                     `}>
                     {day}
-                    {isToday && !isSelected && (
-                      <div className='absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-400 rounded-full'></div>
-                    )}
                     {hasBooking && !isSelected && (
                       <div className='absolute -top-1 right-1 w-2 h-2 bg-purple-500 rounded-full'></div>
                     )}
@@ -615,7 +577,7 @@ export default function UpcomingClass() {
             {/* Upcoming Classes Summary */}
             <div className='bg-white border border-gray-200 rounded-xl p-6'>
               <h3 className='font-semibold text-gray-900 mb-4'>
-                Upcoming This Week
+                Upcoming This Month
               </h3>
               {bookings.length > 0 ? (
                 <div className='space-y-3'>
@@ -662,7 +624,7 @@ export default function UpcomingClass() {
                 </div>
               ) : (
                 <p className='text-gray-500 text-sm'>
-                  No upcoming classes this week
+                  No upcoming classes this month
                 </p>
               )}
             </div>
