@@ -23,7 +23,7 @@ export class ChatController {
 
   @Get('groups')
   async getGroups(@GetUser() user: any) {
-    const userId = user?.sub || user?._id;
+    const userId = user?.userId;
     return this.chatService.getChatGroupsForUser(String(userId));
   }
 
@@ -51,7 +51,7 @@ export class ChatController {
     },
     @GetUser() user: any,
   ) {
-    const userId = String(user?.sub || user?._id);
+    const userId = user?.userId;
     const msg = await this.chatService.createMessage({
       chatGroup: groupId,
       senderId: userId,

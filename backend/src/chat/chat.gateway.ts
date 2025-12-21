@@ -65,6 +65,7 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         (client as any).data.user = payload;
 
         const userId = String(payload.sub || payload._id);
+
         const set = this.onlineUsers.get(userId) || new Set<string>();
         set.add(client.id);
         this.onlineUsers.set(userId, set);
