@@ -278,7 +278,9 @@ const FindTutorPage = () => {
                           </span>
                         </div>
                         <p className='font-semibold text-xl text-purple-700'>
-                          €{tutor?.minHourlyRate} - €{tutor?.maxHourlyRate}/hour
+                          €{tutor?.groupHourlyRate} - €
+                          {tutor?.oneOnOneHourlyRate}
+                          /hour
                         </p>
                       </div>
 

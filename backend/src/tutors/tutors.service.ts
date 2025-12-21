@@ -71,11 +71,17 @@ export class TutorsService {
     }
 
     if (maxHourlyRate !== undefined) {
-      tutorMatch.hourlyRate = { ...tutorMatch.hourlyRate, $lte: maxHourlyRate };
+      tutorMatch.$or = [
+        { groupHourlyRate: { $lte: maxHourlyRate } },
+        { oneOnOneHourlyRate: { $lte: maxHourlyRate } },
+      ];
     }
 
     if (minHourlyRate !== undefined) {
-      tutorMatch.hourlyRate = { ...tutorMatch.hourlyRate, $gte: minHourlyRate };
+      tutorMatch.$or = [
+        { groupHourlyRate: { $gte: minHourlyRate } },
+        { oneOnOneHourlyRate: { $gte: minHourlyRate } },
+      ];
     }
 
     /** --------------------
