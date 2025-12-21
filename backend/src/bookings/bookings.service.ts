@@ -196,7 +196,7 @@ export class BookingsService {
       },
       { $unwind: '$booking' },
 
-      // 5. Lookup timeSlot (SINGLE DOC)
+      // 5. Lookup timeSlot
       {
         $lookup: {
           from: 'timeslots',
@@ -229,11 +229,37 @@ export class BookingsService {
       },
       { $unwind: '$tutorProfile' },
 
-      // 8. Pagination
+      // 8. Add status order for sorting
+      {
+        $addFields: {
+          statusOrder: {
+            $switch: {
+              branches: [
+                { case: { $eq: ['$booking.status', 'PENDING'] }, then: 1 },
+                { case: { $eq: ['$booking.status', 'SCHEDULED'] }, then: 2 },
+                { case: { $eq: ['$booking.status', 'CANCELLED'] }, then: 3 },
+                { case: { $eq: ['$booking.status', 'COMPLETED'] }, then: 4 },
+              ],
+              default: 5,
+            },
+          },
+        },
+      },
+
+      // 9. Sort: PENDING first, then by date (earliest first)
+      {
+        $sort: {
+          statusOrder: 1, // PENDING (1) appears first
+          'availability.date': 1, // Earliest dates first
+          'timeSlot.startTime': 1, // Earliest times first
+        },
+      },
+
+      // 10. Pagination
       { $skip: (page - 1) * limit },
       { $limit: limit },
 
-      // 9. Final Projection (FIXED)
+      // 11. Final Projection
       {
         $project: {
           _id: 0,
@@ -255,16 +281,16 @@ export class BookingsService {
             id: '$timeSlot._id',
             subject: '$timeSlot.subject',
             type: '$timeSlot.type',
-            // Conditional meetLink
             meetLink: {
               $cond: {
-                if: { $in: ['$booking.status', ['PENDING', 'CANCELLED']] },
-                then: null,
-                else: '$timeSlot.meetLink',
+                if: { $in: ['$booking.status', ['SCHEDULED', 'COMPLETED']] },
+                then: '$timeSlot.meetLink',
+                else: null,
               },
             },
             startTime: '$timeSlot.startTime',
             endTime: '$timeSlot.endTime',
+            date: '$availability.date',
           },
         },
       },
