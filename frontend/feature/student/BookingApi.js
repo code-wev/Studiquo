@@ -44,6 +44,14 @@ export const BookingApi = createApi({
         body: { bookingId, studentId },
       }),
     }),
+
+    getMyUpcomingBookings: builder.query({
+      query: () => ({
+        url: `/bookings/my-upcoming-bookings`,
+        method: "GET",
+      }),
+      providesTags: ["Booking"],
+    }),
   }),
 });
 
@@ -51,4 +59,5 @@ export const {
   useCreateBookingMutation,
   useGetMyChildrenBookingsQuery,
   useMakePaymentMutation,
+  useGetMyUpcomingBookingsQuery,
 } = BookingApi;
