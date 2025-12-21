@@ -11,7 +11,7 @@ export enum MessageType {
   PDF = 'PDF',
 }
 
-@Schema()
+@Schema({ timestamps: true })
 export class Message extends Document {
   @Prop({ type: Types.ObjectId, ref: 'ChatGroup', required: true })
   chatGroup: Types.ObjectId;

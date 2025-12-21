@@ -48,13 +48,15 @@ export class ChatService {
 
   async getMessages(chatGroupId: string, page = 1, limit = 20) {
     const skip = Math.max(0, page - 1) * limit;
-    return this.messageModel
-      .find({ chatGroup: chatGroupId })
+    const messages = await this.messageModel
+      .find({ chatGroup: new mongoose.Types.ObjectId(chatGroupId) })
       .sort({ _id: -1 })
       .skip(skip)
       .limit(limit)
       .lean()
       .exec();
+
+    return messages.reverse();
   }
 
   async createMessage(data: {
