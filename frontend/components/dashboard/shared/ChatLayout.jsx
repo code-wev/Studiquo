@@ -280,7 +280,10 @@ export default function ChatInterface() {
                     setLocalMessages([]);
                     const s = getSocket();
                     try {
-                      s?.emit("joinRoom", { room: group._id, user: currentUserId });
+                      s?.emit("joinRoom", {
+                        room: group._id,
+                        user: currentUserId,
+                      });
                     } catch (e) {}
                   }}
                   className={`p-4 cursor-pointer border-b border-gray-200 hover:bg-white transition-colors ${
