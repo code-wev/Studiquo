@@ -392,14 +392,180 @@ export class BookingsService {
     };
   }
 
+  /**
+   * Get all upcoming bookings for the authenticated student.
+   *
+   * @param user - authenticated student user
+   * @return list of upcoming bookings for the student
+   */
   async getMyUpcomingBookings(user: any) {
-    const bookings = await this.bookingModel
-      .find({
-        student: new Types.ObjectId(user.userId),
-        status: { $in: ['SCHEDULED', 'COMPLETED'] },
-      })
-      .populate('timeSlot')
-      .exec();
+    const bookings = await this.bookingModel.aggregate([
+      // Step 1: Find all booking IDs for this student
+      {
+        $lookup: {
+          from: 'bookingstudents',
+          let: { bookingId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$booking', '$$bookingId'] },
+                    { $eq: ['$student', new Types.ObjectId(user.userId)] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: 'studentBooking',
+        },
+      },
+
+      // Step 2: Filter only bookings where this student is enrolled
+      {
+        $match: {
+          'studentBooking.0': { $exists: true },
+        },
+      },
+
+      // Step 3: Populate timeSlot details
+      {
+        $lookup: {
+          from: 'timeslots',
+          localField: 'timeSlot',
+          foreignField: '_id',
+          as: 'timeSlotDetails',
+        },
+      },
+
+      // Step 4: Unwind timeSlotDetails
+      {
+        $unwind: {
+          path: '$timeSlotDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Step 5: Get tutor availability linked to the time slot
+      {
+        $lookup: {
+          from: 'tutoravailabilities',
+          localField: 'timeSlotDetails.tutorAvailability',
+          foreignField: '_id',
+          as: 'tutorAvailability',
+        },
+      },
+
+      // Step 6: Unwind tutorAvailability
+      {
+        $unwind: {
+          path: '$tutorAvailability',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Step 7: Get tutor details from tutorAvailability
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'tutorAvailability.user',
+          foreignField: '_id',
+          as: 'tutorDetails',
+        },
+      },
+
+      // Step 8: Unwind tutorDetails
+      {
+        $unwind: {
+          path: '$tutorDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Step 9: Filter only upcoming bookings (based on tutorAvailability date)
+      {
+        $match: {
+          'tutorAvailability.date': { $gte: new Date() },
+        },
+      },
+
+      // Step 10: Format individual booking documents with conditional meetLink
+      {
+        $project: {
+          _id: 1,
+          subject: 1,
+          type: 1,
+          status: 1,
+          createdAt: 1,
+          updatedAt: 1,
+          timeSlot: {
+            _id: '$timeSlotDetails._id',
+            startTime: '$timeSlotDetails.startTime',
+            endTime: '$timeSlotDetails.endTime',
+            subject: '$timeSlotDetails.subject',
+            type: '$timeSlotDetails.type',
+            // Conditionally include meetLink based on booking status
+            meetLink: {
+              $cond: {
+                if: { $in: ['$status', ['COMPLETED', 'SCHEDULED']] },
+                then: '$timeSlotDetails.meetLink',
+                else: null,
+              },
+            },
+          },
+          tutor: {
+            _id: '$tutorDetails._id',
+            firstName: '$tutorDetails.firstName',
+            lastName: '$tutorDetails.lastName',
+            avatar: '$tutorDetails.avatar',
+          },
+          bookingDate: '$tutorAvailability.date',
+        },
+      },
+
+      // Step 11: Group bookings by date (tutorAvailability.date)
+      {
+        $group: {
+          _id: '$bookingDate',
+          date: { $first: '$bookingDate' },
+          list: {
+            $push: {
+              _id: '$_id',
+              subject: '$subject',
+              type: '$type',
+              status: '$status',
+              createdAt: '$createdAt',
+              updatedAt: '$updatedAt',
+              timeSlot: '$timeSlot',
+              tutor: '$tutor',
+            },
+          },
+          totalBookings: { $sum: 1 },
+        },
+      },
+
+      // Step 12: Format the grouped response (renaming 'bookings' to 'list')
+      {
+        $project: {
+          _id: 0,
+          date: 1,
+          list: 1,
+          totalBookings: 1,
+        },
+      },
+
+      // Step 13: Sort by date ascending
+      {
+        $sort: {
+          date: 1,
+        },
+      },
+    ]);
+
+    return {
+      message: 'Upcoming bookings retrieved successfully',
+      bookings,
+    };
   }
 
   // async updateBookingStatus(bookingId: string, status: string) {

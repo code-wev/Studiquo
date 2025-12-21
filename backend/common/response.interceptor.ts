@@ -52,6 +52,7 @@ export class ResponseInterceptor implements NestInterceptor {
           success: statusCode >= 200 && statusCode < 300,
           message,
           method,
+          endpoint: url,
           statusCode,
           timestamp: new Date().toISOString(),
           data: responseData,

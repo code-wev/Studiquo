@@ -64,8 +64,14 @@ export class BookingsController {
     return this.bookingsService.getChildrenBookings(user, pagination);
   }
 
+  /**
+   * Get all upcoming bookings for the authenticated student.
+   *
+   * @param user - authenticated student user
+   * @return list of upcoming bookings for the student
+   */
   @Get('my-upcoming-bookings')
-  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent)
+  @Roles(UserRole.Student)
   async myUpcomingBookings(@GetUser() user: any) {
     return this.bookingsService.getMyUpcomingBookings(user);
   }
