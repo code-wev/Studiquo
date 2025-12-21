@@ -23,6 +23,7 @@ export class ChatService {
       ? new mongoose.Types.ObjectId(String(id))
       : id;
 
+    // current time UTC
     const now = new Date();
 
     const chatsGroup = await this.chatGroupModel.aggregate([
@@ -101,6 +102,7 @@ export class ChatService {
   async getMessages(chatGroupId: string, page = 1, limit = 20) {
     const skip = Math.max(0, page - 1) * limit;
 
+    // current time UTC
     const now = new Date();
 
     const messages = await this.messageModel.aggregate([
@@ -155,6 +157,7 @@ export class ChatService {
     fileName?: string;
     fileSize?: number;
   }) {
+    // current time UTC
     const now = new Date();
 
     const chatGroup = await this.chatGroupModel.findOne({
