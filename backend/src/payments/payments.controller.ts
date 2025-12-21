@@ -96,7 +96,7 @@ export class PaymentsController {
             const tutorEarning = Math.max(0, amt - commission);
 
             // Create payment record including commission and tutor earning
-            const paymentDoc = await this.paymentModel.create({
+            await this.paymentModel.create({
               booking: bookingId,
               student: studentId,
               tutor: tutorId,
