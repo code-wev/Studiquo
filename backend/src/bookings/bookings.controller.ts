@@ -76,6 +76,18 @@ export class BookingsController {
     return this.bookingsService.getMyUpcomingBookings(user);
   }
 
+  /**
+   * Get all bookings for the authenticated tutor.
+   *
+   * @param user - authenticated tutor user
+   * @return list of bookings for the tutor
+   */
+  @Get('tutor-bookings')
+  @Roles(UserRole.Tutor)
+  async tutorBookings(@GetUser() user: any) {
+    return this.bookingsService.getTutorBookings(user);
+  }
+
   // @Put(':bookingId/cancel')
   // @Roles(UserRole.Student, UserRole.Tutor, UserRole.Admin)
   // async cancelBooking(@Param('bookingId') bookingId: MongoIdDto['id']) {

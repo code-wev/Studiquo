@@ -80,14 +80,56 @@ export class BookingsService {
       );
     }
 
-    // Ensure the timeslot isn't already booked (pending or scheduled)
-    const existing = await this.bookingModel.findOne({
+    // Check if time slot is already fully booked
+    // First, get all bookings for this time slot
+    const existingBookings = await this.bookingModel
+      .find({
+        timeSlot: new Types.ObjectId(slot._id),
+        status: { $in: ['PENDING', 'SCHEDULED'] },
+      })
+      .populate('timeSlot');
+
+    if (existingBookings.length > 0) {
+      // For ONE_TO_ONE: can only have one booking
+      if (dto.type === 'ONE_TO_ONE') {
+        throw new BadRequestException('This time slot is already booked');
+      }
+
+      // For GROUP: check capacity
+      if (dto.type === 'GROUP') {
+        // Get total students already enrolled in this time slot
+        const bookingIds = existingBookings.map((b) => b._id);
+        const enrolledStudentsCount =
+          await this.bookingStudentsModel.countDocuments({
+            booking: { $in: bookingIds },
+          });
+
+        // You need to define max capacity for group sessions
+        // Assuming you have a field in TimeSlot or a constant
+        const maxGroupCapacity = 500; // Adjust this based on your requirements
+
+        if (enrolledStudentsCount >= maxGroupCapacity) {
+          throw new BadRequestException('This group session is already full');
+        }
+      }
+    }
+
+    // Also check if the current student already has a booking in this time slot
+    const studentExistingBooking = await this.bookingModel.findOne({
       timeSlot: new Types.ObjectId(slot._id),
       status: { $in: ['PENDING', 'SCHEDULED'] },
     });
 
-    if (existing) {
-      throw new BadRequestException('You have already booked this time slot');
+    if (studentExistingBooking) {
+      // Check if this student is already enrolled in the booking
+      const existingStudentBooking = await this.bookingStudentsModel.findOne({
+        booking: studentExistingBooking._id,
+        student: new Types.ObjectId(user.userId),
+      });
+
+      if (existingStudentBooking) {
+        throw new BadRequestException('You have already booked this time slot');
+      }
     }
 
     const booking = new this.bookingModel({
@@ -105,14 +147,6 @@ export class BookingsService {
       student: new Types.ObjectId(user.userId),
     });
     await bookingStudent.save();
-
-    // Optionally create a lesson report for this booking
-    await this.lessonReportModel.create({
-      booking: booking._id,
-      description: '',
-      dueDate: new Date(),
-      submitted: false,
-    });
 
     // Students create bookings but should NOT be able to complete payment.
     // Return the booking record; parents will later generate a payment link.
@@ -400,7 +434,7 @@ export class BookingsService {
    */
   async getMyUpcomingBookings(user: any) {
     // Get today's date boundaries
-    const today = new Date();
+    const today = new Date().getUTCDay();
     const todayStart = new Date(today);
     todayStart.setHours(0, 0, 0, 0);
 
@@ -668,6 +702,397 @@ export class BookingsService {
       data: {
         bookings: finalResult.bookings,
         stats: finalResult.stats,
+      },
+    };
+  }
+
+  /**
+   * Get all bookings for the authenticated tutor in the current month.
+   * Grouped by date with details of each time slot and enrolled students.
+   *
+   * @param user - authenticated tutor user
+   * @return list of tutor bookings grouped by date for the current month
+   */
+  async getTutorBookings(user: any) {
+    // Get current month boundaries
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    currentMonthEnd.setHours(23, 59, 59, 999);
+
+    const result = await this.bookingModel.aggregate([
+      // Step 1: Get time slots for the tutor in current month
+      {
+        $lookup: {
+          from: 'timeslots',
+          localField: 'timeSlot',
+          foreignField: '_id',
+          as: 'timeSlotDetails',
+        },
+      },
+
+      // Step 2: Unwind timeSlotDetails
+      {
+        $unwind: {
+          path: '$timeSlotDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Step 3: Get tutor availability for the time slot
+      {
+        $lookup: {
+          from: 'tutoravailabilities',
+          localField: 'timeSlotDetails.tutorAvailability',
+          foreignField: '_id',
+          as: 'tutorAvailability',
+        },
+      },
+
+      // Step 4: Unwind tutorAvailability
+      {
+        $unwind: {
+          path: '$tutorAvailability',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Step 5: Filter only bookings for this tutor in current month
+      {
+        $match: {
+          'tutorAvailability.user': new Types.ObjectId(user.userId),
+          'tutorAvailability.date': {
+            $gte: currentMonthStart,
+            $lte: currentMonthEnd,
+          },
+        },
+      },
+
+      // Step 6: Get all students enrolled in each booking (but only for counting)
+      {
+        $lookup: {
+          from: 'bookingstudents',
+          localField: '_id',
+          foreignField: 'booking',
+          as: 'enrolledStudents',
+        },
+      },
+
+      // Step 7: Get tutor details (optional)
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'tutorAvailability.user',
+          foreignField: '_id',
+          as: 'tutorDetails',
+        },
+      },
+
+      // Step 8: Unwind tutorDetails
+      {
+        $unwind: {
+          path: '$tutorDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Step 9: Add fields for calculations
+      {
+        $addFields: {
+          bookingDate: '$tutorAvailability.date',
+          studentsCount: { $size: '$enrolledStudents' },
+          isToday: {
+            $and: [
+              {
+                $gte: [
+                  '$tutorAvailability.date',
+                  new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+                ],
+              },
+              {
+                $lte: [
+                  '$tutorAvailability.date',
+                  new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    now.getDate(),
+                    23,
+                    59,
+                    59,
+                    999,
+                  ),
+                ],
+              },
+            ],
+          },
+        },
+      },
+
+      // Step 10: Use facet to get both grouped bookings and stats
+      {
+        $facet: {
+          // Main pipeline for grouped bookings by date
+          groupedBookings: [
+            // Format individual booking documents
+            {
+              $project: {
+                _id: 1,
+                subject: 1,
+                type: 1,
+                status: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                timeSlot: {
+                  _id: '$timeSlotDetails._id',
+                  startTime: '$timeSlotDetails.startTime',
+                  endTime: '$timeSlotDetails.endTime',
+                  subject: '$timeSlotDetails.subject',
+                  type: '$timeSlotDetails.type',
+                  meetLink: '$timeSlotDetails.meetLink',
+                },
+                bookingDate: 1,
+                studentsCount: 1,
+              },
+            },
+            // Group by date first, then by time slot (since multiple bookings can share same time slot)
+            {
+              $group: {
+                _id: {
+                  date: '$bookingDate',
+                  slotId: '$timeSlot._id',
+                },
+                date: { $first: '$bookingDate' },
+                slotDetails: { $first: '$timeSlot' },
+                bookings: {
+                  $push: {
+                    _id: '$_id',
+                    subject: '$subject',
+                    type: '$type',
+                    status: '$status',
+                    createdAt: '$createdAt',
+                    updatedAt: '$updatedAt',
+                    studentsCount: '$studentsCount',
+                  },
+                },
+                totalStudentsInSlot: { $sum: '$studentsCount' },
+                slotBookingsCount: { $sum: 1 },
+              },
+            },
+            // Now group by date only
+            {
+              $group: {
+                _id: '$date',
+                date: { $first: '$date' },
+                timeSlots: {
+                  $push: {
+                    slotId: '$slotDetails._id',
+                    startTime: '$slotDetails.startTime',
+                    endTime: '$slotDetails.endTime',
+                    subject: '$slotDetails.subject',
+                    type: '$slotDetails.type',
+                    meetLink: '$slotDetails.meetLink',
+                    bookings: '$bookings',
+                    totalStudentsInSlot: '$totalStudentsInSlot',
+                    slotBookingsCount: '$slotBookingsCount',
+                  },
+                },
+                totalBookings: { $sum: '$slotBookingsCount' },
+                totalStudents: { $sum: '$totalStudentsInSlot' },
+              },
+            },
+            // Format grouped response (removed subjects array)
+            {
+              $project: {
+                _id: 0,
+                date: 1,
+                dateString: {
+                  $dateToString: {
+                    format: '%Y-%m-%d',
+                    date: '$date',
+                  },
+                },
+                totalBookings: 1,
+                totalStudents: 1,
+                timeSlots: {
+                  $map: {
+                    input: {
+                      $sortArray: {
+                        input: '$timeSlots',
+                        sortBy: { startTime: 1 },
+                      },
+                    },
+                    as: 'slot',
+                    in: {
+                      slotId: '$$slot.slotId',
+                      startTime: '$$slot.startTime',
+                      endTime: '$$slot.endTime',
+                      subject: '$$slot.subject',
+                      type: '$$slot.type',
+                      meetLink: '$$slot.meetLink',
+                      slotBookingsCount: '$$slot.slotBookingsCount',
+                      totalStudentsInSlot: '$$slot.totalStudentsInSlot',
+                      bookings: {
+                        $map: {
+                          input: '$$slot.bookings',
+                          as: 'booking',
+                          in: {
+                            _id: '$$booking._id',
+                            subject: '$$booking.subject',
+                            type: '$$booking.type',
+                            status: '$$booking.status',
+                            createdAt: '$$booking.createdAt',
+                            updatedAt: '$$booking.updatedAt',
+                            studentsCount: '$$booking.studentsCount',
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+            // Sort by date
+            {
+              $sort: {
+                date: 1,
+              },
+            },
+          ],
+
+          // Pipeline for statistics
+          statsCalculation: [
+            // Calculate all stats in one group stage
+            {
+              $group: {
+                _id: null,
+                totalBookings: { $sum: 1 },
+                totalStudents: { $sum: '$studentsCount' },
+                todayBookings: {
+                  $sum: {
+                    $cond: {
+                      if: '$isToday',
+                      then: 1,
+                      else: 0,
+                    },
+                  },
+                },
+                completedBookings: {
+                  $sum: {
+                    $cond: {
+                      if: { $eq: ['$status', 'COMPLETED'] },
+                      then: 1,
+                      else: 0,
+                    },
+                  },
+                },
+                scheduledBookings: {
+                  $sum: {
+                    $cond: {
+                      if: { $eq: ['$status', 'SCHEDULED'] },
+                      then: 1,
+                      else: 0,
+                    },
+                  },
+                },
+                pendingBookings: {
+                  $sum: {
+                    $cond: {
+                      if: { $eq: ['$status', 'PENDING'] },
+                      then: 1,
+                      else: 0,
+                    },
+                  },
+                },
+                cancelledBookings: {
+                  $sum: {
+                    $cond: {
+                      if: { $eq: ['$status', 'CANCELLED'] },
+                      then: 1,
+                      else: 0,
+                    },
+                  },
+                },
+              },
+            },
+            // Format stats object
+            {
+              $project: {
+                _id: 0,
+                totalBookings: 1,
+                totalStudents: 1,
+                todayBookings: 1,
+                completedBookings: 1,
+                scheduledBookings: 1,
+                pendingBookings: 1,
+                cancelledBookings: 1,
+                // Calculate averages
+                avgStudentsPerBooking: {
+                  $cond: {
+                    if: { $gt: ['$totalBookings', 0] },
+                    then: { $divide: ['$totalStudents', '$totalBookings'] },
+                    else: 0,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      },
+
+      // Step 11: Format the final response structure
+      {
+        $project: {
+          bookings: {
+            $cond: {
+              if: { $gt: [{ $size: '$groupedBookings' }, 0] },
+              then: '$groupedBookings',
+              else: [],
+            },
+          },
+          stats: {
+            $cond: {
+              if: { $gt: [{ $size: '$statsCalculation' }, 0] },
+              then: { $arrayElemAt: ['$statsCalculation', 0] },
+              else: {
+                totalBookings: 0,
+                totalStudents: 0,
+                todayBookings: 0,
+                completedBookings: 0,
+                scheduledBookings: 0,
+                pendingBookings: 0,
+                cancelledBookings: 0,
+                avgStudentsPerBooking: 0,
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    // Extract the single result from facet
+    const finalResult = result[0] || {
+      bookings: [],
+      stats: {
+        totalBookings: 0,
+        totalStudents: 0,
+        todayBookings: 0,
+        completedBookings: 0,
+        scheduledBookings: 0,
+        pendingBookings: 0,
+        cancelledBookings: 0,
+        avgStudentsPerBooking: 0,
+      },
+    };
+
+    return {
+      message: 'Tutor bookings retrieved successfully',
+      bookings: finalResult.bookings,
+      stats: finalResult.stats,
+      currentMonth: {
+        start: currentMonthStart.toISOString(),
+        end: currentMonthEnd.toISOString(),
+        month: now.toLocaleString('default', { month: 'long' }),
+        year: now.getFullYear(),
       },
     };
   }
