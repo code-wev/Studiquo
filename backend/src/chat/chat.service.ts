@@ -14,48 +14,129 @@ export class ChatService {
   async getChatGroupsForUser(userId: string) {
     if (!userId) return [];
 
-    // normalize possible shapes (token payload or plain id)
+    // normalize user id
     let id: any = userId;
-    if (typeof id === 'object' && (id as any).sub) id = (id as any).sub;
-    if (typeof id === 'object' && (id as any)._id) id = (id as any)._id;
+    if (typeof id === 'object' && id?.sub) id = id.sub;
+    if (typeof id === 'object' && id?._id) id = id._id;
 
-    const orClauses: any[] = [];
-    if (mongoose.isValidObjectId(id)) {
-      const objId = new mongoose.Types.ObjectId(String(id));
-      orClauses.push(
-        { tutorId: objId },
-        { studentId: objId },
-        { parentIds: { $in: [objId] } },
-      );
-    } else {
-      orClauses.push(
-        { tutorId: id },
-        { studentId: id },
-        { parentIds: { $in: [id] } },
-      );
-    }
+    const objId = mongoose.isValidObjectId(id)
+      ? new mongoose.Types.ObjectId(String(id))
+      : id;
 
-    const chatsGroup = await this.chatGroupModel
-      .find({ $or: orClauses })
-      .populate({ path: 'tutorId', select: 'firstName lastName avatar' })
-      .populate({ path: 'studentId', select: 'firstName lastName avatar' })
-      .populate({ path: 'parentIds', select: 'firstName lastName avatar' })
-      .lean()
-      .exec();
+    const chatsGroup = await this.chatGroupModel.aggregate([
+      {
+        $match: {
+          $or: [
+            { tutorId: objId },
+            { studentId: objId },
+            { parentIds: { $in: [objId] } },
+          ],
+        },
+      },
+
+      /* ---------- tutor ---------- */
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'tutorId',
+          foreignField: '_id',
+          as: 'tutor',
+        },
+      },
+      {
+        $unwind: {
+          path: '$tutor',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      /* ---------- student ---------- */
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'studentId',
+          foreignField: '_id',
+          as: 'student',
+        },
+      },
+      {
+        $unwind: {
+          path: '$student',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      /* ---------- parents ---------- */
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'parentIds',
+          foreignField: '_id',
+          as: 'parents',
+        },
+      },
+
+      /* ---------- cleanup ---------- */
+      {
+        $project: {
+          tutorId: 0,
+          studentId: 0,
+          parentIds: 0,
+
+          'tutor.password': 0,
+          'student.password': 0,
+          'parents.password': 0,
+
+          __v: 0,
+        },
+      },
+    ]);
 
     return chatsGroup;
   }
 
   async getMessages(chatGroupId: string, page = 1, limit = 20) {
     const skip = Math.max(0, page - 1) * limit;
-    const messages = await this.messageModel
-      .find({ chatGroup: new mongoose.Types.ObjectId(chatGroupId) })
-      .sort({ _id: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean()
-      .exec();
 
+    const messages = await this.messageModel.aggregate([
+      {
+        $match: {
+          chatGroup: new mongoose.Types.ObjectId(chatGroupId),
+        },
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+      {
+        $skip: skip,
+      },
+      {
+        $limit: limit,
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'senderId',
+          foreignField: '_id',
+          as: 'sender',
+        },
+      },
+      {
+        $unwind: {
+          path: '$sender',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $project: {
+          senderId: 0,
+          'sender.password': 0,
+          'sender.__v': 0,
+        },
+      },
+    ]);
+
+    // reverse to keep oldest → newest in UI
     return messages.reverse();
   }
 
