@@ -450,46 +450,74 @@ export class UsersService extends BaseService<User> {
     parentId: MongoIdDto['id'],
     accept: RespondToParentRequestDto['accept'],
   ) {
-    const student = await this.model.findById(studentId);
-    if (!student) throw new NotFoundException('Student not found');
-    if (student.role !== UserRole.Student)
-      throw new ForbiddenException(
-        'Only students can respond to parent requests',
+    const session = await this.model.db.startSession();
+    session.startTransaction();
+
+    try {
+      const studentObjId = new Types.ObjectId(studentId);
+      const parentObjId = new Types.ObjectId(parentId);
+
+      // 1. Load student
+      const student = await this.model.findById(studentObjId).session(session);
+
+      if (!student) throw new NotFoundException('Student not found');
+      if (student.role !== UserRole.Student) {
+        throw new ForbiddenException(
+          'Only students can respond to parent requests',
+        );
+      }
+
+      // 2. Load parent
+      const parent = await this.model.findById(parentObjId).session(session);
+
+      if (!parent) throw new NotFoundException('Parent not found');
+      if (parent.role !== UserRole.Parent) {
+        throw new BadRequestException('Provided user is not a parent');
+      }
+
+      // 3. Ensure request is pending
+      const isPending = (student.pendingParents || []).some((p) =>
+        new Types.ObjectId(p).equals(parentObjId),
       );
 
-    const parent = await this.model.findById(parentId);
-    if (!parent) throw new NotFoundException('Parent not found');
-    if (parent.role !== UserRole.Parent)
-      throw new BadRequestException('Provided user is not a parent');
+      if (!isPending) {
+        throw new BadRequestException('No pending request from this parent');
+      }
 
-    // Ensure there is a pending request
-    const isPending = (student.pendingParents || []).some((p: any) =>
-      new Types.ObjectId(p).equals(parent._id),
-    );
-    if (!isPending) {
-      throw new BadRequestException('No pending request from this parent');
-    }
-
-    // Remove pending regardless of accept/decline
-    await this.model.updateOne(
-      { _id: student._id },
-      { $pull: { pendingParents: new Types.ObjectId(parent._id) } },
-    );
-
-    if (accept) {
-      // add student to parent's children and add parent to student's parents
+      // 4. Always remove pending request
       await this.model.updateOne(
-        { _id: parent._id },
-        { $addToSet: { children: new Types.ObjectId(student._id) } },
+        { _id: studentObjId },
+        { $pull: { pendingParents: parentObjId } },
+        { session },
       );
-      await this.model.updateOne(
-        { _id: student._id },
-        { $addToSet: { parents: new Types.ObjectId(parent._id) } },
-      );
-      return { message: 'Parent request accepted' };
-    }
 
-    return { message: 'Parent request declined' };
+      // 5. ACCEPT → update both sides
+      if (accept === true) {
+        await this.model.updateOne(
+          { _id: parentObjId },
+          { $addToSet: { children: studentObjId } },
+          { session },
+        );
+
+        await this.model.updateOne(
+          { _id: studentObjId },
+          { $addToSet: { parents: parentObjId } },
+          { session },
+        );
+
+        await session.commitTransaction();
+        return { message: 'Parent request accepted' };
+      }
+
+      // 6. REJECT → nothing else to do
+      await session.commitTransaction();
+      return { message: 'Parent request declined' };
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
   }
 
   /**
