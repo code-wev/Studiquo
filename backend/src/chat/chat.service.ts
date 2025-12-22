@@ -37,12 +37,8 @@ export class ChatService {
             { studentId: objId },
             { parentIds: { $in: [objId] } },
           ],
-          //TODO: Chat can start after this time in this group
-          /* 
-            // Chat can start after this time in this group
-            @Prop({ required: true })
-            startsAt: Date;
-          */
+          // Chat can start after this time in this group
+          startsAt: { $lte: new Date() },
         },
       },
 
@@ -118,16 +114,20 @@ export class ChatService {
   async getMessages(chatGroupId: string, page = 1, limit = 20) {
     const skip = Math.max(0, page - 1) * limit;
 
+    // First check if chat group exists and has started
+    const chatGroup = await this.chatGroupModel.findOne({
+      _id: new mongoose.Types.ObjectId(chatGroupId),
+      startsAt: { $lte: new Date() },
+    });
+
+    if (!chatGroup) {
+      throw new Error('Chat group not found or chat has not started yet');
+    }
+
     const messages = await this.messageModel.aggregate([
       {
         $match: {
           chatGroup: new mongoose.Types.ObjectId(chatGroupId),
-          //TODO: Chat can start after this time in this group
-          /* 
-            // Chat can start after this time in this group
-            @Prop({ required: true })
-            startsAt: Date;
-          */
         },
       },
       {
@@ -183,6 +183,7 @@ export class ChatService {
   }) {
     const chatGroup = await this.chatGroupModel.findOne({
       _id: new mongoose.Types.ObjectId(data.chatGroup),
+      startsAt: { $lte: new Date() },
     });
 
     if (!chatGroup) {
