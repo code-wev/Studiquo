@@ -148,12 +148,12 @@ export class UsersController {
   async respondToParentRequest(
     @GetUser() user: any,
     @Param('parentId') parentId: MongoIdDto['id'],
-    @Body() accept: RespondToParentRequestDto['accept'],
+    @Body() body: RespondToParentRequestDto,
   ) {
     return this.usersService.respondToParentRequest(
       user.userId,
       parentId,
-      accept,
+      body.accept,
     );
   }
 
