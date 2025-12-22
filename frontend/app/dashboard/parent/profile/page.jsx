@@ -1,9 +1,10 @@
 "use client";
 
 import TitleSection from "@/components/dashboard/shared/TitleSection";
-import { useChildrenSearchQuery } from "@/feature/parent/ParentApi";
+import { useAddMyChildMutation, useChildrenSearchQuery } from "@/feature/parent/ParentApi";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import {
   BiInfoCircle,
   BiLink,
@@ -17,6 +18,26 @@ const ParentProfilePage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [foundStudents, setFoundStudents] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [ addMyChild, {isLoadin}] =  useAddMyChildMutation();
+
+
+
+  const handleConnect = async(id)=>{
+    try {
+
+      console.log(id);
+      const result = await addMyChild(id);
+      toast.success(result?.data?.message)
+      console.log(result, "gase re gase");
+
+
+      
+    } catch (error) {
+      console.log(error);
+      toast.error('Something went wrong!')
+    }
+  }
+
 
   const {
     data: searchData,
@@ -52,6 +73,8 @@ const ParentProfilePage = () => {
 
   useEffect(() => {
     if (searchData?.data?.results) {
+
+      console.log(searchData?.data?.results, "ay re aayyyy");
       setFoundStudents(searchData.data.results);
     }
   }, [searchData]);
@@ -131,7 +154,7 @@ const ParentProfilePage = () => {
                             </div>
 
                             <button
-                              onClick={() => console.log(student)}
+                              onClick={() =>  handleConnect(student?._id)}
                               className='px-4 py-2 bg-green-600 text-white rounded-lg flex items-center gap-2'>
                               <BiPlusCircle />
                               Connect

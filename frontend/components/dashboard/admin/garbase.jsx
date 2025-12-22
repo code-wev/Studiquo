@@ -14,9 +14,6 @@ export default function ExamBoard() {
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [updateProfile, { isLoading, loading }] = useUpdateProfileMutation();
   const { data: myPofile } = useMyProfileQuery();
-  console.log(myPofile?.data?.user?.avatar, "my profile is here");
-
-
   const { data } = useGetParentRequestQuery();
   const { data: myParents } = useMyParentsQuery();
   
@@ -33,20 +30,20 @@ export default function ExamBoard() {
     console.log("Rejecting request with ID:", requestId);
     // এখানে আপনার API call যোগ করুন
   };
-
-
-
-
-
+  
   const [selectedAvatar, setSelectedAvatar] = useState(
     myPofile?.data?.user?.avatar
   );
+  
   const [formData, setFormData] = useState({
-    firstName: myPofile?.data?.user?.firstName,
-    lastName: myPofile?.data?.user?.lastName,
-    // email: myPofile?.data?.user?.email,
-    bio: myPofile?.data?.user?.bio,
+    firstName: myPofile?.data?.user?.firstName || "",
+    lastName: myPofile?.data?.user?.lastName || "",
+    email: myPofile?.data?.user?.email || "",
+    bio: myPofile?.data?.user?.bio || "",
   });
+
+
+
 
   const avatarOptions = [
     "https://i.pravatar.cc/150?img=1",
@@ -80,8 +77,7 @@ export default function ExamBoard() {
       if (result.error) {
         console.log(result, "tomi amar result");
       }
-
-      toast.success("Profile Update Succesfully");
+      // toast.success("Profile Update Succesfully");
     } catch (error) {
       console.log(error);
     }
@@ -89,7 +85,15 @@ export default function ExamBoard() {
 
   const handleCancel = () => {
     setIsEditing(false);
+    setFormData({
+      firstName: myPofile?.data?.user?.firstName || "",
+      lastName: myPofile?.data?.user?.lastName || "",
+      email: myPofile?.data?.user?.email || "",
+      bio: myPofile?.data?.user?.bio || "",
+    });
   };
+
+
 
   return (
     <div className=''>
@@ -173,7 +177,6 @@ export default function ExamBoard() {
                   <input
                     type='text'
                     value={formData.firstName}
-                    defaultValue={myPofile?.data?.user?.firstName}
                     onChange={(e) =>
                       handleInputChange("firstName", e.target.value)
                     }
@@ -188,7 +191,6 @@ export default function ExamBoard() {
                   </label>
                   <input
                     type='text'
-                    defaultValue={myPofile?.data?.user?.lastName}
                     value={formData.lastName}
                     onChange={(e) =>
                       handleInputChange("lastName", e.target.value)
@@ -206,22 +208,36 @@ export default function ExamBoard() {
                     type='email'
                     value={formData.email}
                     readOnly
-                    defaultValue={myPofile?.data?.user?.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
+                    disabled={true}
+                    className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600 cursor-not-allowed'
+                  />
+                </div>
+                
+                <div className='col-span-2'>
+                  <label className='block text-sm font-medium text-gray-700 mb-2'>
+                    Bio
+                  </label>
+                  <textarea
+                    value={formData.bio}
+                    onChange={(e) =>
+                      handleInputChange("bio", e.target.value)
+                    }
                     disabled={!isEditing}
-                    className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600'
+                    rows="3"
+                    className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600 resize-none'
+                    placeholder="Tell us about yourself..."
                   />
                 </div>
               </div>
 
-              {/* Parents Info */}
             </div>
           </div>
         </div>
 
         {/* Buttons - Only show when editing */}
         {isEditing && (
-          <div className='flex justify-end gap-3'>
+          <div className='flex justify-end gap-3 mb-8'>
             <button
               onClick={handleCancel}
               className='px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors'>
@@ -229,14 +245,14 @@ export default function ExamBoard() {
             </button>
             <button
               onClick={handleSave}
-              className='px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors'>
-              Save Changes
+              disabled={isLoading}
+              className='px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'>
+              {isLoading ? "Saving..." : "Save Changes"}
             </button>
           </div>
         )}
 
-
-         {/* Pending Parents Requests Section */}
+        {/* Pending Parents Requests Section */}
         <div className="mt-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-semibold text-gray-800">Parent Requests</h2>
@@ -430,10 +446,6 @@ export default function ExamBoard() {
           )}
         </div>
       </div>
-
-
-
-       
     </div>
   );
 }
