@@ -374,33 +374,115 @@ export class UsersService extends BaseService<User> {
   async listChildrenOfParent(parentId: MongoIdDto['id']) {
     const parentObjId = new Types.ObjectId(parentId);
 
-    // 1. Load parent with connected children
-    const parent = await this.model
-      .findById(parentId)
-      .populate('children', 'firstName lastName email avatar studentId')
-      .lean();
+    const result = await this.model.aggregate([
+      // 1. Match parent
+      {
+        $match: {
+          _id: parentObjId,
+          role: UserRole.Parent,
+        },
+      },
 
-    if (!parent) {
+      // 2. Connected children
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'children',
+          foreignField: '_id',
+          as: 'connectedChildren',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                firstName: 1,
+                lastName: 1,
+                email: 1,
+                avatar: 1,
+                studentId: 1,
+                status: { $literal: 'CONNECTED' },
+              },
+            },
+          ],
+        },
+      },
+
+      // 3. Pending children
+      {
+        $lookup: {
+          from: 'users',
+          let: { parentId: '$_id' },
+          as: 'pendingChildren',
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$role', UserRole.Student] },
+                    { $in: ['$$parentId', '$pendingParents'] },
+                  ],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                firstName: 1,
+                lastName: 1,
+                email: 1,
+                avatar: 1,
+                studentId: 1,
+                status: { $literal: 'PENDING' },
+              },
+            },
+          ],
+        },
+      },
+
+      // 4. Merge both into `children`
+      {
+        $addFields: {
+          children: {
+            $concatArrays: ['$connectedChildren', '$pendingChildren'],
+          },
+        },
+      },
+
+      // 5. Counts
+      {
+        $addFields: {
+          connectedCount: { $size: '$connectedChildren' },
+          pendingCount: { $size: '$pendingChildren' },
+          totalCount: {
+            $add: [
+              { $size: '$connectedChildren' },
+              { $size: '$pendingChildren' },
+            ],
+          },
+        },
+      },
+
+      // 6. Final projection
+      {
+        $project: {
+          _id: 0,
+          children: 1,
+          counts: {
+            connected: '$connectedCount',
+            pending: '$pendingCount',
+            total: '$totalCount',
+          },
+        },
+      },
+    ]);
+
+    if (!result.length) {
       throw new NotFoundException('Parent not found');
     }
 
-    // 2. Count pending students (where parent request is awaiting approval)
-    const pendingStudentsCount = await this.model.countDocuments({
-      role: UserRole.Student,
-      pendingParents: parentObjId,
-    });
-
-    // 3️. Connected students count
-    const connectedStudentsCount = parent.children?.length ?? 0;
-
     return {
       message: 'Children list retrieved',
-      children: parent.children || [],
-      counts: {
-        connected: connectedStudentsCount,
-        pending: pendingStudentsCount,
-        total: connectedStudentsCount + pendingStudentsCount,
-      },
+      children: result[0].children,
+      counts: result[0].counts,
     };
   }
 
