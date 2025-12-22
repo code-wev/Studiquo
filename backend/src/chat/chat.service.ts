@@ -37,6 +37,12 @@ export class ChatService {
             { studentId: objId },
             { parentIds: { $in: [objId] } },
           ],
+          //TODO: Chat can start after this time in this group
+          /* 
+            // Chat can start after this time in this group
+            @Prop({ required: true })
+            startsAt: Date;
+          */
         },
       },
 
@@ -116,6 +122,12 @@ export class ChatService {
       {
         $match: {
           chatGroup: new mongoose.Types.ObjectId(chatGroupId),
+          //TODO: Chat can start after this time in this group
+          /* 
+            // Chat can start after this time in this group
+            @Prop({ required: true })
+            startsAt: Date;
+          */
         },
       },
       {
