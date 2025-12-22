@@ -368,16 +368,35 @@ export class UsersService extends BaseService<User> {
    * @return array of student user documents who are children of the parent
    */
   async listChildrenOfParent(parentId: MongoIdDto['id']) {
+    const parentObjId = new Types.ObjectId(parentId);
+
+    // 1. Load parent with connected children
     const parent = await this.model
       .findById(parentId)
       .populate('children', 'firstName lastName email avatar studentId')
       .lean();
 
-    if (!parent) throw new NotFoundException('Parent not found');
+    if (!parent) {
+      throw new NotFoundException('Parent not found');
+    }
+
+    // 2. Count pending students (where parent request is awaiting approval)
+    const pendingStudentsCount = await this.model.countDocuments({
+      role: UserRole.Student,
+      pendingParents: parentObjId,
+    });
+
+    // 3️. Connected students count
+    const connectedStudentsCount = parent.children?.length ?? 0;
 
     return {
       message: 'Children list retrieved',
       children: parent.children || [],
+      counts: {
+        connected: connectedStudentsCount,
+        pending: pendingStudentsCount,
+        total: connectedStudentsCount + pendingStudentsCount,
+      },
     };
   }
 
