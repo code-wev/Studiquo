@@ -66,10 +66,88 @@ export class BookingsService {
     // Load timeslot first and ensure it exists
     const slot = await this.timeSlotModel.findById(dto.timeSlot);
 
-    // TODO: Time same time slot(start and end time) e onno kono student booking koreche kina ta check korte hobe
-
     if (!slot) {
       throw new BadRequestException('Invalid time slot');
+    }
+
+    // Check if student has already booked any timeslot with the same start and end time using aggregation
+    const existingSameTimeBookings = await this.bookingModel.aggregate([
+      {
+        $match: {
+          student: new Types.ObjectId(user.userId),
+          status: { $in: ['PENDING', 'SCHEDULED'] },
+        },
+      },
+      {
+        $lookup: {
+          from: 'timeslots',
+          localField: 'timeSlot',
+          foreignField: '_id',
+          as: 'timeSlotData',
+        },
+      },
+      {
+        $unwind: '$timeSlotData',
+      },
+      {
+        $match: {
+          $or: [
+            // Exact match: same start and end time
+            {
+              $and: [
+                { 'timeSlotData.startTime': new Date(slot.startTime) },
+                { 'timeSlotData.endTime': new Date(slot.endTime) },
+              ],
+            },
+            // Overlap check: new slot starts during existing slot or existing slot starts during new slot
+            {
+              $and: [
+                { 'timeSlotData.startTime': { $lt: new Date(slot.endTime) } },
+                { 'timeSlotData.endTime': { $gt: new Date(slot.startTime) } },
+              ],
+            },
+          ],
+        },
+      },
+      {
+        $limit: 1,
+      },
+    ]);
+
+    if (existingSameTimeBookings.length > 0) {
+      const existingBooking = existingSameTimeBookings[0];
+      const existingSlot = existingBooking.timeSlotData;
+
+      // Check if it's the exact same time slot ID
+      if (existingSlot._id.toString() === slot._id.toString()) {
+        throw new BadRequestException(
+          'You have already booked this exact time slot',
+        );
+      }
+
+      // Check if it's the exact same start and end time
+      if (
+        existingSlot.startTime.getTime() === slot.startTime.getTime() &&
+        existingSlot.endTime.getTime() === slot.endTime.getTime()
+      ) {
+        throw new BadRequestException(
+          'You have already booked a time slot with the same start and end time',
+        );
+      }
+
+      // Otherwise it's an overlap
+      const existingStartTime = existingSlot.startTime.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const existingEndTime = existingSlot.endTime.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      throw new BadRequestException(
+        `You already have a booking from ${existingStartTime} to ${existingEndTime} which overlaps with this time slot`,
+      );
     }
 
     // Enforce minimum advance booking window: must book at least 3 days before the lesson
