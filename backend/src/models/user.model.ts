@@ -88,6 +88,8 @@ export class User extends Document {
 
 export const UserSchema = SchemaFactory.createForClass(User);
 
+UserSchema.index({ role: 1, pendingParents: 1 });
+
 /**
  * Generate unique Student ID after user creation
  */
