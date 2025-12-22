@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Logger,
   Param,
   Post,
   Query,
@@ -24,6 +25,8 @@ export class ChatController {
     private readonly chatService: ChatService,
     private readonly chatGateway: ChatGateway,
   ) {}
+
+  private readonly logger = new Logger(ChatController.name);
 
   /**
    * Get chat groups for the user
@@ -93,6 +96,9 @@ export class ChatController {
       this.chatGateway.server?.to(groupId).emit('newMessage', msg);
     } catch (err) {
       // do nothing if gateway is down
+      this.logger.error(
+        `Failed to emit newMessage to group ${groupId}: ${err.message}`,
+      );
     }
 
     return msg;

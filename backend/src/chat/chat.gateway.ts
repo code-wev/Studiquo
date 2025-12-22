@@ -178,6 +178,18 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return { event: 'messageSent', data: msg };
   }
 
+  /**
+   * Handles typing indicator events from clients.
+   *
+   * Flow:
+   * 1. Client emits "typing" with room and typing status
+   * 2. Server broadcasts "userTyping" to the room
+   * 3. Acknowledgement is sent back to sender
+   *
+   * @param data - Typing status payload (room, isTyping)
+   * @param client - Socket instance of the sender
+   * @returns Typing event acknowledgement
+   */
   @SubscribeMessage('typing')
   handleTyping(
     @MessageBody() data: { room: string; isTyping: boolean },
@@ -191,6 +203,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return { event: 'typing', data: { userId, isTyping: !!data.isTyping } };
   }
 
+  /**
+   * Handles a client's request to leave a chat room.
+   *
+   * @param data - Room information
+   * @param client - Socket instance of the connected client
+   * @returns Confirmation event payload
+   */
   @SubscribeMessage('leaveRoom')
   handleLeaveRoom(
     @MessageBody() data: { room: string },
