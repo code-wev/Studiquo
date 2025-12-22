@@ -53,6 +53,12 @@ export class UpdateProfileDto {
   oneOnOneHourlyRate?: number;
 }
 
+export class UpdatePasswordDto {
+  @IsNotEmpty()
+  @IsString({ message: 'New password must be a string' })
+  newPassword: string;
+}
+
 export class RespondToParentRequestDto {
   @IsNotEmpty()
   @IsIn([true, false], {

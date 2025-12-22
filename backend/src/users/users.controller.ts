@@ -19,7 +19,11 @@ import { UserRole } from 'src/models/User.model';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { RespondToParentRequestDto, UpdateProfileDto } from './dto/user.dto';
+import {
+  RespondToParentRequestDto,
+  UpdatePasswordDto,
+  UpdateProfileDto,
+} from './dto/user.dto';
 import { UsersService } from './users.service';
 
 /**
@@ -169,7 +173,7 @@ export class UsersController {
    */
   @Put('me/password')
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
-  async updatePassword(@GetUser() user: any, @Body() body) {
+  async updatePassword(@GetUser() user: any, @Body() body: UpdatePasswordDto) {
     return this.usersService.updatePassword(user, body);
   }
 }
