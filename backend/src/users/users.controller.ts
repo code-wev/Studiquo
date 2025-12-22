@@ -112,6 +112,18 @@ export class UsersController {
   }
 
   /**
+   * Student: list connected parents.
+   *
+   * @param req - the request object containing `user` set by the auth guard
+   * @returns array of parent user documents who are connected to the student
+   */
+  @Get('my/parents')
+  @Roles(UserRole.Student)
+  async listParents(@GetUser() user: any) {
+    return this.usersService.listParentsOfStudent(user.userId);
+  }
+
+  /**
    * Student: list pending parent requests
    *
    * @param req - the request object containing `user` set by the auth guard

@@ -401,6 +401,24 @@ export class UsersService extends BaseService<User> {
   }
 
   /**
+   * List connected parents for a student (student view).
+   *
+   * @param studentId - the MongoDB ID of the student user
+   * @return array of parent user documents who are connected to the student
+   */
+  async listParentsOfStudent(studentId: MongoIdDto['id']) {
+    const student = await this.model
+      .findById(studentId)
+      .populate('parents', 'firstName lastName email avatar')
+      .lean();
+    if (!student) throw new NotFoundException('Student not found');
+    return {
+      message: 'Parents list retrieved',
+      parents: student.parents || [],
+    };
+  }
+
+  /**
    * List pending parent requests for a student (student view).
    *
    * @param studentId - the MongoDB ID of the student user
