@@ -418,7 +418,9 @@ export class UsersService extends BaseService<User> {
                 $expr: {
                   $and: [
                     { $eq: ['$role', UserRole.Student] },
-                    { $in: ['$$parentId', '$pendingParents'] },
+                    {
+                      $in: ['$$parentId', { $ifNull: ['$pendingParents', []] }],
+                    },
                   ],
                 },
               },
