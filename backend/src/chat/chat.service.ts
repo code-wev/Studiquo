@@ -11,6 +11,12 @@ export class ChatService {
     @InjectModel(Message.name) private messageModel: Model<Message>,
   ) {}
 
+  /**
+   * Get chat groups for a user
+   *
+   * @param userId - the user ID
+   * @returns list of chat groups
+   */
   async getChatGroupsForUser(userId: string) {
     if (!userId) return [];
 
@@ -95,6 +101,14 @@ export class ChatService {
     return chatsGroup;
   }
 
+  /**
+   * Get messages for a chat group with pagination
+   *
+   * @param chatGroupId - the chat group ID
+   * @param page - the page number (default: 1)
+   * @param limit - number of messages per page (default: 20)
+   * @returns list of messages
+   */
   async getMessages(chatGroupId: string, page = 1, limit = 20) {
     const skip = Math.max(0, page - 1) * limit;
 
@@ -140,6 +154,12 @@ export class ChatService {
     return messages.reverse();
   }
 
+  /**
+   * Create a new message in a chat group
+   *
+   * @param data - message data
+   * @returns the created message
+   */
   async createMessage(data: {
     chatGroup: string;
     senderId: string;

@@ -92,7 +92,7 @@ export class ChatController {
     try {
       this.chatGateway.server?.to(groupId).emit('newMessage', msg);
     } catch (err) {
-      // noop
+      // do nothing if gateway is down
     }
 
     return msg;
