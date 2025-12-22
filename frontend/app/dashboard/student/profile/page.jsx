@@ -5,7 +5,7 @@ import {
   useMyProfileQuery,
   useUpdateProfileMutation,
 } from "@/feature/shared/AuthApi";
-import { useGetParentRequestQuery, useMyParentsQuery } from "@/feature/student/StudentApi";
+import { useAcceptOrRejectRequestMutation, useGetParentRequestQuery, useMyParentsQuery, useOnlyRejectRequestMutation } from "@/feature/student/StudentApi";
 import Image from "next/image";
 import { useState } from "react";
 
@@ -23,15 +23,44 @@ export default function ExamBoard() {
   console.log(myParents, `kmn aso abbara`);
   console.log(data, 'chole asca abbagolo');
   console.log(myPofile?.data?.user?.avatar, "my profile is here");
+  const [ acceptOrRejectRequest] = useAcceptOrRejectRequestMutation();
+  const [  onlyRejectRequest] = useOnlyRejectRequestMutation();
 
-    const handleAcceptRequest = (requestId) => {
-    console.log("Accepting request with ID:", requestId);
-    // এখানে আপনার API call যোগ করুন
+    const handleAcceptRequest = async(id) => {
+
+
+      try {
+
+
+
+        const result = await acceptOrRejectRequest({id, accept:true}).unwrap;
+        console.log(result, 'result re kapaa');
+        
+
+        
+      } catch (error) {
+
+        console.log(error);
+        
+      }
+
+
   };
 
-  const handleRejectRequest = (requestId) => {
-    console.log("Rejecting request with ID:", requestId);
-    // এখানে আপনার API call যোগ করুন
+  const handleRejectRequest = async(id) => {
+
+    
+
+    
+    try {
+
+            const result = await onlyRejectRequest({id, accept:false}).unwrap;
+        console.log(result, 'result re kapaa');
+      
+    } catch (error) {
+      console.log(error);
+    }
+
   };
 
 

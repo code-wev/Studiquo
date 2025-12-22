@@ -1,9 +1,9 @@
-import FIndTutorPage from "@/components/findTutor/FindTutorPage";
+import FindTutorPage from "@/components/findTutor/FIndTutorPage";
 
 const page = () => {
   return (
     <div>
-      <FIndTutorPage />
+      <FindTutorPage />
     </div>
   );
 };

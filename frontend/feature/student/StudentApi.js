@@ -46,13 +46,23 @@ export const StudentApi = createApi({
       query: ({id , accept}) => ({
         url:`users/me/children/requests/${id}/respond`,
         method:"POST",
-        body:{accept}
+        body:{accept:true}
       }),
           invalidatesTags: ["StatusUpdate"],
-    })
+    }),
+        onlyRejectRequest: builder.mutation({
+      query: ({id , accept}) => ({
+        url:`users/me/children/requests/${id}/respond`,
+        method:"POST",
+        body:{accept: false}
+      }),
+          invalidatesTags: ["StatusUpdate"],
+    }),
+
+
   }),
 });
 
-export const { useGetExamBoardQuery, useUpdateBoardMutation , useGetParentRequestQuery, useMyParentsQuery, useAcceptOrRejectRequestMutation} = StudentApi;
+export const { useGetExamBoardQuery, useUpdateBoardMutation , useGetParentRequestQuery, useMyParentsQuery, useAcceptOrRejectRequestMutation, useOnlyRejectRequestMutation} = StudentApi;
 
 
