@@ -822,7 +822,7 @@ export class BookingsService {
         $addFields: {
           bookingDate: '$tutorAvailability.date',
 
-          // ✅ FIXED COUNT
+          // FIXED COUNT
           studentsCount: {
             $cond: [
               { $ne: ['$status', 'CANCELLED'] },
