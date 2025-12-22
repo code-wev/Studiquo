@@ -70,7 +70,7 @@ export class BookingsService {
       throw new BadRequestException('Invalid time slot');
     }
 
-    // Check if student has already booked any timeslot with the same start and end time using aggregation
+    // Check if student has already booked any time slot with the same start and end time using aggregation
     const existingSameTimeBookings = await this.bookingModel.aggregate([
       {
         $match: {
