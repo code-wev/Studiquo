@@ -286,7 +286,7 @@ export class UsersService extends BaseService<User> {
     parentId: MongoIdDto['id'],
     search: SearchDto['search'],
   ) {
-    // Ensure parent exists & is allowed
+    // 1️. Ensure parent exists & is allowed
     const parent = await this.model.findById(parentId);
     if (!parent) throw new NotFoundException('Parent not found');
     if (parent.role !== UserRole.Parent) {
@@ -297,14 +297,28 @@ export class UsersService extends BaseService<User> {
     const regex = new RegExp(search ?? '', 'i');
 
     const results = await this.model.aggregate([
-      // 1️. Match students only
+      // 2️. Match students only
       {
         $match: {
           role: UserRole.Student,
         },
       },
 
-      // 2️. Search by studentId / name / email
+      // 3️. Exclude already CONNECTED students
+      {
+        $match: {
+          $expr: {
+            $not: {
+              $in: [
+                parentObjId,
+                { $ifNull: ['$parents', []] }, // EXCLUDE CONNECTED
+              ],
+            },
+          },
+        },
+      },
+
+      // 4️. Search by studentId / name / email
       {
         $match: {
           $or: [
@@ -316,33 +330,32 @@ export class UsersService extends BaseService<User> {
         },
       },
 
-      // 3️. Ensure pendingParents logic
+      // 5️. Allow pending OR no pending
       {
         $match: {
-          $or: [
-            { pendingParents: { $exists: false } },
-            { pendingParents: { $size: 0 } },
-            { pendingParents: parentObjId },
-          ],
-        },
-      },
-
-      // 4️. Compute requestSent flag
-      {
-        $addFields: {
-          requestSent: {
-            $cond: [
+          $expr: {
+            $or: [
+              {
+                $eq: [{ $size: { $ifNull: ['$pendingParents', []] } }, 0],
+              },
               {
                 $in: [parentObjId, { $ifNull: ['$pendingParents', []] }],
               },
-              true,
-              false,
             ],
           },
         },
       },
 
-      // 5️. Shape response
+      // 6️. requestSent flag
+      {
+        $addFields: {
+          requestSent: {
+            $in: [parentObjId, { $ifNull: ['$pendingParents', []] }],
+          },
+        },
+      },
+
+      // 7️. Shape response
       {
         $project: {
           _id: 1,
@@ -355,7 +368,7 @@ export class UsersService extends BaseService<User> {
         },
       },
 
-      // 6️. Limit results
+      // 8️. Limit
       { $limit: 20 },
     ]);
 
