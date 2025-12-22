@@ -342,7 +342,6 @@ export class UsersService extends BaseService<User> {
       {
         $project: {
           _id: 1,
-          id: { $toString: '$_id' },
           firstName: 1,
           lastName: 1,
           studentId: 1,
