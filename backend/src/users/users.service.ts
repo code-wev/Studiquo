@@ -217,7 +217,7 @@ export class UsersService extends BaseService<User> {
 
     // Find student by studentId
     const student = await this.model.findOne({
-      studentId,
+      _id: new Types.ObjectId(studentId),
       role: UserRole.Student,
     });
 
@@ -230,7 +230,7 @@ export class UsersService extends BaseService<User> {
 
     // If parent already approved (exists in parent's children) -> short-circuit
     const alreadyChild = await this.model.findOne({
-      _id: parent._id,
+      _id: new Types.ObjectId(parent._id),
       children: new Types.ObjectId(student._id),
     });
 
@@ -247,7 +247,7 @@ export class UsersService extends BaseService<User> {
 
     // If already requested, inform
     const alreadyRequested = await this.model.findOne({
-      _id: student._id,
+      _id: new Types.ObjectId(student._id),
       pendingParents: { $in: [new Types.ObjectId(parent._id)] },
     });
 
@@ -257,7 +257,7 @@ export class UsersService extends BaseService<User> {
 
     // Add parent to student's pendingParents
     await this.model.updateOne(
-      { _id: student._id },
+      { _id: new Types.ObjectId(student._id) },
       { $addToSet: { pendingParents: new Types.ObjectId(parent._id) } },
     );
 
