@@ -40,3 +40,5 @@ export class Payment extends Document {
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);
+
+PaymentSchema.index({ booking: 1, tutor: 1, status: 1 });
