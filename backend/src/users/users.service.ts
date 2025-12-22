@@ -341,7 +341,7 @@ export class UsersService extends BaseService<User> {
       // 5️. Shape response
       {
         $project: {
-          _id: 0,
+          _id: 1,
           id: { $toString: '$_id' },
           firstName: 1,
           lastName: 1,
