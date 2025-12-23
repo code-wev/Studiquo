@@ -59,8 +59,15 @@ export const TutorApi = createApi({
       query: () => "/subjects",
       providesTags: ["Tutor"],
     }),
+
+
+    getTutorOverview: builder.query({
+      query: () => "/tutors/overview",
+      providesTags: ["Tutor"],
+    }),
+
   }),
 });
 
-export const { useGetTutorQuery, useTutorProfileQuery, useGetSubjectsQuery } =
+export const { useGetTutorQuery, useTutorProfileQuery, useGetSubjectsQuery, useGetTutorOverviewQuery } =
   TutorApi;
