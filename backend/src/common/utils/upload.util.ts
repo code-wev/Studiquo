@@ -1,4 +1,4 @@
-import { AwsService } from 'src/aws/aws.service';
+import { AwsService } from '../../aws/aws.service';
 
 /**
  * Upload a single file (multer file or data URL) and return { url, key }

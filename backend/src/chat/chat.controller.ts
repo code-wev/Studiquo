@@ -8,13 +8,13 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { Roles } from 'common/decorators/roles.decorator';
-import { MongoIdDto } from 'common/dto/mongoId.dto';
-import { PaginationDto } from 'common/dto/pagination.dto';
-import { UserRole } from 'src/models/User.model';
 import { GetUser } from '../../common/decorators/get-user.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { MongoIdDto } from '../../common/dto/mongoId.dto';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { UserRole } from '../models/User.model';
 import { ChatGateway } from './chat.gateway';
 import { ChatService } from './chat.service';
 

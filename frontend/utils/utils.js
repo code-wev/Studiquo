@@ -1,6 +1,6 @@
 import Cookies from "js-cookie";
 
-export const base_url = "http://localhost:8080/api";
+export const base_url = "https://lazmina-backend-test.vercel.app/api";
 
 export const logOut = async () => {
   try {

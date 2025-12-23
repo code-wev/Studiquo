@@ -1,16 +1,13 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
-import { jwtConfig } from 'common/jwt.config';
-import { AwsService } from 'src/aws/aws.service';
+import { jwtConfig } from '../../common/jwt.config';
+import { AwsService } from '../aws/aws.service';
 import {
   StudentProfile,
   StudentProfileSchema,
-} from 'src/models/StudentProfile.model';
-import {
-  TutorProfile,
-  TutorProfileSchema,
-} from 'src/models/TutorProfile.model';
+} from '../models/StudentProfile.model';
+import { TutorProfile, TutorProfileSchema } from '../models/TutorProfile.model';
 import { User, UserSchema } from '../models/User.model';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
