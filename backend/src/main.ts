@@ -21,13 +21,23 @@ async function bootstrap() {
 
   // Enable CORS for the frontend and allow credentials so cookies are sent
   // across origins (frontend must send requests with `credentials: 'include'`).
+  const allowedOrigins = [
+    'https://studiquo-frontend.herokuapp.com',
+    'http://localhost:3000',
+    'https://lazmina-frontend-test.vercel.app',
+  ];
+
   app.enableCors({
-    origin: [
-      'https://studiquo-frontend.herokuapp.com/',
-      'http://localhost:3000/',
-      process.env.FRONTEND_URL,
-    ],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS not allowed for origin: ${origin}`));
+      }
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
   // Enable global validation pipe with strict options:
@@ -70,7 +80,7 @@ async function bootstrap() {
     logger.error('Error ensuring default admin user', err);
   }
 
-  console.log(`App running at port ${process.env.PORT ?? 3000}`);
+  console.log(`App running at port ${process.env.PORT ?? 8080}`);
 }
 
 void bootstrap();

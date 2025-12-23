@@ -72,6 +72,7 @@ export class PaymentsController {
 
     try {
       event = this.paymentsService.constructEvent(rawBody, sig, endpointSecret);
+      console.log(event, "Event triiggd");
     } catch (err: any) {
       this.logger.error('Webhook signature verification failed.', err.message);
       throw new BadRequestException('Webhook signature verification failed.');
@@ -81,6 +82,7 @@ export class PaymentsController {
 
     switch (event.type) {
       case 'payment_intent.succeeded': {
+        console.log('Payment succeeded:', event.data.object.id);
         this.logger.log('Payment succeeded:', event.data.object.id);
         const bookingId = event.data.object.metadata?.bookingId;
         const studentId = event.data.object.metadata?.studentId;
@@ -190,6 +192,8 @@ export class PaymentsController {
         break;
       }
       case 'payment_intent.payment_failed': {
+        console.log('Payment failed:', event.data.object.id);
+
         this.logger.log('Payment failed:', event.data.object.id);
         const bookingId = event.data.object.metadata?.bookingId;
         const studentId = event.data.object.metadata?.studentId;
