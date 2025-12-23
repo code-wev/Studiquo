@@ -16,12 +16,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const reflector = app.get(Reflector);
 
-  /* PUBLIC CORS */
-  app.enableCors({
-    origin: true,
-    credentials: true,
-  });
-
   // Set a global API prefix so all routes are prefixed with `/api`.
   app.setGlobalPrefix('api');
 
@@ -54,6 +48,11 @@ async function bootstrap() {
   // The app has a global prefix of `/api` so the webhook path is `/api/payments/webhook`.
   app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
+  // Simple health-check endpoint at `/health`
+  app.use('/health', (_, res) => {
+    res.status(200).send({ status: 'ok' });
+  });
+
   await app.listen(process.env.PORT ?? 8080);
 
   const logger = new Logger('Bootstrap');
@@ -68,7 +67,7 @@ async function bootstrap() {
     logger.error('Error ensuring default admin user', err);
   }
 
-  console.log(`App running at port ${process.env.PORT ?? 3000}`);
+  console.log(`App running at port ${process.env.PORT ?? 8080}`);
 }
 
 void bootstrap();
