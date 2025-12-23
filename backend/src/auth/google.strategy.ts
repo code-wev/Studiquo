@@ -5,7 +5,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
 import { Model } from 'mongoose';
 import { Strategy, VerifyCallback } from 'passport-google-oauth20';
-import { MailService } from 'src/mail/mail.service';
+import { MailService } from '../mail/mail.service';
 import { User, UserRole } from '../models/User.model';
 
 const ALLOWED_GOOGLE_ROLES = [

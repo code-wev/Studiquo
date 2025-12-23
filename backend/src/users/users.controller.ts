@@ -11,14 +11,14 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { GetUser } from 'common/decorators/get-user.decorator';
-import { MongoIdDto } from 'common/dto/mongoId.dto';
-import { SearchDto } from 'common/dto/search.dto';
 import * as multer from 'multer';
-import { UserRole } from 'src/models/User.model';
+import { GetUser } from '../../common/decorators/get-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { MongoIdDto } from '../../common/dto/mongoId.dto';
+import { SearchDto } from '../../common/dto/search.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { UserRole } from '../models/User.model';
 import { RespondToParentRequestDto, UpdateProfileDto } from './dto/user.dto';
 import { UsersService } from './users.service';
 
