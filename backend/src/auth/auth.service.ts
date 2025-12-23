@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { MailService } from 'src/mail/mail.service';
 import { User } from '../models/User.model';
 import {
@@ -148,16 +148,30 @@ export class AuthService {
    * @returns a success message on completion
    */
   async changePassword(user: any, data: ChangePasswordDto) {
-    console.log(user);
-    const existingUser = await this.userModel.findById(
-      new Types.ObjectId(user.userId),
-    );
+    const existingUser = await this.userModel.findById(user.userId);
+
     if (!existingUser) throw new UnauthorizedException('User not found');
-    if (!(await bcrypt.compare(data.oldPassword, existingUser.password))) {
-      throw new UnauthorizedException('Old password is incorrect');
+
+    if (!existingUser.password)
+      throw new UnauthorizedException('Password login not enabled');
+
+    const isMatch = await bcrypt.compare(
+      data.oldPassword,
+      existingUser.password,
+    );
+
+    if (!isMatch) throw new UnauthorizedException('Old password is incorrect');
+
+    // Old password can't be the same as new password
+    if (data.oldPassword === data.newPassword) {
+      throw new UnauthorizedException(
+        'New password must be different from old password',
+      );
     }
+
     existingUser.password = await bcrypt.hash(data.newPassword, 10);
     await existingUser.save();
+
     return { message: 'Password changed successfully' };
   }
 }
