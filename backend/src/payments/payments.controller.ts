@@ -6,8 +6,10 @@ import {
   Headers,
   Logger,
   Post,
+  Req,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import type { Request } from 'express';
 import mongoose, { Model, Types } from 'mongoose';
 import { MailService } from '../mail/mail.service';
 import { Booking } from '../models/Booking.model';
@@ -64,22 +66,46 @@ export class PaymentsController {
    */
   @Post('webhook')
   async handleWebhook(
-    @Body() rawBody: Buffer,
-    @Headers('stripe-signature') sig: string,
+    @Req() req: Request,
+    @Body() body: any,
+    @Headers('stripe-signature') sig?: string,
   ) {
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
     let event: any;
 
+    // Prefer rawBody (registered in main.ts) but fall back to parsed body
+    const payload: string | Buffer = (req as any).rawBody
+      ? (req as any).rawBody
+      : typeof body === 'string'
+        ? body
+        : JSON.stringify(body || {});
+
     try {
-      event = this.paymentsService.constructEvent(rawBody, sig, endpointSecret);
+      event = this.paymentsService.constructEvent(
+        payload,
+        sig || '',
+        endpointSecret,
+      );
     } catch (err: any) {
-      this.logger.error('Webhook signature verification failed.', err.message);
+      this.logger.error(
+        'Webhook signature verification failed.',
+        err?.message || err,
+      );
       throw new BadRequestException('Webhook signature verification failed.');
     }
 
-    this.logger.log(`Received webhook event ${event.type}`);
+    // Some webhook providers (or different API versions) may nest the type
+    // in different places — provide a robust fallback extraction.
+    const eventType =
+      event?.type ||
+      event?.data?.type ||
+      event?.event ||
+      event?.event_type ||
+      event?.data?.object?.type;
 
-    switch (event.type) {
+    this.logger.log(`Received webhook event ${eventType}`);
+
+    switch (eventType) {
       case 'payment_intent.succeeded': {
         this.logger.log('Payment succeeded:', event.data.object.id);
         const bookingId = event.data.object.metadata?.bookingId;
@@ -250,7 +276,7 @@ export class PaymentsController {
         break;
       }
       default:
-        this.logger.log(`Unhandled event type ${event.type}`);
+        this.logger.log(`Unhandled event type ${eventType}`);
     }
 
     return { received: true };
