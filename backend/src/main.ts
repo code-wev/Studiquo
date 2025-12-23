@@ -21,11 +21,12 @@ async function bootstrap() {
 
   // Enable CORS for the frontend and allow credentials so cookies are sent
   // across origins (frontend must send requests with `credentials: 'include'`).
-  // app.enableCors({
-  //   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-  //   credentials: true,
-  // });
-  app.enableCors({ origin: '*' });
+  app.enableCors({
+    origin: ['http://localhost:3000', process.env.FRONTEND_URL],
+    credentials: true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  });
 
   // Enable global validation pipe with strict options:
   // - `whitelist` removes unexpected properties
