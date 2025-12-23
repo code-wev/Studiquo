@@ -15,6 +15,12 @@ import { UsersService } from './users/users.service';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Stripe webhook needs the raw body — register it before the JSON parser
+  app.use(
+    '/api/payments/webhook',
+    bodyParser.raw({ type: 'application/json' }),
+  );
+
   // Normal JSON parsing for all other routes
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
@@ -61,12 +67,7 @@ async function bootstrap() {
   // Global response formatting (wraps responses into a consistent shape).
   app.useGlobalInterceptors(new ResponseInterceptor());
 
-  // Use raw body for Stripe webhook endpoint so signature verification works.
-  // The app has a global prefix of `/api` so the webhook path is `/api/payments/webhook`.
-  app.use(
-    '/api/payments/webhook',
-    bodyParser.raw({ type: 'application/json' }),
-  );
+  // (Stripe webhook raw body middleware registered earlier)
 
   app.use('/health', (_, res) => {
     res.status(200).send({ status: 'ok' });
