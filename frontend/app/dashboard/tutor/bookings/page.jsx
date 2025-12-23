@@ -1,39 +1,9 @@
 "use client";
 
 import TitleSection from "@/components/dashboard/shared/TitleSection";
-import Image from "next/image";
-import { useState } from "react";
+import { useGetTutorBookingsQuery } from "@/feature/student/BookingApi";
+import { useEffect, useState } from "react";
 import { BiChevronRight, BiX } from "react-icons/bi";
-
-const classes = [
-  {
-    subject: "Science",
-    students: 48,
-    timeSlot: "12:00 PM",
-    studentAvatars: [
-      "https://i.pravatar.cc/150?img=1",
-      "https://i.pravatar.cc/150?img=2",
-    ],
-  },
-  {
-    subject: "Mathematics",
-    students: 35,
-    timeSlot: "02:00 PM",
-    studentAvatars: [
-      "https://i.pravatar.cc/150?img=5",
-      "https://i.pravatar.cc/150?img=6",
-    ],
-  },
-  {
-    subject: "English",
-    students: 52,
-    timeSlot: "10:00 AM",
-    studentAvatars: [
-      "https://i.pravatar.cc/150?img=9",
-      "https://i.pravatar.cc/150?img=10",
-    ],
-  },
-];
 
 const students = [
   {
@@ -69,14 +39,29 @@ const students = [
 ];
 
 export default function Bookings() {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedTimeSlots, setSelectedTimeSlots] = useState({
-    "12:00pm – 02:00pm": true,
-    "06:00pm – 06:00pm": false,
-  });
+  const { data: apiData, isLoading, error } = useGetTutorBookingsQuery();
+  const [bookingData, setBookingData] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
 
-  // Calendar functions
+  // Process API data when loaded
+  useEffect(() => {
+    if (apiData?.data) {
+      setBookingData(apiData.data);
+
+      // Set selected date to first booking date or today
+      if (apiData.data.bookings.length > 0) {
+        const firstBooking = apiData.data.bookings[0];
+        setSelectedDate(firstBooking);
+      }
+    }
+  }, [apiData]);
+
+  // Get current month and year for display
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+
+  // Calendar functions - only for current month
   const getDaysInMonth = (year, month) => {
     return new Date(year, month + 1, 0).getDate();
   };
@@ -85,43 +70,34 @@ export default function Bookings() {
     return new Date(year, month, 1).getDay();
   };
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
-    );
-  };
+  const handleDayClick = (day, hasBooking = false) => {
+    if (!hasBooking || !bookingData) return;
 
-  const goToNextMonth = () => {
-    setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
-    );
-  };
+    const clickedDate = new Date(currentYear, currentMonth, day);
+    const dateString = clickedDate.toISOString().split("T")[0];
 
-  const handleDayClick = (day) => {
-    const newSelectedDate = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      day
+    // Find booking for this date
+    const bookingForDate = bookingData.bookings.find(
+      (booking) => booking.dateString === dateString
     );
-    setSelectedDate(newSelectedDate);
-  };
 
-  const handleTimeSlotToggle = (timeSlot) => {
-    setSelectedTimeSlots((prev) => ({
-      ...prev,
-      [timeSlot]: !prev[timeSlot],
-    }));
+    if (bookingForDate) {
+      setSelectedDate(bookingForDate);
+    }
   };
 
   // Format date for display
   const formatSelectedDate = () => {
+    if (!selectedDate) return "Select a date";
+
+    const date = new Date(selectedDate.date);
     const options = {
       weekday: "long",
       month: "long",
       day: "numeric",
       year: "numeric",
     };
-    return selectedDate.toLocaleDateString("en-US", options);
+    return date.toLocaleDateString("en-US", options);
   };
 
   // Get month and year for display
@@ -140,106 +116,117 @@ export default function Bookings() {
     "December",
   ];
 
-  const currentYear = currentDate.getFullYear();
-  const currentMonth = currentDate.getMonth();
   const monthName = monthNames[currentMonth];
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDayOfMonth = getFirstDayOfMonth(currentYear, currentMonth);
 
-  // Generate days array
+  // Generate days array with booking information - only current month
   const days = [];
 
-  // Previous month days
-  const prevMonthDays = getDaysInMonth(currentYear, currentMonth - 1);
-  for (let i = firstDayOfMonth - 1; i >= 0; i--) {
+  // Previous month days (empty cells to fill the first week)
+  for (let i = 0; i < firstDayOfMonth; i++) {
     days.push({
-      day: prevMonthDays - i,
+      day: "",
       isCurrentMonth: false,
       isSelected: false,
+      hasBooking: false,
+      isEmpty: true,
     });
   }
 
   // Current month days
-  const today = new Date();
   for (let i = 1; i <= daysInMonth; i++) {
-    const isToday =
-      today.getDate() === i &&
-      today.getMonth() === currentMonth &&
-      today.getFullYear() === currentYear;
-    const isSelected =
-      selectedDate.getDate() === i &&
-      selectedDate.getMonth() === currentMonth &&
-      selectedDate.getFullYear() === currentYear;
+    const isToday = today.getDate() === i;
 
-    // Determine if this day should have special styling (matching the hardcoded days)
-    const hasClass =
-      i === 1 || i === 3 || i === 4 || i === 7 || i === 8 || i === 29;
-    const isTodayWithDot = i === 25; // The 25th has a special dot in original design
+    const dateString = `${currentYear}-${String(currentMonth + 1).padStart(
+      2,
+      "0"
+    )}-${String(i).padStart(2, "0")}`;
+
+    // Check if this date has bookings
+    const hasBooking =
+      bookingData?.bookings?.some(
+        (booking) => booking.dateString === dateString
+      ) || false;
+
+    const isSelected = selectedDate?.dateString === dateString;
 
     days.push({
       day: i,
       isCurrentMonth: true,
       isToday,
       isSelected,
-      hasClass,
-      isTodayWithDot,
+      hasBooking,
+      isEmpty: false,
     });
   }
 
-  // Next month days
-  const totalCells = 42; // 6 rows * 7 days
-  const nextMonthDays = totalCells - days.length;
-  for (let i = 1; i <= nextMonthDays; i++) {
-    days.push({
-      day: i,
-      isCurrentMonth: false,
-      isSelected: false,
-    });
-  }
-
-  const handleJoinChat = (studentId, studentName) => {
-    // Implement your join chat logic here
-    console.log(`Joining chat with ${studentName} (ID: ${studentId})`);
-    alert(`Joining chat with ${studentName}`);
+  // Handle class actions
+  const handleJoinClass = (meetLink) => {
+    if (meetLink) {
+      window.open(meetLink, "_blank");
+    } else {
+      alert("Meet link not available");
+    }
   };
 
+  const handleCancelClass = (bookingId, subject) => {
+    if (confirm(`Are you sure you want to cancel ${subject} class?`)) {
+      // Implement cancel logic here
+      console.log(`Canceling booking ${bookingId}`);
+      alert(`${subject} class cancelled`);
+    }
+  };
+
+  // Format time for display
+  const formatTime = (timeString) => {
+    const time = new Date(timeString);
+    return time.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className='w-full min-h-screen bg-gray-50 py-10 px-4 flex items-center justify-center'>
+        <div className='text-center'>
+          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto'></div>
+          <p className='mt-4 text-gray-600'>Loading bookings...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className='w-full min-h-screen bg-gray-50 py-10 px-4 flex items-center justify-center'>
+        <div className='text-center text-red-600'>
+          <p>Error loading bookings. Please try again.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className='w-full min-h-screen bg-gray-50  py-10 px-4'>
+    <div className='w-full min-h-screen bg-gray-50 py-10 px-4'>
       <TitleSection bg={"#FFFFFF"} title={"Bookings"} />
 
-      <div className='w-full max-w-400 bg-[#F7F7F7] shadow-sm  grid grid-cols-1 lg:grid-cols-4 gap-8 p-8'>
+      <div className='w-full max-w-400 bg-[#F7F7F7] shadow-sm grid grid-cols-1 lg:grid-cols-4 gap-8 p-8'>
         {/* ---------------- LEFT SECTION ---------------- */}
         <div className='lg:col-span-2'>
           {/* Toggle Buttons */}
           <div className='flex items-center justify-between mb-6'>
             <p className='text-xl font-semibold text-gray-900'>Calendar</p>
-            <div className='flex gap-2'>
-              <button className='px-6 py-2 rounded-lg text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200'>
-                Group
-              </button>
-              <button className='px-6 py-2 rounded-lg text-sm font-medium text-purple-700 bg-purple-100'>
-                Single
-              </button>
-            </div>
           </div>
 
           {/* Calendar Box */}
           <div className='border border-gray-200 rounded-2xl p-6 mb-6'>
-            {/* Month Header */}
-            <div className='flex justify-between items-center mb-6'>
-              <button
-                onClick={goToPreviousMonth}
-                className='text-gray-400 hover:text-gray-600 text-xl cursor-pointer'>
-                &lt;
-              </button>
+            {/* Month Header - Only shows current month, no navigation buttons */}
+            <div className='flex justify-center items-center mb-6'>
               <p className='font-semibold text-gray-900 text-lg'>
                 {monthName} {currentYear}
               </p>
-              <button
-                onClick={goToNextMonth}
-                className='text-gray-400 hover:text-gray-600 text-xl cursor-pointer'>
-                &gt;
-              </button>
             </div>
 
             {/* Week Days */}
@@ -253,7 +240,7 @@ export default function Bookings() {
               <p>Sa</p>
             </div>
 
-            {/* Calendar Days */}
+            {/* Calendar Days - Only current month */}
             <div className='grid grid-cols-7 gap-2 text-center text-sm'>
               {days.map((dayData, index) => {
                 const {
@@ -261,65 +248,41 @@ export default function Bookings() {
                   isCurrentMonth,
                   isToday,
                   isSelected,
-                  hasClass,
-                  isTodayWithDot,
+                  hasBooking,
+                  isEmpty,
                 } = dayData;
 
-                if (!isCurrentMonth) {
-                  return (
-                    <div key={index} className='py-3 text-orange-300'>
-                      {day}
-                    </div>
-                  );
+                if (isEmpty) {
+                  return <div key={index} className='py-3'></div>;
                 }
 
                 return (
                   <button
                     key={index}
-                    onClick={() => handleDayClick(day)}
+                    onClick={() => handleDayClick(day, hasBooking)}
                     className={`
-                      py-3 rounded-xl transition-all duration-200 cursor-pointer relative
+                      py-3 rounded-xl transition-all duration-200 relative
                       ${
                         isSelected
                           ? "bg-purple-600 text-white font-semibold"
                           : ""
                       }
                       ${
-                        !isSelected && hasClass
+                        !isSelected && hasBooking
                           ? "bg-purple-200 text-purple-700 font-semibold"
                           : ""
                       }
-                      ${!isSelected && !hasClass ? "hover:bg-gray-100" : ""}
+                      ${!isSelected && !hasBooking ? "hover:bg-gray-100" : ""}
+                      ${!hasBooking ? "cursor-default" : "cursor-pointer"}
+                      ${isToday ? "ring-2 ring-purple-400" : ""}
                     `}>
                     {day}
-                    {isTodayWithDot && !isSelected && (
-                      <div className='absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-400 rounded-full'></div>
-                    )}
-                    {isToday && !isSelected && !isTodayWithDot && (
+                    {hasBooking && !isSelected && (
                       <div className='absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-purple-400 rounded-full'></div>
                     )}
                   </button>
                 );
               })}
-            </div>
-
-            {/* Time Slot Checkboxes */}
-            <div className='mt-6 space-y-2'>
-              {Object.entries(selectedTimeSlots).map(
-                ([timeSlot, isChecked]) => (
-                  <label
-                    key={timeSlot}
-                    className='flex items-center gap-2 cursor-pointer'>
-                    <input
-                      type='checkbox'
-                      checked={isChecked}
-                      onChange={() => handleTimeSlotToggle(timeSlot)}
-                      className='w-4 h-4 rounded border-gray-300'
-                    />
-                    <span className='text-sm text-gray-700'>{timeSlot}</span>
-                  </label>
-                )
-              )}
             </div>
           </div>
         </div>
@@ -327,81 +290,151 @@ export default function Bookings() {
         {/* ---------------- RIGHT SECTION ---------------- */}
         <div className='lg:col-span-2'>
           <div>
-            {/* Toggle Buttons */}
+            {/* Selected Date Header */}
             <div className='flex flex-col gap-y-9 justify-between mb-6'>
               <div className='text-xl font-semibold text-gray-900'>
                 {formatSelectedDate()}
+                {selectedDate && (
+                  <span className='ml-2 text-sm text-gray-500'>
+                    ({selectedDate.totalBookings} bookings,{" "}
+                    {selectedDate.totalStudents} students)
+                  </span>
+                )}
               </div>
-              <div className='bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden'>
-                {/* Table Header */}
-                <div className='grid grid-cols-4 gap-4 px-6 py-4 bg-gray-50 border-b border-gray-200'>
-                  <div className='text-sm font-medium text-gray-600'>
-                    Subject
-                  </div>
-                  <div className='text-sm font-medium text-gray-600'>
-                    Students
-                  </div>
-                  <div className='text-sm font-medium text-gray-600'>
-                    Time Slot
-                  </div>
-                  <div className='text-sm font-medium text-gray-600'>
-                    Action
-                  </div>
-                </div>
 
-                {/* Table Body */}
-                {classes.map((classItem, index) => (
-                  <div
-                    key={index}
-                    className='grid grid-cols-4 gap-4 px-6 py-4 items-center border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors'>
-                    {/* Subject */}
-                    <div className='text-sm font-semibold text-green-600'>
-                      {classItem.subject}
+              {selectedDate ? (
+                <div className='bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden'>
+                  {/* Table Header */}
+                  <div className='grid grid-cols-4 gap-4 px-6 py-4 bg-gray-50 border-b border-gray-200'>
+                    <div className='text-sm font-medium text-gray-600'>
+                      Subject
                     </div>
+                    <div className='text-sm font-medium text-gray-600'>
+                      Students
+                    </div>
+                    <div className='text-sm font-medium text-gray-600'>
+                      Time Slot
+                    </div>
+                    <div className='text-sm font-medium text-gray-600'>
+                      Action
+                    </div>
+                  </div>
 
-                    {/* Students with Avatars */}
-                    <div className='flex items-center gap-3'>
-                      <div className='flex -space-x-2'>
-                        {classItem.studentAvatars.map((avatar, idx) => (
-                          <Image
-                            key={idx}
-                            src={avatar}
-                            alt={`Student ${idx + 1}`}
-                            width={280}
-                            height={90}
-                            className='w-8 h-8 rounded-full border-2 border-white object-cover'
-                          />
-                        ))}
+                  {/* Table Body */}
+                  {selectedDate.timeSlots &&
+                  selectedDate.timeSlots.length > 0 ? (
+                    selectedDate.timeSlots.map((timeSlot, index) => (
+                      <div
+                        key={index}
+                        className='grid grid-cols-4 gap-4 px-6 py-4 items-center border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors'>
+                        {/* Subject */}
+                        <div className='text-sm font-semibold text-green-600'>
+                          {timeSlot.subject}
+                          <div className='text-xs text-gray-500'>
+                            {timeSlot.type}
+                          </div>
+                        </div>
+
+                        {/* Students */}
+                        <div className='text-sm text-gray-700'>
+                          {timeSlot.totalStudentsInSlot} student
+                          {timeSlot.totalStudentsInSlot !== 1 ? "s" : ""}
+                          <div className='text-xs text-gray-500'>
+                            {timeSlot.slotBookingsCount} booking
+                            {timeSlot.slotBookingsCount !== 1 ? "s" : ""}
+                          </div>
+                        </div>
+
+                        {/* Time Slot */}
+                        <div className='text-sm text-gray-700'>
+                          {formatTime(timeSlot.startTime)} -{" "}
+                          {formatTime(timeSlot.endTime)}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className='flex items-center gap-3'>
+                          {timeSlot.meetLink && (
+                            <button
+                              onClick={() => handleJoinClass(timeSlot.meetLink)}
+                              className='flex items-center gap-1 text-sm font-medium text-green-600 hover:text-green-700 transition-colors'>
+                              Join Class
+                              <BiChevronRight size={16} />
+                            </button>
+                          )}
+                          {timeSlot.bookings &&
+                            timeSlot.bookings.map(
+                              (booking) =>
+                                booking.status === "SCHEDULED" && (
+                                  <button
+                                    key={booking._id}
+                                    onClick={() =>
+                                      handleCancelClass(
+                                        booking._id,
+                                        booking.subject
+                                      )
+                                    }
+                                    className='flex items-center gap-1 text-sm font-medium text-red-500 hover:text-red-600 transition-colors'>
+                                    Cancel
+                                    <BiX size={16} />
+                                  </button>
+                                )
+                            )}
+                        </div>
                       </div>
-                      <span className='text-sm text-gray-700'>
-                        {classItem.students} students
-                      </span>
+                    ))
+                  ) : (
+                    <div className='px-6 py-8 text-center text-gray-500'>
+                      No classes scheduled for this date
                     </div>
-
-                    {/* Time Slot */}
-                    <div className='text-sm text-gray-700'>
-                      {classItem.timeSlot}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className='flex items-center gap-3'>
-                      <button className='flex items-center gap-1 text-sm font-medium text-green-600 hover:text-green-700 transition-colors'>
-                        Join Class
-                        <BiChevronRight size={16} />
-                      </button>
-                      <button className='flex items-center gap-1 text-sm font-medium text-red-500 hover:text-red-600 transition-colors'>
-                        Cancel Class
-                        <BiX size={16} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  )}
+                </div>
+              ) : (
+                <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center text-gray-500'>
+                  Select a date with bookings to view classes
+                </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
+      {/* Stats Summary */}
+      {bookingData && (
+        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 mt-8'>
+          <div className='bg-white p-4 rounded-lg shadow-sm border border-gray-200'>
+            <h3 className='text-sm font-medium text-gray-500'>
+              Total Bookings
+            </h3>
+            <p className='text-2xl font-bold text-purple-600'>
+              {bookingData.stats.totalBookings}
+            </p>
+          </div>
+          <div className='bg-white p-4 rounded-lg shadow-sm border border-gray-200'>
+            <h3 className='text-sm font-medium text-gray-500'>
+              Total Students
+            </h3>
+            <p className='text-2xl font-bold text-green-600'>
+              {bookingData.stats.totalStudents}
+            </p>
+          </div>
+          <div className='bg-white p-4 rounded-lg shadow-sm border border-gray-200'>
+            <h3 className='text-sm font-medium text-gray-500'>
+              Today's Bookings
+            </h3>
+            <p className='text-2xl font-bold text-blue-600'>
+              {bookingData.stats.todayBookings}
+            </p>
+          </div>
+          <div className='bg-white p-4 rounded-lg shadow-sm border border-gray-200'>
+            <h3 className='text-sm font-medium text-gray-500'>Completed</h3>
+            <p className='text-2xl font-bold text-yellow-600'>
+              {bookingData.stats.completedBookings}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* TODO: Students List Table of specific slot  */}
       <div className='p-6 bg-white rounded-lg shadow-md'>
         <p className='text-xl font-semibold text-gray-900'>Students List</p>
 

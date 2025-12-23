@@ -1,11 +1,6 @@
 import { Transform, Type } from 'class-transformer';
 import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
-
-export enum TutorSubject {
-  MATH = 'MATH',
-  SCIENCE = 'SCIENCE',
-  ENGLISH = 'ENGLISH',
-}
+import { TutorSubject } from 'src/models/TutorProfile.model';
 
 export class TutorSearchPaginationDto {
   /* ---------- Search filters ---------- */

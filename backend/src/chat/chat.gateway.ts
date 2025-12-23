@@ -42,6 +42,19 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   private onlineUsers = new Map<string, Set<string>>();
 
+  private static readonly EVENTS = {
+    CONNECTED: 'connected',
+    USER_ONLINE: 'userOnline',
+    USER_OFFLINE: 'userOffline',
+    USER_JOINED: 'userJoined',
+    JOINED_ROOM: 'joinedRoom',
+    NEW_MESSAGE: 'newMessage',
+    MESSAGE_SENT: 'messageSent',
+    USER_TYPING: 'userTyping',
+    TYPING: 'typing',
+    LEFT_ROOM: 'leftRoom',
+  } as const;
+
   constructor(
     private readonly chatService: ChatService,
     private readonly jwtService: JwtService,
@@ -72,14 +85,24 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.onlineUsers.set(userId, set);
 
         // broadcast user's online status
-        this.server.emit('userOnline', { userId, sockets: set.size });
+        this.server.emit(ChatGateway.EVENTS.USER_ONLINE, {
+          userId,
+          sockets: set.size,
+        });
         // send full online list to connecting client
-        client.emit('connected', { message: 'Welcome to the chat!', userId });
+        client.emit(ChatGateway.EVENTS.CONNECTED, {
+          message: 'Welcome to the chat!',
+          userId,
+        });
       } else {
-        client.emit('connected', { message: 'Welcome to the chat!' });
+        client.emit(ChatGateway.EVENTS.CONNECTED, {
+          message: 'Welcome to the chat!',
+        });
       }
     } catch (err) {
-      client.emit('connected', { message: 'Welcome to the chat!' });
+      client.emit(ChatGateway.EVENTS.CONNECTED, {
+        message: 'Welcome to the chat!',
+      });
     }
   }
 
@@ -99,10 +122,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
           set.delete(client.id);
           if (set.size === 0) {
             this.onlineUsers.delete(userId);
-            this.server.emit('userOffline', { userId });
+            this.server.emit(ChatGateway.EVENTS.USER_OFFLINE, { userId });
           } else {
             this.onlineUsers.set(userId, set);
-            this.server.emit('userOnline', { userId, sockets: set.size });
+            this.server.emit(ChatGateway.EVENTS.USER_ONLINE, {
+              userId,
+              sockets: set.size,
+            });
           }
         }
       }
@@ -132,13 +158,13 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.join(data.room);
 
     // Notify other users in the room
-    this.server.to(data.room).emit('userJoined', {
+    this.server.to(data.room).emit(ChatGateway.EVENTS.USER_JOINED, {
       user: data.user,
     });
 
     // Acknowledge the room join to the requesting client
     return {
-      event: 'joinedRoom',
+      event: ChatGateway.EVENTS.JOINED_ROOM,
       data,
     };
   }
@@ -173,11 +199,23 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     });
 
     // broadcast to room
-    this.server.to(data.room).emit('newMessage', msg);
+    this.server.to(data.room).emit(ChatGateway.EVENTS.NEW_MESSAGE, msg);
 
-    return { event: 'messageSent', data: msg };
+    return { event: ChatGateway.EVENTS.MESSAGE_SENT, data: msg };
   }
 
+  /**
+   * Handles typing indicator events from clients.
+   *
+   * Flow:
+   * 1. Client emits "typing" with room and typing status
+   * 2. Server broadcasts "userTyping" to the room
+   * 3. Acknowledgement is sent back to sender
+   *
+   * @param data - Typing status payload (room, isTyping)
+   * @param client - Socket instance of the sender
+   * @returns Typing event acknowledgement
+   */
   @SubscribeMessage('typing')
   handleTyping(
     @MessageBody() data: { room: string; isTyping: boolean },
@@ -187,16 +225,29 @@ export class ChatGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const userId = sender ? String(sender.sub || sender._id) : client.id;
     this.server
       .to(data.room)
-      .emit('userTyping', { userId, isTyping: !!data.isTyping });
-    return { event: 'typing', data: { userId, isTyping: !!data.isTyping } };
+      .emit(ChatGateway.EVENTS.USER_TYPING, {
+        userId,
+        isTyping: !!data.isTyping,
+      });
+    return {
+      event: ChatGateway.EVENTS.TYPING,
+      data: { userId, isTyping: !!data.isTyping },
+    };
   }
 
+  /**
+   * Handles a client's request to leave a chat room.
+   *
+   * @param data - Room information
+   * @param client - Socket instance of the connected client
+   * @returns Confirmation event payload
+   */
   @SubscribeMessage('leaveRoom')
   handleLeaveRoom(
     @MessageBody() data: { room: string },
     @ConnectedSocket() client: Socket,
   ) {
     client.leave(data.room);
-    return { event: 'leftRoom', data };
+    return { event: ChatGateway.EVENTS.LEFT_ROOM, data };
   }
 }

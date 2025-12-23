@@ -8,21 +8,20 @@ export enum UserRole {
   Admin = 'Admin',
 }
 
-@Schema()
+@Schema({ timestamps: true })
 export class User extends Document {
-  @Prop()
+  @Prop({ default: '' })
   avatar: string;
 
-  @Prop({})
+  @Prop({ default: '' })
   avatarKey: string; // S3 object key
 
-  @Prop()
+  @Prop({ default: '' })
   googleId: string;
 
   @Prop({ unique: true, sparse: true })
   studentId?: string;
 
-  @Prop()
   @Prop({ required: true })
   firstName: string;
 
@@ -40,7 +39,6 @@ export class User extends Document {
 
   /**
    * Parent → Children mapping
-   * Only for Parent role
    */
   @Prop({
     type: [Types.ObjectId],
@@ -50,7 +48,7 @@ export class User extends Document {
   children?: Types.ObjectId[];
 
   /**
-   * For Student role: list of parent ids who are already approved
+   * Student → Approved parents
    */
   @Prop({
     type: [Types.ObjectId],
@@ -60,7 +58,7 @@ export class User extends Document {
   parents?: Types.ObjectId[];
 
   /**
-   * For Student role: parent requests that are awaiting student's approval
+   * Student → Pending parent requests
    */
   @Prop({
     type: [Types.ObjectId],
@@ -70,23 +68,34 @@ export class User extends Document {
   pendingParents?: Types.ObjectId[];
 
   // Optional fields
-  @Prop()
+  @Prop({ default: '' })
   token: string;
 
   @Prop({ required: false })
   tokenExpiry?: Date;
 
-  @Prop()
+  @Prop({ default: '' })
   bio: string;
 
-  @Prop()
+  @Prop({ default: '' })
   dbsLink: string;
 
-  @Prop()
-  referralSource: string;
+  /**
+   * Referral source (string, optional)
+   * e.g. "Facebook", "Google", "Friend"
+   */
+  @Prop({
+    type: String,
+    required: false,
+    trim: true,
+    default: null,
+  })
+  referralSource?: string | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+UserSchema.index({ role: 1, pendingParents: 1 });
 
 /**
  * Generate unique Student ID after user creation
@@ -99,7 +108,9 @@ UserSchema.post('save', async function (doc: User) {
 
   const year = new Date().getFullYear();
   const random = Math.floor(100000 + Math.random() * 900000);
-  const studentId = `STU-${year}-${random}`;
 
-  await UserModel.updateOne({ _id: doc._id }, { $set: { studentId } });
+  await UserModel.updateOne(
+    { _id: doc._id },
+    { $set: { studentId: `STU-${year}-${random}` } },
+  );
 });

@@ -153,7 +153,7 @@ export default function ChatInterface() {
     });
 
     if (selectedGroup) {
-      s.emit("joinRoom", selectedGroup._id);
+      s.emit("joinRoom", { room: selectedGroup._id, user: currentUserId });
     }
 
     return () => {
@@ -162,7 +162,14 @@ export default function ChatInterface() {
         s.off("disconnect");
         s.off("newMessage");
         s.off("userTyping");
-        s.disconnect();
+        // Leave the previously joined room instead of disconnecting socket
+        if (selectedGroup) {
+          try {
+            s.emit("leaveRoom", { room: selectedGroup._id });
+          } catch (e) {
+            // ignore
+          }
+        }
       } catch (e) {
         console.error("Socket cleanup error:", e);
       }
@@ -273,7 +280,10 @@ export default function ChatInterface() {
                     setLocalMessages([]);
                     const s = getSocket();
                     try {
-                      s?.emit("joinRoom", { room: group._id });
+                      s?.emit("joinRoom", {
+                        room: group._id,
+                        user: currentUserId,
+                      });
                     } catch (e) {}
                   }}
                   className={`p-4 cursor-pointer border-b border-gray-200 hover:bg-white transition-colors ${

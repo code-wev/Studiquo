@@ -1,11 +1,13 @@
 import {
   IsArray,
+  IsEnum,
   IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
 } from 'class-validator';
+import { TutorSubject } from 'src/models/TutorProfile.model';
 
 export class UpdateProfileDto {
   // User fields
@@ -36,7 +38,7 @@ export class UpdateProfileDto {
   // Tutor fields
   @IsOptional()
   @IsArray({ message: 'Subjects must be an array' })
-  @IsIn(['MATH', 'SCIENCE', 'ENGLISH'], {
+  @IsEnum(TutorSubject, {
     each: true,
     message: 'Each subject must be one of MATH, SCIENCE, ENGLISH',
   })

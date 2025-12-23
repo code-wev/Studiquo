@@ -5,6 +5,7 @@ import { PassportStrategy } from '@nestjs/passport';
 import { Request } from 'express';
 import { Model } from 'mongoose';
 import { Strategy, VerifyCallback } from 'passport-google-oauth20';
+import { MailService } from 'src/mail/mail.service';
 import { User, UserRole } from '../models/User.model';
 
 const ALLOWED_GOOGLE_ROLES = [
@@ -18,6 +19,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(
     @InjectModel(User.name) private userModel: Model<User>,
     private jwtService: JwtService,
+    private mailService: MailService,
   ) {
     super({
       clientID: process.env.GOOGLE_CLIENT_ID,
@@ -80,6 +82,11 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
           role: requestedRole as UserRole,
         });
         await user.save();
+
+        await this.mailService.sendWelcomeEmail(
+          user.email,
+          `${user.firstName} ${user.lastName}`,
+        );
       } else {
         // If the user exists but their role doesn't match the requested role,
         // reject to prevent accidental privilege escalation or mismatched

@@ -70,6 +70,86 @@ export class BookingsService {
       throw new BadRequestException('Invalid time slot');
     }
 
+    // Check if student has already booked any time slot with the same start and end time using aggregation
+    const existingSameTimeBookings = await this.bookingModel.aggregate([
+      {
+        $match: {
+          student: new Types.ObjectId(user.userId),
+          status: { $in: ['PENDING', 'SCHEDULED'] },
+        },
+      },
+      {
+        $lookup: {
+          from: 'timeslots',
+          localField: 'timeSlot',
+          foreignField: '_id',
+          as: 'timeSlotData',
+        },
+      },
+      {
+        $unwind: '$timeSlotData',
+      },
+      {
+        $match: {
+          $or: [
+            // Exact match: same start and end time
+            {
+              $and: [
+                { 'timeSlotData.startTime': new Date(slot.startTime) },
+                { 'timeSlotData.endTime': new Date(slot.endTime) },
+              ],
+            },
+            // Overlap check: new slot starts during existing slot or existing slot starts during new slot
+            {
+              $and: [
+                { 'timeSlotData.startTime': { $lt: new Date(slot.endTime) } },
+                { 'timeSlotData.endTime': { $gt: new Date(slot.startTime) } },
+              ],
+            },
+          ],
+        },
+      },
+      {
+        $limit: 1,
+      },
+    ]);
+
+    if (existingSameTimeBookings.length > 0) {
+      const existingBooking = existingSameTimeBookings[0];
+      const existingSlot = existingBooking.timeSlotData;
+
+      // Check if it's the exact same time slot ID
+      if (existingSlot._id.toString() === slot._id.toString()) {
+        throw new BadRequestException(
+          'You have already booked this exact time slot',
+        );
+      }
+
+      // Check if it's the exact same start and end time
+      if (
+        existingSlot.startTime.getTime() === slot.startTime.getTime() &&
+        existingSlot.endTime.getTime() === slot.endTime.getTime()
+      ) {
+        throw new BadRequestException(
+          'You have already booked a time slot with the same start and end time',
+        );
+      }
+
+      // Otherwise it's an overlap
+      const existingStartTime = existingSlot.startTime.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      const existingEndTime = existingSlot.endTime.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      throw new BadRequestException(
+        `You already have a booking from ${existingStartTime} to ${existingEndTime} which overlaps with this time slot`,
+      );
+    }
+
     // Enforce minimum advance booking window: must book at least 3 days before the lesson
     const now = Date.now();
     const slotStart = new Date(slot.startTime).getTime();
@@ -80,14 +160,56 @@ export class BookingsService {
       );
     }
 
-    // Ensure the timeslot isn't already booked (pending or scheduled)
-    const existing = await this.bookingModel.findOne({
+    // Check if time slot is already fully booked
+    // First, get all bookings for this time slot
+    const existingBookings = await this.bookingModel
+      .find({
+        timeSlot: new Types.ObjectId(slot._id),
+        status: { $in: ['PENDING', 'SCHEDULED'] },
+      })
+      .populate('timeSlot');
+
+    if (existingBookings.length > 0) {
+      // For ONE_TO_ONE: can only have one booking
+      if (dto.type === 'ONE_TO_ONE') {
+        throw new BadRequestException('This time slot is already booked');
+      }
+
+      // For GROUP: check capacity
+      if (dto.type === 'GROUP') {
+        // Get total students already enrolled in this time slot
+        const bookingIds = existingBookings.map((b) => b._id);
+        const enrolledStudentsCount =
+          await this.bookingStudentsModel.countDocuments({
+            booking: { $in: bookingIds },
+          });
+
+        // You need to define max capacity for group sessions
+        // Assuming you have a field in TimeSlot or a constant
+        const maxGroupCapacity = 500; // Adjust this based on your requirements
+
+        if (enrolledStudentsCount >= maxGroupCapacity) {
+          throw new BadRequestException('This group session is already full');
+        }
+      }
+    }
+
+    // Also check if the current student already has a booking in this time slot
+    const studentExistingBooking = await this.bookingModel.findOne({
       timeSlot: new Types.ObjectId(slot._id),
       status: { $in: ['PENDING', 'SCHEDULED'] },
     });
 
-    if (existing) {
-      throw new BadRequestException('You have already booked this time slot');
+    if (studentExistingBooking) {
+      // Check if this student is already enrolled in the booking
+      const existingStudentBooking = await this.bookingStudentsModel.findOne({
+        booking: studentExistingBooking._id,
+        student: new Types.ObjectId(user.userId),
+      });
+
+      if (existingStudentBooking) {
+        throw new BadRequestException('You have already booked this time slot');
+      }
     }
 
     const booking = new this.bookingModel({
@@ -105,14 +227,6 @@ export class BookingsService {
       student: new Types.ObjectId(user.userId),
     });
     await bookingStudent.save();
-
-    // Optionally create a lesson report for this booking
-    await this.lessonReportModel.create({
-      booking: booking._id,
-      description: '',
-      dueDate: new Date(),
-      submitted: false,
-    });
 
     // Students create bookings but should NOT be able to complete payment.
     // Return the booking record; parents will later generate a payment link.
@@ -162,7 +276,7 @@ export class BookingsService {
       },
       { $unwind: '$booking' },
 
-      // 5. Lookup timeSlot (SINGLE DOC)
+      // 5. Lookup timeSlot
       {
         $lookup: {
           from: 'timeslots',
@@ -195,11 +309,37 @@ export class BookingsService {
       },
       { $unwind: '$tutorProfile' },
 
-      // 8. Pagination
+      // 8. Add status order for sorting
+      {
+        $addFields: {
+          statusOrder: {
+            $switch: {
+              branches: [
+                { case: { $eq: ['$booking.status', 'PENDING'] }, then: 1 },
+                { case: { $eq: ['$booking.status', 'SCHEDULED'] }, then: 2 },
+                { case: { $eq: ['$booking.status', 'CANCELLED'] }, then: 3 },
+                { case: { $eq: ['$booking.status', 'COMPLETED'] }, then: 4 },
+              ],
+              default: 5,
+            },
+          },
+        },
+      },
+
+      // 9. Sort: PENDING first, then by date (earliest first)
+      {
+        $sort: {
+          statusOrder: 1, // PENDING (1) appears first
+          'availability.date': 1, // Earliest dates first
+          'timeSlot.startTime': 1, // Earliest times first
+        },
+      },
+
+      // 10. Pagination
       { $skip: (page - 1) * limit },
       { $limit: limit },
 
-      // 9. Final Projection (FIXED)
+      // 11. Final Projection
       {
         $project: {
           _id: 0,
@@ -221,16 +361,16 @@ export class BookingsService {
             id: '$timeSlot._id',
             subject: '$timeSlot.subject',
             type: '$timeSlot.type',
-            // Conditional meetLink
             meetLink: {
               $cond: {
-                if: { $in: ['$booking.status', ['PENDING', 'CANCELLED']] },
-                then: null,
-                else: '$timeSlot.meetLink',
+                if: { $in: ['$booking.status', ['SCHEDULED', 'COMPLETED']] },
+                then: '$timeSlot.meetLink',
+                else: null,
               },
             },
             startTime: '$timeSlot.startTime',
             endTime: '$timeSlot.endTime',
+            date: '$availability.date',
           },
         },
       },
@@ -371,6 +511,8 @@ export class BookingsService {
         tutorName: `${tutorUser.firstName} ${tutorUser.lastName}`,
         subject: booking.subject,
         slotEndTime: new Date(slot.endTime).toISOString(),
+        parentEmail: parent.email,
+        shortBookingId: booking.bookingId || '',
       },
     });
 
@@ -392,19 +534,611 @@ export class BookingsService {
     };
   }
 
+  /**
+   * Get all upcoming bookings for the authenticated student.
+   *
+   * @param user - authenticated student user
+   * @return list of upcoming bookings for the student
+   */
+  async getMyUpcomingBookings(user: any) {
+    // Get today's date boundaries
+    const today = new Date().getUTCDay();
+    const todayStart = new Date(today);
+    todayStart.setHours(0, 0, 0, 0);
+
+    const todayEnd = new Date(today);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const result = await this.bookingModel.aggregate([
+      // Step 1: Find all booking IDs for this student
+      {
+        $lookup: {
+          from: 'bookingstudents',
+          let: { bookingId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$booking', '$$bookingId'] },
+                    { $eq: ['$student', new Types.ObjectId(user.userId)] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: 'studentBooking',
+        },
+      },
+
+      // Step 2: Filter only bookings where this student is enrolled
+      {
+        $match: {
+          'studentBooking.0': { $exists: true },
+        },
+      },
+
+      // Step 3: Populate timeSlot details
+      {
+        $lookup: {
+          from: 'timeslots',
+          localField: 'timeSlot',
+          foreignField: '_id',
+          as: 'timeSlotDetails',
+        },
+      },
+
+      // Step 4: Unwind timeSlotDetails
+      {
+        $unwind: {
+          path: '$timeSlotDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Step 5: Get tutor availability linked to the time slot
+      {
+        $lookup: {
+          from: 'tutoravailabilities',
+          localField: 'timeSlotDetails.tutorAvailability',
+          foreignField: '_id',
+          as: 'tutorAvailability',
+        },
+      },
+
+      // Step 6: Unwind tutorAvailability
+      {
+        $unwind: {
+          path: '$tutorAvailability',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Step 7: Get tutor details from tutorAvailability
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'tutorAvailability.user',
+          foreignField: '_id',
+          as: 'tutorDetails',
+        },
+      },
+
+      // Step 8: Unwind tutorDetails
+      {
+        $unwind: {
+          path: '$tutorDetails',
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+
+      // Step 9: Add fields for calculations
+      {
+        $addFields: {
+          bookingDate: '$tutorAvailability.date',
+          isToday: {
+            $and: [
+              { $gte: ['$tutorAvailability.date', todayStart] },
+              { $lte: ['$tutorAvailability.date', todayEnd] },
+            ],
+          },
+          isCompleted: { $eq: ['$status', 'COMPLETED'] },
+        },
+      },
+
+      // Step 10: Use facet to get both grouped bookings and stats in one query
+      {
+        $facet: {
+          // Main pipeline for grouped bookings (upcoming only)
+          groupedBookings: [
+            // Filter only upcoming bookings
+            {
+              $match: {
+                bookingDate: { $gte: new Date() },
+              },
+            },
+            // Format individual booking documents
+            {
+              $project: {
+                _id: 1,
+                subject: 1,
+                type: 1,
+                status: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                timeSlot: {
+                  _id: '$timeSlotDetails._id',
+                  startTime: '$timeSlotDetails.startTime',
+                  endTime: '$timeSlotDetails.endTime',
+                  subject: '$timeSlotDetails.subject',
+                  type: '$timeSlotDetails.type',
+                  meetLink: {
+                    $cond: {
+                      if: { $in: ['$status', ['COMPLETED', 'SCHEDULED']] },
+                      then: '$timeSlotDetails.meetLink',
+                      else: null,
+                    },
+                  },
+                },
+                tutor: {
+                  _id: '$tutorDetails._id',
+                  firstName: '$tutorDetails.firstName',
+                  lastName: '$tutorDetails.lastName',
+                  avatar: '$tutorDetails.avatar',
+                },
+                bookingDate: 1,
+              },
+            },
+            // Group by date
+            {
+              $group: {
+                _id: '$bookingDate',
+                date: { $first: '$bookingDate' },
+                list: {
+                  $push: {
+                    _id: '$_id',
+                    subject: '$subject',
+                    type: '$type',
+                    status: '$status',
+                    createdAt: '$createdAt',
+                    updatedAt: '$updatedAt',
+                    timeSlot: '$timeSlot',
+                    tutor: '$tutor',
+                  },
+                },
+                totalBookings: { $sum: 1 },
+              },
+            },
+            // Format grouped response
+            {
+              $project: {
+                _id: 0,
+                date: 1,
+                list: 1,
+                totalBookings: 1,
+              },
+            },
+            // Sort by date
+            {
+              $sort: {
+                date: 1,
+              },
+            },
+          ],
+
+          // Pipeline for statistics - Only the 3 required stats
+          statsCalculation: [
+            // Calculate all stats in one group stage
+            {
+              $group: {
+                _id: null,
+                totalClasses: { $sum: 1 }, // Total all bookings
+                todayClasses: {
+                  $sum: {
+                    $cond: {
+                      if: '$isToday',
+                      then: 1,
+                      else: 0,
+                    },
+                  },
+                },
+                completedClasses: {
+                  $sum: {
+                    $cond: {
+                      if: '$isCompleted',
+                      then: 1,
+                      else: 0,
+                    },
+                  },
+                },
+              },
+            },
+            // Format stats object
+            {
+              $project: {
+                _id: 0,
+                totalClasses: 1,
+                todayClasses: 1,
+                completedClasses: 1,
+              },
+            },
+          ],
+        },
+      },
+
+      // Step 11: Format the final response structure
+      {
+        $project: {
+          bookings: {
+            $cond: {
+              if: { $gt: [{ $size: '$groupedBookings' }, 0] },
+              then: '$groupedBookings',
+              else: [],
+            },
+          },
+          stats: {
+            $cond: {
+              if: { $gt: [{ $size: '$statsCalculation' }, 0] },
+              then: { $arrayElemAt: ['$statsCalculation', 0] },
+              else: {
+                totalClasses: 0,
+                todayClasses: 0,
+                completedClasses: 0,
+              },
+            },
+          },
+        },
+      },
+    ]);
+
+    // Extract the single result from facet
+    const finalResult = result[0] || {
+      bookings: [],
+      stats: {
+        totalClasses: 0,
+        todayClasses: 0,
+        completedClasses: 0,
+      },
+    };
+
+    return {
+      success: true,
+      message: 'Upcoming bookings retrieved successfully',
+      method: 'GET',
+      statusCode: 200,
+      timestamp: new Date().toISOString(),
+      data: {
+        bookings: finalResult.bookings,
+        stats: finalResult.stats,
+      },
+    };
+  }
+
+  /**
+   * Get all bookings for the authenticated tutor in the current month.
+   * Grouped by date with details of each time slot and enrolled (paid) students.
+   *
+   * Rules:
+   * - Cancelled bookings are excluded from student counts
+   * - Only students with COMPLETED payment are counted
+   */
+  async getTutorBookings(user: any) {
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    currentMonthEnd.setHours(23, 59, 59, 999);
+
+    const result = await this.bookingModel.aggregate([
+      // 1. Lookup TimeSlot
+      {
+        $lookup: {
+          from: 'timeslots',
+          localField: 'timeSlot',
+          foreignField: '_id',
+          as: 'timeSlotDetails',
+        },
+      },
+      {
+        $unwind: {
+          path: '$timeSlotDetails',
+          preserveNullAndEmptyArrays: false,
+        },
+      },
+
+      // 2. Lookup TutorAvailability
+      {
+        $lookup: {
+          from: 'tutoravailabilities',
+          localField: 'timeSlotDetails.tutorAvailability',
+          foreignField: '_id',
+          as: 'tutorAvailability',
+        },
+      },
+      {
+        $unwind: {
+          path: '$tutorAvailability',
+          preserveNullAndEmptyArrays: false,
+        },
+      },
+
+      // 3. Filter by tutor + current month
+      {
+        $match: {
+          'tutorAvailability.user': new Types.ObjectId(user.userId),
+          'tutorAvailability.date': {
+            $gte: currentMonthStart,
+            $lte: currentMonthEnd,
+          },
+        },
+      },
+
+      // 4. Lookup PAID students (Payments = source of truth)
+      {
+        $lookup: {
+          from: 'payments',
+          let: {
+            bookingId: '$_id',
+            tutorId: '$tutorAvailability.user',
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$booking', '$$bookingId'] },
+                    { $eq: ['$tutor', '$$tutorId'] },
+                    { $eq: ['$status', 'COMPLETED'] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: 'paidStudents',
+        },
+      },
+
+      // 5. Computed fields
+      {
+        $addFields: {
+          bookingDate: '$tutorAvailability.date',
+
+          // FIXED COUNT
+          studentsCount: {
+            $cond: [
+              { $ne: ['$status', 'CANCELLED'] },
+              { $size: '$paidStudents' },
+              0,
+            ],
+          },
+
+          isToday: {
+            $and: [
+              {
+                $gte: [
+                  '$tutorAvailability.date',
+                  new Date(now.getFullYear(), now.getMonth(), now.getDate()),
+                ],
+              },
+              {
+                $lte: [
+                  '$tutorAvailability.date',
+                  new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    now.getDate(),
+                    23,
+                    59,
+                    59,
+                    999,
+                  ),
+                ],
+              },
+            ],
+          },
+        },
+      },
+
+      // 6. FACET: grouped bookings + stats
+      {
+        $facet: {
+          groupedBookings: [
+            {
+              $project: {
+                _id: 1,
+                subject: 1,
+                type: 1,
+                status: 1,
+                createdAt: 1,
+                updatedAt: 1,
+                bookingDate: 1,
+                studentsCount: 1,
+                timeSlot: {
+                  _id: '$timeSlotDetails._id',
+                  startTime: '$timeSlotDetails.startTime',
+                  endTime: '$timeSlotDetails.endTime',
+                  subject: '$timeSlotDetails.subject',
+                  type: '$timeSlotDetails.type',
+                  meetLink: '$timeSlotDetails.meetLink',
+                },
+              },
+            },
+            {
+              $group: {
+                _id: {
+                  date: '$bookingDate',
+                  slotId: '$timeSlot._id',
+                },
+                date: { $first: '$bookingDate' },
+                slotDetails: { $first: '$timeSlot' },
+                bookings: {
+                  $push: {
+                    _id: '$_id',
+                    subject: '$subject',
+                    type: '$type',
+                    status: '$status',
+                    createdAt: '$createdAt',
+                    updatedAt: '$updatedAt',
+                    studentsCount: '$studentsCount',
+                  },
+                },
+                totalStudentsInSlot: { $sum: '$studentsCount' },
+                slotBookingsCount: { $sum: 1 },
+              },
+            },
+            {
+              $group: {
+                _id: '$date',
+                date: { $first: '$date' },
+                timeSlots: {
+                  $push: {
+                    slotId: '$slotDetails._id',
+                    startTime: '$slotDetails.startTime',
+                    endTime: '$slotDetails.endTime',
+                    subject: '$slotDetails.subject',
+                    type: '$slotDetails.type',
+                    meetLink: '$slotDetails.meetLink',
+                    bookings: '$bookings',
+                    totalStudentsInSlot: '$totalStudentsInSlot',
+                    slotBookingsCount: '$slotBookingsCount',
+                  },
+                },
+                totalBookings: { $sum: '$slotBookingsCount' },
+                totalStudents: { $sum: '$totalStudentsInSlot' },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                date: 1,
+                dateString: {
+                  $dateToString: {
+                    format: '%Y-%m-%d',
+                    date: '$date',
+                  },
+                },
+                totalBookings: 1,
+                totalStudents: 1,
+                timeSlots: {
+                  $sortArray: {
+                    input: '$timeSlots',
+                    sortBy: { startTime: 1 },
+                  },
+                },
+              },
+            },
+            { $sort: { date: 1 } },
+          ],
+
+          statsCalculation: [
+            {
+              $group: {
+                _id: null,
+                totalBookings: { $sum: 1 },
+                totalStudents: { $sum: '$studentsCount' },
+                todayBookings: {
+                  $sum: { $cond: ['$isToday', 1, 0] },
+                },
+                completedBookings: {
+                  $sum: {
+                    $cond: [{ $eq: ['$status', 'COMPLETED'] }, 1, 0],
+                  },
+                },
+                scheduledBookings: {
+                  $sum: {
+                    $cond: [{ $eq: ['$status', 'SCHEDULED'] }, 1, 0],
+                  },
+                },
+                pendingBookings: {
+                  $sum: {
+                    $cond: [{ $eq: ['$status', 'PENDING'] }, 1, 0],
+                  },
+                },
+                cancelledBookings: {
+                  $sum: {
+                    $cond: [{ $eq: ['$status', 'CANCELLED'] }, 1, 0],
+                  },
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                totalBookings: 1,
+                totalStudents: 1,
+                todayBookings: 1,
+                completedBookings: 1,
+                scheduledBookings: 1,
+                pendingBookings: 1,
+                cancelledBookings: 1,
+                avgStudentsPerBooking: {
+                  $cond: [
+                    { $gt: ['$totalBookings', 0] },
+                    { $divide: ['$totalStudents', '$totalBookings'] },
+                    0,
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      },
+
+      // 7. Final shape
+      {
+        $project: {
+          bookings: { $ifNull: ['$groupedBookings', []] },
+          stats: {
+            $ifNull: [
+              { $arrayElemAt: ['$statsCalculation', 0] },
+              {
+                totalBookings: 0,
+                totalStudents: 0,
+                todayBookings: 0,
+                completedBookings: 0,
+                scheduledBookings: 0,
+                pendingBookings: 0,
+                cancelledBookings: 0,
+                avgStudentsPerBooking: 0,
+              },
+            ],
+          },
+        },
+      },
+    ]);
+
+    const finalResult = result[0] || {
+      bookings: [],
+      stats: {
+        totalBookings: 0,
+        totalStudents: 0,
+        todayBookings: 0,
+        completedBookings: 0,
+        scheduledBookings: 0,
+        pendingBookings: 0,
+        cancelledBookings: 0,
+        avgStudentsPerBooking: 0,
+      },
+    };
+
+    return {
+      message: 'Tutor bookings retrieved successfully',
+      bookings: finalResult.bookings,
+      stats: finalResult.stats,
+      currentMonth: {
+        start: currentMonthStart.toISOString(),
+        end: currentMonthEnd.toISOString(),
+        month: now.toLocaleString('default', { month: 'long' }),
+        year: now.getFullYear(),
+      },
+    };
+  }
+
   // async updateBookingStatus(bookingId: string, status: string) {
   //   return this.bookingModel.findByIdAndUpdate(
   //     bookingId,
   //     { status },
   //     { new: true },
   //   );
-  // }
-
-  // async getMyBookings(user: any) {
-  //   const bookings = await this.bookingStudentsModel
-  //     .find({ student: user.userId })
-  //     .populate('booking');
-  //   return bookings.map((b) => b.booking);
   // }
 
   // async getMySchedule(user: any) {

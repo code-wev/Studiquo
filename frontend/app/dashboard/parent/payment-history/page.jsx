@@ -81,7 +81,9 @@ export default function PaymentHistory() {
       console.log("Payment API Response:", result);
 
       if (result?.success) {
-        console.log("Payment link created successfully:", result.data);
+        console.log("Payment link created successfully:", result.data?.checkoutUrl);
+
+        window.location.href = result.data?.checkoutUrl
         alert(`Payment initiated! Check console for details.`);
 
         // If there's a payment URL, you could redirect to it

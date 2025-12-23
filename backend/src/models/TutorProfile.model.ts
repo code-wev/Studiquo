@@ -1,17 +1,26 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-@Schema()
+export enum TutorSubject {
+  MATH = 'MATH',
+  SCIENCE = 'SCIENCE',
+  ENGLISH = 'ENGLISH',
+}
+
+@Schema({ timestamps: true })
 export class TutorProfile extends Document {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   user: Types.ObjectId;
 
+  // Approved by admin or not
+  @Prop({ default: false })
+  isApproved: boolean;
+
   @Prop({
     type: [String],
-    enum: ['MATH', 'SCIENCE', 'ENGLISH'],
-    required: true,
+    enum: TutorSubject,
   })
-  subjects: string[];
+  subjects: TutorSubject[];
 
   // hourly rate in euros for group lessons
   @Prop({ required: true })

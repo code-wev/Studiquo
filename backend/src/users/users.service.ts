@@ -217,7 +217,7 @@ export class UsersService extends BaseService<User> {
 
     // Find student by studentId
     const student = await this.model.findOne({
-      studentId,
+      _id: new Types.ObjectId(studentId),
       role: UserRole.Student,
     });
 
@@ -230,7 +230,7 @@ export class UsersService extends BaseService<User> {
 
     // If parent already approved (exists in parent's children) -> short-circuit
     const alreadyChild = await this.model.findOne({
-      _id: parent._id,
+      _id: new Types.ObjectId(parent._id),
       children: new Types.ObjectId(student._id),
     });
 
@@ -247,7 +247,7 @@ export class UsersService extends BaseService<User> {
 
     // If already requested, inform
     const alreadyRequested = await this.model.findOne({
-      _id: student._id,
+      _id: new Types.ObjectId(student._id),
       pendingParents: { $in: [new Types.ObjectId(parent._id)] },
     });
 
@@ -257,7 +257,7 @@ export class UsersService extends BaseService<User> {
 
     // Add parent to student's pendingParents
     await this.model.updateOne(
-      { _id: student._id },
+      { _id: new Types.ObjectId(student._id) },
       { $addToSet: { pendingParents: new Types.ObjectId(parent._id) } },
     );
 
@@ -282,7 +282,7 @@ export class UsersService extends BaseService<User> {
     parentId: MongoIdDto['id'],
     search: SearchDto['search'],
   ) {
-    // Ensure parent exists & is allowed
+    // 1️. Ensure parent exists & is allowed
     const parent = await this.model.findById(parentId);
     if (!parent) throw new NotFoundException('Parent not found');
     if (parent.role !== UserRole.Parent) {
@@ -293,14 +293,28 @@ export class UsersService extends BaseService<User> {
     const regex = new RegExp(search ?? '', 'i');
 
     const results = await this.model.aggregate([
-      // 1️. Match students only
+      // 2️. Match students only
       {
         $match: {
           role: UserRole.Student,
         },
       },
 
-      // 2️. Search by studentId / name / email
+      // 3️. Exclude already CONNECTED students
+      {
+        $match: {
+          $expr: {
+            $not: {
+              $in: [
+                parentObjId,
+                { $ifNull: ['$parents', []] }, // EXCLUDE CONNECTED
+              ],
+            },
+          },
+        },
+      },
+
+      // 4️. Search by studentId / name / email
       {
         $match: {
           $or: [
@@ -312,37 +326,35 @@ export class UsersService extends BaseService<User> {
         },
       },
 
-      // 3️. Ensure pendingParents logic
+      // 5️. Allow pending OR no pending
       {
         $match: {
-          $or: [
-            { pendingParents: { $exists: false } },
-            { pendingParents: { $size: 0 } },
-            { pendingParents: parentObjId },
-          ],
-        },
-      },
-
-      // 4️. Compute requestSent flag
-      {
-        $addFields: {
-          requestSent: {
-            $cond: [
+          $expr: {
+            $or: [
+              {
+                $eq: [{ $size: { $ifNull: ['$pendingParents', []] } }, 0],
+              },
               {
                 $in: [parentObjId, { $ifNull: ['$pendingParents', []] }],
               },
-              true,
-              false,
             ],
           },
         },
       },
 
-      // 5️. Shape response
+      // 6️. requestSent flag
+      {
+        $addFields: {
+          requestSent: {
+            $in: [parentObjId, { $ifNull: ['$pendingParents', []] }],
+          },
+        },
+      },
+
+      // 7️. Shape response
       {
         $project: {
-          _id: 0,
-          id: { $toString: '$_id' },
+          _id: 1,
           firstName: 1,
           lastName: 1,
           studentId: 1,
@@ -352,7 +364,7 @@ export class UsersService extends BaseService<User> {
         },
       },
 
-      // 6️. Limit results
+      // 8️. Limit
       { $limit: 20 },
     ]);
 
@@ -369,16 +381,137 @@ export class UsersService extends BaseService<User> {
    * @return array of student user documents who are children of the parent
    */
   async listChildrenOfParent(parentId: MongoIdDto['id']) {
-    const parent = await this.model
-      .findById(parentId)
-      .populate('children', 'firstName lastName email avatar studentId')
-      .lean();
+    const parentObjId = new Types.ObjectId(parentId);
 
-    if (!parent) throw new NotFoundException('Parent not found');
+    const result = await this.model.aggregate([
+      // 1. Match parent
+      {
+        $match: {
+          _id: parentObjId,
+          role: UserRole.Parent,
+        },
+      },
+
+      // 2. Connected children
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'children',
+          foreignField: '_id',
+          as: 'connectedChildren',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                firstName: 1,
+                lastName: 1,
+                email: 1,
+                avatar: 1,
+                studentId: 1,
+                status: { $literal: 'CONNECTED' },
+              },
+            },
+          ],
+        },
+      },
+
+      // 3. Pending children
+      {
+        $lookup: {
+          from: 'users',
+          let: { parentId: '$_id' },
+          as: 'pendingChildren',
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$role', UserRole.Student] },
+                    {
+                      $in: ['$$parentId', { $ifNull: ['$pendingParents', []] }],
+                    },
+                  ],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 1,
+                firstName: 1,
+                lastName: 1,
+                email: 1,
+                avatar: 1,
+                studentId: 1,
+                status: { $literal: 'PENDING' },
+              },
+            },
+          ],
+        },
+      },
+
+      // 4. Merge both into `children`
+      {
+        $addFields: {
+          children: {
+            $concatArrays: ['$connectedChildren', '$pendingChildren'],
+          },
+        },
+      },
+
+      // 5. Counts
+      {
+        $addFields: {
+          connectedCount: { $size: '$connectedChildren' },
+          pendingCount: { $size: '$pendingChildren' },
+          totalCount: {
+            $add: [
+              { $size: '$connectedChildren' },
+              { $size: '$pendingChildren' },
+            ],
+          },
+        },
+      },
+
+      // 6. Final projection
+      {
+        $project: {
+          _id: 0,
+          children: 1,
+          counts: {
+            connected: '$connectedCount',
+            pending: '$pendingCount',
+            total: '$totalCount',
+          },
+        },
+      },
+    ]);
+
+    if (!result.length) {
+      throw new NotFoundException('Parent not found');
+    }
 
     return {
       message: 'Children list retrieved',
-      children: parent.children || [],
+      children: result[0].children,
+      counts: result[0].counts,
+    };
+  }
+
+  /**
+   * List connected parents for a student (student view).
+   *
+   * @param studentId - the MongoDB ID of the student user
+   * @return array of parent user documents who are connected to the student
+   */
+  async listParentsOfStudent(studentId: MongoIdDto['id']) {
+    const student = await this.model
+      .findById(studentId)
+      .populate('parents', 'firstName lastName email avatar')
+      .lean();
+    if (!student) throw new NotFoundException('Student not found');
+    return {
+      message: 'Parents list retrieved',
+      parents: student.parents || [],
     };
   }
 
@@ -454,21 +587,6 @@ export class UsersService extends BaseService<User> {
     }
 
     return { message: 'Parent request declined' };
-  }
-
-  /**
-   * Change the authenticated user's password.
-   *
-   * @param req - the request object that contains `user` (set by auth guard)
-   * @param data - object containing `newPassword` property
-   * @returns an object with a message on success
-   */
-  async updatePassword(user: any, data: any) {
-    const userDoc = await this.model.findById(user.userId);
-    if (!userDoc) throw new UnauthorizedException('User not found');
-    userDoc.password = await bcrypt.hash(data.newPassword, 10);
-    await userDoc.save();
-    return { message: 'Password updated' };
   }
 
   /**

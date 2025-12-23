@@ -11,10 +11,14 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { useGetTutorOverviewQuery } from "@/feature/shared/TutorApi";
 
 const Overview = () => {
   const [earningsMonth, setEarningsMonth] = useState("Select month");
   const [subjectMonth, setSubjectMonth] = useState("Select month");
+
+  const {data:overview} = useGetTutorOverviewQuery();
+  console.log(overview?.data, 'overview is here');
 
   const earningsData = [
     { name: "English", value: 5500 },

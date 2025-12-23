@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { ExamBoardEntry, ExamBoardEntrySchema } from './ExamBoardModel';
 
-@Schema()
+@Schema({ timestamps: true })
 export class StudentProfile extends Document {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   user: Types.ObjectId;

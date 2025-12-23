@@ -7,9 +7,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { formatAmPm } from 'common/utils/time.util';
 import { Model, Types } from 'mongoose';
-import { TutorProfile } from 'src/models/TutorProfile.model';
+import { TutorProfile, TutorSubject } from 'src/models/TutorProfile.model';
 import { UserRole } from 'src/models/User.model';
-import { TimeSlot } from '../models/TimeSlot.model';
+import { TimeSlot, TimeSlotType } from '../models/TimeSlot.model';
 import { TutorAvailability } from '../models/TutorAvailability.model';
 import {
   CreateAvailabilityDto,
@@ -349,10 +349,10 @@ export class AvailabilityService {
     }
 
     if (dto.type) {
-      slot.type = dto.type;
+      slot.type = dto.type as TimeSlotType;
     }
     if (dto.subject) {
-      slot.subject = dto.subject;
+      slot.subject = dto.subject as TutorSubject;
     }
 
     return slot.save();

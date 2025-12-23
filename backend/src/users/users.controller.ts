@@ -112,6 +112,18 @@ export class UsersController {
   }
 
   /**
+   * Student: list connected parents.
+   *
+   * @param req - the request object containing `user` set by the auth guard
+   * @returns array of parent user documents who are connected to the student
+   */
+  @Get('my/parents')
+  @Roles(UserRole.Student)
+  async listParents(@GetUser() user: any) {
+    return this.usersService.listParentsOfStudent(user.userId);
+  }
+
+  /**
    * Student: list pending parent requests
    *
    * @param req - the request object containing `user` set by the auth guard
@@ -136,28 +148,12 @@ export class UsersController {
   async respondToParentRequest(
     @GetUser() user: any,
     @Param('parentId') parentId: MongoIdDto['id'],
-    @Body() accept: RespondToParentRequestDto['accept'],
+    @Body() body: RespondToParentRequestDto,
   ) {
     return this.usersService.respondToParentRequest(
       user.userId,
       parentId,
-      accept,
+      body.accept,
     );
-  }
-
-  /**
-   * Update the current authenticated user's password.
-   *
-   * Expects an object with `newPassword` (and optionally `oldPassword`)
-   * depending on the application's policy.
-   *
-   * @param req - the request object containing `user` set by the auth guard
-   * @param body - data containing the new password
-   * @returns a success message on completion
-   */
-  @Put('me/password')
-  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
-  async updatePassword(@GetUser() user: any, @Body() body) {
-    return this.usersService.updatePassword(user, body);
   }
 }

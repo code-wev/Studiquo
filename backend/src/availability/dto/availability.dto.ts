@@ -8,6 +8,8 @@ import {
   IsString,
   IsUrl,
 } from 'class-validator';
+import { TimeSlotType } from 'src/models/TimeSlot.model';
+import { TutorSubject } from 'src/models/TutorProfile.model';
 
 export class CreateAvailabilityDto {
   @IsDateString(
@@ -34,7 +36,7 @@ export class CreateTimeSlotDto {
   meetLink: string;
 
   @IsString({ message: 'Type must be a string' })
-  @IsEnum(['ONE_TO_ONE', 'GROUP'], {
+  @IsEnum(TimeSlotType, {
     message: 'Type must be ONE_TO_ONE or GROUP',
   })
   type: string;
@@ -68,13 +70,13 @@ export class UpdateTimeSlotDto {
 
   @IsOptional()
   @IsString({ message: 'Type must be a string' })
-  @IsEnum(['ONE_TO_ONE', 'GROUP'], {
+  @IsEnum(TimeSlotType, {
     message: 'Type must be ONE_TO_ONE or GROUP',
   })
   type: string;
 
   @IsString({ message: 'Subject must be a string' })
-  @IsEnum(['MATH', 'SCIENCE', 'ENGLISH'], {
+  @IsEnum(TutorSubject, {
     message: 'Subject must be one of MATH|SCIENCE|ENGLISH',
   })
   subject: string;
