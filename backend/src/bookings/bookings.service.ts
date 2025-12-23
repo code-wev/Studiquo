@@ -511,6 +511,8 @@ export class BookingsService {
         tutorName: `${tutorUser.firstName} ${tutorUser.lastName}`,
         subject: booking.subject,
         slotEndTime: new Date(slot.endTime).toISOString(),
+        parentEmail: parent.email,
+        shortBookingId: booking.bookingId || '',
       },
     });
 
