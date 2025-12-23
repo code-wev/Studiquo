@@ -39,7 +39,6 @@ export class User extends Document {
 
   /**
    * Parent → Children mapping
-   * Only for Parent role
    */
   @Prop({
     type: [Types.ObjectId],
@@ -49,7 +48,7 @@ export class User extends Document {
   children?: Types.ObjectId[];
 
   /**
-   * For Student role: list of parent ids who are already approved
+   * Student → Approved parents
    */
   @Prop({
     type: [Types.ObjectId],
@@ -59,7 +58,7 @@ export class User extends Document {
   parents?: Types.ObjectId[];
 
   /**
-   * For Student role: parent requests that are awaiting student's approval
+   * Student → Pending parent requests
    */
   @Prop({
     type: [Types.ObjectId],
@@ -81,6 +80,10 @@ export class User extends Document {
   @Prop({ default: '' })
   dbsLink: string;
 
+  /**
+   * Referral source (string, optional)
+   * e.g. "Facebook", "Google", "Friend"
+   */
   @Prop({
     type: String,
     required: false,
@@ -105,7 +108,9 @@ UserSchema.post('save', async function (doc: User) {
 
   const year = new Date().getFullYear();
   const random = Math.floor(100000 + Math.random() * 900000);
-  const studentId = `STU-${year}-${random}`;
 
-  await UserModel.updateOne({ _id: doc._id }, { $set: { studentId } });
+  await UserModel.updateOne(
+    { _id: doc._id },
+    { $set: { studentId: `STU-${year}-${random}` } },
+  );
 });
