@@ -22,7 +22,6 @@ export class User extends Document {
   @Prop({ unique: true, sparse: true })
   studentId?: string;
 
-  @Prop()
   @Prop({ required: true })
   firstName: string;
 
@@ -70,19 +69,19 @@ export class User extends Document {
   pendingParents?: Types.ObjectId[];
 
   // Optional fields
-  @Prop()
+  @Prop({ default: '' })
   token: string;
 
   @Prop({ required: false })
   tokenExpiry?: Date;
 
-  @Prop()
+  @Prop({ default: '' })
   bio: string;
 
-  @Prop()
+  @Prop({ default: '' })
   dbsLink: string;
 
-  @Prop()
+  @Prop({ default: '' })
   referralSource: string;
 }
 
