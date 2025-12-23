@@ -148,6 +148,7 @@ export class AuthService {
    * @returns a success message on completion
    */
   async changePassword(user: any, data: ChangePasswordDto) {
+    console.log(user);
     const existingUser = await this.userModel.findById(
       new Types.ObjectId(user.userId),
     );
