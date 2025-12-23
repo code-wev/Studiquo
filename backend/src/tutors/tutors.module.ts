@@ -1,20 +1,20 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
-import { jwtConfig } from 'common/jwt.config';
-import { AvailabilityModule } from 'src/availability/availability.module';
-import { Booking, BookingSchema } from 'src/models/Booking.model';
-import { Payment, PaymentSchema } from 'src/models/Payment.model';
-import { Payout, PayoutSchema } from 'src/models/Payout.model';
-import { Review, ReviewSchema } from 'src/models/Review.model';
-import { TimeSlot, TimeSlotSchema } from 'src/models/TimeSlot.model';
+import { jwtConfig } from '../../common/jwt.config';
+import { AvailabilityModule } from '../availability/availability.module';
+import { Booking, BookingSchema } from '../models/Booking.model';
+import { Payment, PaymentSchema } from '../models/Payment.model';
+import { Payout, PayoutSchema } from '../models/Payout.model';
+import { Review, ReviewSchema } from '../models/Review.model';
+import { TimeSlot, TimeSlotSchema } from '../models/TimeSlot.model';
 import {
   TutorAvailability,
   TutorAvailabilitySchema,
-} from 'src/models/TutorAvailability.model';
-import { Wallet, WalletSchema } from 'src/models/Wallet.model';
+} from '../models/TutorAvailability.model';
 import { TutorProfile, TutorProfileSchema } from '../models/TutorProfile.model';
 import { User, UserSchema } from '../models/User.model';
+import { Wallet, WalletSchema } from '../models/Wallet.model';
 import { TutorsController } from './tutors.controller';
 import { TutorsService } from './tutors.service';
 

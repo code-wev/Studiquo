@@ -1,10 +1,10 @@
 import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
-import { GetUser } from 'common/decorators/get-user.decorator';
-import { PaginationDto } from 'common/dto/pagination.dto';
-import { UserRole } from 'src/models/User.model';
+import { GetUser } from '../../common/decorators/get-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { PaginationDto } from '../../common/dto/pagination.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { UserRole } from '../models/User.model';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto, CreatePaymentLinkDto } from './dto/booking.dto';
 

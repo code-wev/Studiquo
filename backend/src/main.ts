@@ -16,19 +16,17 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const reflector = app.get(Reflector);
 
-  /* PUBLIC CORS */
-  app.enableCors({
-    origin: true,
-    credentials: true,
-  });
-
   // Set a global API prefix so all routes are prefixed with `/api`.
   app.setGlobalPrefix('api');
 
   // Enable CORS for the frontend and allow credentials so cookies are sent
   // across origins (frontend must send requests with `credentials: 'include'`).
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: [
+      'https://studiquo-frontend.herokuapp.com/',
+      'http://localhost:3000/',
+      process.env.FRONTEND_URL,
+    ],
     credentials: true,
   });
 
@@ -53,6 +51,10 @@ async function bootstrap() {
   // Use raw body for Stripe webhook endpoint so signature verification works.
   // The app has a global prefix of `/api` so the webhook path is `/api/payments/webhook`.
   app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
+
+  app.use('/health', (_, res) => {
+    res.status(200).send({ status: 'ok' });
+  });
 
   await app.listen(process.env.PORT ?? 8080);
 

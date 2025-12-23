@@ -1,16 +1,13 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
-import { jwtConfig } from 'common/jwt.config';
-import {
-  TutorProfile,
-  TutorProfileSchema,
-} from 'src/models/TutorProfile.model';
+import { jwtConfig } from '../../common/jwt.config';
 import { TimeSlot, TimeSlotSchema } from '../models/TimeSlot.model';
 import {
   TutorAvailability,
   TutorAvailabilitySchema,
 } from '../models/TutorAvailability.model';
+import { TutorProfile, TutorProfileSchema } from '../models/TutorProfile.model';
 import { AvailabilityController } from './availability.controller';
 import { AvailabilityService } from './availability.service';
 

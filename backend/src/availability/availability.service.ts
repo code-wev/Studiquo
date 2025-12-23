@@ -4,13 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { MongoIdDto } from 'common/dto/mongoId.dto';
-import { formatAmPm } from 'common/utils/time.util';
 import { Model, Types } from 'mongoose';
-import { TutorProfile, TutorSubject } from 'src/models/TutorProfile.model';
-import { UserRole } from 'src/models/User.model';
+import { MongoIdDto } from '../../common/dto/mongoId.dto';
+import { formatAmPm } from '../../common/utils/time.util';
 import { TimeSlot, TimeSlotType } from '../models/TimeSlot.model';
 import { TutorAvailability } from '../models/TutorAvailability.model';
+import { TutorProfile, TutorSubject } from '../models/TutorProfile.model';
+import { UserRole } from '../models/User.model';
 import {
   CreateAvailabilityDto,
   CreateTimeSlotDto,

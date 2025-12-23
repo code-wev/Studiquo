@@ -1,6 +1,6 @@
 import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
-import { ExamBoard } from 'src/models/ExamBoardModel';
-import { TutorSubject } from 'src/models/TutorProfile.model';
+import { ExamBoard } from '../../models/ExamBoardModel';
+import { TutorSubject } from '../../models/TutorProfile.model';
 
 export class CreateExamBoardDto {
   @IsString({ message: 'Subject must be a string' })

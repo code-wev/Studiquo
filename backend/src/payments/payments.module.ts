@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { MailService } from 'src/mail/mail.service';
-import { Booking, BookingSchema } from 'src/models/Booking.model';
-import { ChatGroup, ChatGroupSchema } from 'src/models/ChatGroup.model';
-import { Payment, PaymentSchema } from 'src/models/Payment.model';
-import { Wallet, WalletSchema } from 'src/models/Wallet.model';
+import { MailService } from '../mail/mail.service';
+import { Booking, BookingSchema } from '../models/Booking.model';
+import { ChatGroup, ChatGroupSchema } from '../models/ChatGroup.model';
+import { Payment, PaymentSchema } from '../models/Payment.model';
+import { Wallet, WalletSchema } from '../models/Wallet.model';
 import { PaymentsController } from './payments.controller';
 import { PaymentsService } from './payments.service';
 
