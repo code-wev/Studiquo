@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-@Schema()
+@Schema({ timestamps: true })
 export class Payment extends Document {
   @Prop({ type: Types.ObjectId, ref: 'Booking', required: true })
   booking: Types.ObjectId;
@@ -15,23 +15,30 @@ export class Payment extends Document {
   @Prop({ required: true })
   amount: number;
 
-  @Prop({ required: true })
+  // Pound sterling GBP not supported in Stripe test mode
+  @Prop({ required: true, default: 'gbp' })
   currency: string;
 
   @Prop({ required: true })
   method: string;
 
-  @Prop({ required: true })
+  @Prop({
+    type: String,
+    enum: ['COMPLETED', 'FAILED'],
+    required: true,
+  })
   status: string;
 
   @Prop({ required: true })
   transactionId: string;
 
-  @Prop({ required: true })
+  @Prop({ required: true, default: 0 })
   commission: number;
 
-  @Prop({ required: true })
+  @Prop({ required: true, default: 0 })
   tutorEarning: number;
 }
 
 export const PaymentSchema = SchemaFactory.createForClass(Payment);
+
+PaymentSchema.index({ booking: 1, tutor: 1, status: 1 });

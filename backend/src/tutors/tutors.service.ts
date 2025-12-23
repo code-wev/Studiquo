@@ -1,17 +1,19 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model, Types } from 'mongoose';
-import { Booking } from 'src/models/booking.model';
-import { Payment } from 'src/models/payment.model';
-import { Payout } from 'src/models/payout.model';
-import { Review } from 'src/models/review.model';
-import { TimeSlot } from 'src/models/timeSlot.model';
-import { TutorAvailability } from 'src/models/tutorAvailability.model';
+import { Booking } from 'src/models/Booking.model';
+import { Payment } from 'src/models/Payment.model';
+import { Payout } from 'src/models/Payout.model';
+import { Review } from 'src/models/Review.model';
+import { Wallet } from 'src/models/Wallet.model';
 import { ReviewQueryDto } from 'src/reviews/dto/review.dto';
-import { TutorProfile } from '../models/tutorProfile.model';
-import { User } from '../models/user.model';
-import { TutorSearchQueryDto } from './dto/tutor.dto';
+import { TutorProfile } from '../models/TutorProfile.model';
+import { PaymentRequestDto, TutorSearchPaginationDto } from './dto/tutor.dto';
 
 @Injectable()
 export class TutorsService {
@@ -21,9 +23,6 @@ export class TutorsService {
   constructor(
     @InjectModel(TutorProfile.name)
     private tutorProfileModel: Model<TutorProfile>,
-
-    @InjectModel(User.name)
-    private userModel: Model<User>,
 
     @InjectModel(Review.name)
     private reviewModel: Model<Review>,
@@ -36,12 +35,8 @@ export class TutorsService {
 
     @InjectModel(Payout.name)
     private payoutModel: Model<Payout>,
-
-    @InjectModel(TimeSlot.name)
-    private timeSlotModel: Model<TimeSlot>,
-
-    @InjectModel(TutorAvailability.name)
-    private tutorAvailabilityModel: Model<TutorAvailability>,
+    @InjectModel(Wallet.name)
+    private walletModel: Model<Wallet>,
   ) {}
   /**
    * Search tutors by profile and user fields.
@@ -50,45 +45,148 @@ export class TutorsService {
    * `firstName`, `lastName`, and `bio`.
    *
    * @param query - validated search query DTO
+   * @param pagination - pagination options
+   * @returns paginated list of tutor profiles
    */
-  async searchTutors(query: TutorSearchQueryDto) {
-    const tutorFilter: any = {};
-    const userFilter: any = {};
+  async searchTutors(query: TutorSearchPaginationDto) {
+    const {
+      subject,
+      maxHourlyRate,
+      minHourlyRate,
+      minRating,
+      search,
+      page = 1,
+      limit = 10,
+    } = query;
 
-    // TutorProfile filters
-    if (query.subject) {
-      tutorFilter.subjects = query.subject;
+    const skip = (page - 1) * limit;
+
+    /** --------------------
+     * Tutor base filter
+     * -------------------*/
+    const tutorMatch: any = {};
+
+    if (subject) {
+      tutorMatch.subjects = subject;
     }
 
-    if (query.maxHourlyRate !== undefined) {
-      tutorFilter.hourlyRate = { $lte: query.maxHourlyRate };
+    if (maxHourlyRate !== undefined) {
+      tutorMatch.$or = [
+        { groupHourlyRate: { $lte: maxHourlyRate } },
+        { oneOnOneHourlyRate: { $lte: maxHourlyRate } },
+      ];
     }
 
-    if (query.minRating !== undefined) {
-      tutorFilter.rating = { $gte: query.minRating };
+    if (minHourlyRate !== undefined) {
+      tutorMatch.$or = [
+        { groupHourlyRate: { $gte: minHourlyRate } },
+        { oneOnOneHourlyRate: { $gte: minHourlyRate } },
+      ];
     }
 
-    // User filters
-    if (query.firstName) {
-      userFilter.firstName = { $regex: query.firstName, $options: 'i' };
+    /** --------------------
+     * User search filter
+     * -------------------*/
+    let userMatchStage: any = {};
+
+    if (search) {
+      const regex = new RegExp(search, 'i');
+      userMatchStage = {
+        $or: [
+          { 'user.firstName': regex },
+          { 'user.lastName': regex },
+          { 'user.bio': regex },
+        ],
+      };
     }
 
-    if (query.lastName) {
-      userFilter.lastName = { $regex: query.lastName, $options: 'i' };
-    }
+    /** --------------------
+     * Aggregation Pipeline
+     * -------------------*/
+    const pipeline: any[] = [
+      { $match: { isApproved: true } },
+      { $match: tutorMatch },
 
-    if (query.bio) {
-      userFilter.bio = { $regex: query.bio, $options: 'i' };
-    }
+      // Join user
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user',
+        },
+      },
+      { $unwind: '$user' },
 
-    return this.tutorProfileModel
-      .find(tutorFilter)
-      .populate({
-        path: 'user',
-        match: userFilter,
-        select: 'firstName lastName avatar bio',
-      })
-      .exec();
+      // Apply search on user fields
+      ...(search ? [{ $match: userMatchStage }] : []),
+
+      // Join reviews
+      {
+        $lookup: {
+          from: 'reviews',
+          localField: 'user._id',
+          foreignField: 'tutor',
+          as: 'reviews',
+        },
+      },
+
+      // Calculate average rating
+      {
+        $addFields: {
+          averageRating: {
+            $cond: [
+              { $gt: [{ $size: '$reviews' }, 0] },
+              { $avg: '$reviews.rating' },
+              null,
+            ],
+          },
+          ratingCount: { $size: '$reviews' },
+        },
+      },
+
+      // Filter by minRating (after calculation)
+      ...(minRating !== undefined
+        ? [{ $match: { averageRating: { $gte: minRating } } }]
+        : []),
+
+      // Clean output
+      {
+        $project: {
+          reviews: 0,
+          'user.dbsLink': 0,
+          'user.referralSource': 0,
+          'user.password': 0,
+          'user.email': 0,
+        },
+      },
+    ];
+
+    /** --------------------
+     * Pagination + Count
+     * -------------------*/
+    const [data, totalResult] = await Promise.all([
+      this.tutorProfileModel
+        .aggregate([...pipeline, { $skip: skip }, { $limit: limit }])
+        .exec(),
+
+      this.tutorProfileModel
+        .aggregate([...pipeline, { $count: 'total' }])
+        .exec(),
+    ]);
+
+    const total = totalResult[0]?.total || 0;
+
+    return {
+      message: 'Tutors fetched successfully',
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   /**
@@ -100,7 +198,7 @@ export class TutorsService {
    */
   async getPublicProfile(tutorId: MongoIdDto['id']) {
     const tutorProfile = await this.tutorProfileModel
-      .findById(tutorId)
+      .findOne({ user: new Types.ObjectId(tutorId), isApproved: true })
       .populate({
         path: 'user',
         select: 'firstName lastName avatar bio role',
@@ -111,11 +209,29 @@ export class TutorsService {
       throw new NotFoundException('Tutor profile not found');
     }
 
+    // Get average rating and count
+    const ratingStats = await this.reviewModel.aggregate([
+      { $match: { tutor: new Types.ObjectId(tutorId) } },
+      {
+        $group: {
+          _id: null,
+          averageRating: { $avg: '$rating' },
+          ratingCount: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const averageRating = ratingStats[0]?.averageRating || 0;
+    const ratingCount = ratingStats[0]?.ratingCount || 0;
+
     return {
       id: tutorProfile._id,
       subjects: tutorProfile.subjects,
-      hourlyRate: tutorProfile.hourlyRate,
+      groupHourlyRate: tutorProfile.groupHourlyRate,
+      oneOnOneHourlyRate: tutorProfile.oneOnOneHourlyRate,
       user: tutorProfile.user,
+      averageRating,
+      ratingCount,
     };
   }
 
@@ -126,6 +242,15 @@ export class TutorsService {
    * @param query - pagination and filter options for reviews
    */
   async getTutorReviews(tutorId: MongoIdDto['id'], query: ReviewQueryDto) {
+    // Only approve profile reviews
+    const tutorProfile = await this.tutorProfileModel
+      .findOne({ user: new Types.ObjectId(tutorId), isApproved: true })
+      .lean();
+
+    if (!tutorProfile) {
+      throw new NotFoundException('Tutor profile not found or not approved');
+    }
+
     const { page = 1, limit = 10, rating } = query;
 
     const filter: any = { tutor: tutorId };
@@ -167,11 +292,11 @@ export class TutorsService {
     const userId = user.userId;
 
     const tutorProfile = await this.tutorProfileModel
-      .findOne({ user: userId })
+      .findOne({ user: new Types.ObjectId(userId), isApproved: true })
       .lean();
 
     if (!tutorProfile) {
-      throw new NotFoundException('Tutor profile not found');
+      throw new NotFoundException('Tutor profile not found or not approved');
     }
 
     // Aggregate key metrics in parallel
@@ -242,7 +367,8 @@ export class TutorsService {
     return {
       tutorProfileId: tutorProfile._id,
       subjects: tutorProfile.subjects,
-      hourlyRate: tutorProfile.hourlyRate,
+      groupHourlyRate: tutorProfile.groupHourlyRate,
+      oneOnOneHourlyRate: tutorProfile.oneOnOneHourlyRate,
       totalStudents: (distinctStudents || []).length,
       totalSessions: totalSessions || 0,
       totalEarnings:
@@ -269,5 +395,89 @@ export class TutorsService {
           : null,
       })),
     };
+  }
+
+  /**
+   * Return wallet for authenticated tutor.
+   */
+  async getMyWallet(user: any) {
+    const userId = user.userId;
+
+    const tutorProfile = await this.tutorProfileModel
+      .findOne({ user: new Types.ObjectId(userId), isApproved: true })
+      .lean();
+
+    if (!tutorProfile) {
+      throw new NotFoundException('Tutor profile not found or not approved');
+    }
+
+    const wallet = await this.walletModel.findOne({ tutorId: userId }).lean();
+    return {
+      balance: (wallet && wallet.balance) || 0,
+      currency:
+        (wallet && wallet.currency) || process.env.STRIPE_CURRENCY || 'gbp', // Pound sterling GBP not supported in Stripe test mode
+    };
+  }
+
+  /**
+   * Tutor requests a payout. Amount expected in smallest currency unit (cents).
+   */
+  async requestPayout(user: any, dto: PaymentRequestDto) {
+    const userId = user.userId;
+
+    const tutorProfile = await this.tutorProfileModel
+      .findOne({ user: new Types.ObjectId(userId), isApproved: true })
+      .lean();
+
+    if (!tutorProfile) {
+      throw new NotFoundException('Tutor profile not found or not approved');
+    }
+
+    const { amount, method } = dto;
+
+    if (!amount || amount <= 0) {
+      throw new BadRequestException('Invalid payout amount');
+    }
+
+    // Load wallet
+    const wallet = await this.walletModel.findOne({ tutorId: userId });
+    const balance = (wallet && wallet.balance) || 0;
+    if (balance < amount) {
+      throw new BadRequestException('Insufficient wallet balance');
+    }
+
+    // Deduct amount from wallet and create payout request
+    const session = await this.walletModel.db.startSession();
+    session.startTransaction();
+    try {
+      await this.walletModel
+        .updateOne(
+          { tutorId: userId },
+          { $inc: { balance: -amount }, $set: { updatedAt: new Date() } },
+        )
+        .session(session);
+
+      const payout = await this.payoutModel.create(
+        [
+          {
+            tutorId: userId,
+            amount,
+            method: method || 'bank',
+            status: 'PENDING',
+            transactionId: '',
+          },
+        ],
+        { session },
+      );
+
+      await session.commitTransaction();
+      session.endSession();
+
+      return payout[0];
+    } catch (err: any) {
+      await session.abortTransaction();
+      session.endSession();
+      throw err;
+    }
   }
 }

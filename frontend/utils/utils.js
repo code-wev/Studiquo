@@ -2,9 +2,6 @@ import Cookies from "js-cookie";
 
 export const base_url = "http://localhost:8080/api";
 
-
-
-
 export const logOut = async () => {
   try {
     // Remove the token cookie
@@ -17,4 +14,4 @@ export const logOut = async () => {
   } catch (error) {
     console.error("Logout failed:", error);
   }
-}
+};

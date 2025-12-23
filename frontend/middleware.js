@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 /**
  * Safely parse JWT payload
  */
-function parseJwt(token) {
+export function parseJwt(token) {
   if (!token) return null;
 
   try {
@@ -29,10 +29,22 @@ export function middleware(req) {
   const now = Math.floor(Date.now() / 1000);
 
   // Auth-only public pages (login, register etc.)
-  const authPages = ["/login", "/register", "/forgot-password", "/reset-password"];
+  const authPages = [
+    "/login",
+    "/register",
+    "/forgot-password",
+    "/reset-password",
+  ];
 
   // Fully public pages
-  const openPages = ["/", "/about", "/how-its-works", "/find-tutor", "/home", "/unauthorized"];
+  const openPages = [
+    "/",
+    "/about",
+    "/how-its-works",
+    "/find-tutor",
+    "/home",
+    "/unauthorized",
+  ];
 
   // API routes - allow all
   if (pathname.startsWith("/api/")) {
@@ -53,9 +65,12 @@ export function middleware(req) {
   // 🔒 Block auth pages if already logged in
   if (authPages.includes(pathname) && isAuthenticated) {
     // Role-based redirect
-    if (userRole === "Admin") return NextResponse.redirect(new URL("/dashboard/admin", origin));
-    if (userRole === "Tutor") return NextResponse.redirect(new URL("/dashboard/tutor/", origin));
-    if (userRole === "Student") return NextResponse.redirect(new URL("/student/dashboard", origin));
+    if (userRole === "Admin")
+      return NextResponse.redirect(new URL("/dashboard/admin", origin));
+    if (userRole === "Tutor")
+      return NextResponse.redirect(new URL("/dashboard/tutor/", origin));
+    if (userRole === "Student")
+      return NextResponse.redirect(new URL("/student/dashboard", origin));
 
     // default redirect
     return NextResponse.redirect(new URL("/", origin));
@@ -77,19 +92,28 @@ export function middleware(req) {
   }
 
   // Role-based access control
-  if (pathname.startsWith("/admin") || pathname.startsWith("/dashboard/admin")) {
+  if (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/dashboard/admin")
+  ) {
     if (userRole !== "Admin") {
       return NextResponse.redirect(new URL("/login", origin));
     }
   }
 
-  if (pathname.startsWith("/dashboard/tutor") || pathname.startsWith("/tutor")) {
+  if (
+    pathname.startsWith("/dashboard/tutor") ||
+    pathname.startsWith("/tutor")
+  ) {
     if (userRole !== "Tutor") {
       return NextResponse.redirect(new URL("/login", origin));
     }
   }
 
-  if (pathname.startsWith("/dashboard/student") || pathname.startsWith("/student")) {
+  if (
+    pathname.startsWith("/dashboard/student") ||
+    pathname.startsWith("/student")
+  ) {
     if (userRole !== "Student") {
       return NextResponse.redirect(new URL("/login", origin));
     }
@@ -100,7 +124,5 @@ export function middleware(req) {
 }
 
 export const config = {
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|public/).*)',
-  ],
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|public/).*)"],
 };

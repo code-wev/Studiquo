@@ -1,311 +1,580 @@
 "use client";
 
-import React, { useState } from "react";
-import Image from "next/image";
-import { BiChevronDown, BiCreditCard } from "react-icons/bi";
 import TitleSection from "@/components/dashboard/shared/TitleSection";
 import {
   useMyProfileQuery,
   useUpdateProfileMutation,
+  useChangePasswordMutation,
 } from "@/feature/shared/AuthApi";
+import Image from "next/image";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { BiUpload, BiX } from "react-icons/bi";
 
 const TutorProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [updateProfile, { isLoading, loading }] = useUpdateProfileMutation();
-  const { data: myPofile } = useMyProfileQuery();
+  const [updateProfile, { isLoading }] = useUpdateProfileMutation();
+  const { data: myPofile, refetch } = useMyProfileQuery();
+  const [uploading, setUploading] = useState(false);
+  const [changePassword, { isLoading: passwordLoading }] = useChangePasswordMutation();
 
   const [profileData, setProfileData] = useState({
-    firstName: myPofile?.data?.user?.firstName,
-    lastName: myPofile?.data?.user?.lastName,
-    // email: myPofile?.data?.user?.email,
-    subject: myPofile?.data?.user?.subject,
-    bio: myPofile?.data?.user?.bio,
-    // paymentName: "Aubrey Aubrey",
-    // cardNumber: "",
-    // expiresMonth: "March",
-    // expiresYear: "2027",
-    // cvc: "CVC",
+    firstName: "",
+    lastName: "",
+    email: "",
+    subjects: [],
+    bio: "",
+    groupHourlyRate: "",
+    oneOnOneHourlyRate: "",
+    avatar: "",
   });
 
-  console.log(myPofile, "khela hobe");
+  const [passwordData, setPasswordData] = useState({
+    oldPassword: "",
+    newPassword: ""
+  });
+
+  console.log(myPofile, "tomi amar my profile");
+
+  // Initialize profileData when myPofile data is available
+  useEffect(() => {
+    if (myPofile?.data?.user) {
+      const userData = myPofile.data.user;
+      const profileInfo = myPofile.data.profile;
+
+      // Convert existing subjects to uppercase
+      const existingSubjects = profileInfo?.subjects || [];
+      const uppercaseSubjects = existingSubjects.map((subject) =>
+        typeof subject === "string" ? subject.toUpperCase() : subject
+      );
+
+      setProfileData({
+        firstName: userData.firstName || "",
+        lastName: userData.lastName || "",
+        email: userData.email || "",
+        subjects: uppercaseSubjects, // Store as uppercase
+        bio: userData.bio || "",
+        groupHourlyRate:
+          profileInfo?.groupHourlyRate || profileInfo?.hourlyRate || "",
+        oneOnOneHourlyRate:
+          profileInfo?.oneOnOneHourlyRate || profileInfo?.hourlyRate || "",
+        avatar: userData.avatar || "",
+      });
+    }
+  }, [myPofile]);
 
   const handleInputChange = (field, value) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handlePasswordChange = (field, value) => {
+    setPasswordData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubjectChange = (e) => {
+    const selectedOptions = Array.from(
+      e.target.selectedOptions,
+      (option) => option.value.toUpperCase() // Convert to uppercase immediately
+    );
+    handleInputChange("subjects", selectedOptions);
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image size should be less than 5MB");
+      return;
+    }
+
+    // Upload to backend via PUT /users/me as multipart/form-data
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    try {
+      setUploading(true);
+      const result = await updateProfile(formData);
+
+      if (result.error) {
+        toast.error("Failed to save avatar");
+      } else {
+        toast.success("Avatar updated successfully");
+        refetch(); // Refresh profile data
+      }
+    } catch (error) {
+      console.error("Avatar update error:", error);
+      toast.error("Failed to save avatar");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    try {
+      const formData = new FormData();
+      // send empty string to indicate removal
+      formData.append("avatar", "");
+      const result = await updateProfile(formData);
+
+      if (result.error) {
+        toast.error("Failed to remove avatar");
+      } else {
+        setProfileData((prev) => ({ ...prev, avatar: "" }));
+        toast.success("Avatar removed successfully");
+        refetch(); // Refresh profile data
+      }
+    } catch (error) {
+      console.error("Avatar remove error:", error);
+      toast.error("Failed to remove avatar");
+    }
+  };
+
   const handleSave = async () => {
     setIsEditing(false);
-    console.log(profileData, "toi profile data");
-    // Add your save logic here
-    try {
-      const result = await updateProfile(profileData);
-      if (result.error) {
-        console.log(result, "tomi amar result");
-      }
 
-      toast.success("Profile Update Succesfully");
+    try {
+      // Prepare data for API call
+      // Convert subjects to uppercase array (extra safety check)
+      const uppercaseSubjects = Array.isArray(profileData.subjects)
+        ? profileData.subjects.map((subject) =>
+            typeof subject === "string" ? subject.toUpperCase() : subject
+          )
+        : [];
+
+      const updateData = {
+        firstName: profileData.firstName,
+        lastName: profileData.lastName,
+        bio: profileData.bio,
+        subjects: uppercaseSubjects, // Send uppercase subjects array
+        hourlyRate: profileData.hourlyRate, // Keep for backward compatibility
+        groupHourlyRate: profileData.groupHourlyRate,
+        oneOnOneHourlyRate: profileData.oneOnOneHourlyRate,
+      };
+
+      console.log(updateData, "update data with subjects in uppercase");
+
+      const result = await updateProfile(updateData);
+
+      if (result.error) {
+        toast.error(result.error.data?.message || "Update failed");
+        console.error("Update error:", result.error);
+      } else {
+        toast.success("Profile Updated Successfully");
+        refetch(); // Refresh profile data
+      }
     } catch (error) {
-      console.log(error);
+      console.error("Update error:", error);
+      toast.error("An error occurred while updating profile");
+    }
+  };
+
+  const handlePasswordHandler = async () => {
+    console.log("Old Password:", passwordData.oldPassword);
+    console.log("New Password:", passwordData.newPassword);
+    
+    try {
+      const payload = {
+        oldPassword: passwordData.oldPassword,
+        newPassword: passwordData.newPassword
+      };
+
+      const result = await changePassword(payload);
+
+      if (result.error) {
+        toast.error(result?.error?.data?.message);
+        return;
+      }
+      
+      toast.success("Password changed successfully");
+      console.log(result, "Password change successfully");
+
+      // Reset the form
+      setPasswordData({
+        oldPassword: "",
+        newPassword: ""
+      });
+    } catch (error) {
+      toast.error('Something went wrong! Please try again later!');
     }
   };
 
   const handleCancel = () => {
+    // Reset to original data
+    if (myPofile?.data?.user) {
+      const userData = myPofile.data.user;
+      const profileInfo = myPofile.data.profile;
+
+      // Convert existing subjects to uppercase
+      const existingSubjects = profileInfo?.subjects || [];
+      const uppercaseSubjects = existingSubjects.map((subject) =>
+        typeof subject === "string" ? subject.toUpperCase() : subject
+      );
+
+      setProfileData({
+        firstName: userData.firstName || "",
+        lastName: userData.lastName || "",
+        email: userData.email || "",
+        subjects: uppercaseSubjects,
+        bio: userData.bio || "",
+        hourlyRate: profileInfo?.hourlyRate || "",
+        groupHourlyRate:
+          profileInfo?.groupHourlyRate || profileInfo?.hourlyRate || "",
+        oneOnOneHourlyRate:
+          profileInfo?.oneOnOneHourlyRate || profileInfo?.hourlyRate || "",
+        avatar: userData.avatar || "",
+      });
+    }
     setIsEditing(false);
-    // Reset to original data if needed
+  };
+
+  // Available subjects options (already in uppercase)
+  const subjectOptions = [
+    { value: "MATH", label: "Mathematics" },
+    { value: "ENGLISH", label: "English" },
+    { value: "SCIENCE", label: "Science" },
+    // Add more subjects as needed
+  ];
+
+  // Default avatar if none is set
+  const defaultAvatar = "https://i.pravatar.cc/150?img=45";
+  const displayAvatar = profileData.avatar || defaultAvatar;
+
+  // Get display labels for selected subjects
+  const getSubjectLabel = (subjectValue) => {
+    const subject = subjectOptions.find((s) => s.value === subjectValue);
+    return subject?.label || subjectValue;
   };
 
   return (
-    <div className=" bg-white p-12">
+    <div className='bg-white p-12'>
       <TitleSection bg={"#FFFFFF"} title={"Profile"} />
-      <div className="mx-auto p-8">
+      <div className='mx-auto p-8'>
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-semibold text-gray-800">Profile</h1>
+        <div className='flex items-center justify-between mb-8'>
+          <h1 className='text-3xl font-semibold text-gray-800'>Profile</h1>
           {!isEditing ? (
             <button
               onClick={() => setIsEditing(true)}
-              className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-            >
+              className='px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors'>
               Edit Profile
             </button>
           ) : (
-            <div className="flex gap-3">
+            <div className='flex gap-3'>
               <button
                 onClick={handleCancel}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
+                className='px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors'>
                 Cancel
               </button>
               <button
                 onClick={handleSave}
-                className="px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-              >
-                Save Changes
+                disabled={isLoading}
+                className='px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:bg-purple-300'>
+                {isLoading ? "Saving..." : "Save Changes"}
               </button>
             </div>
           )}
         </div>
 
         {/* Basic Information */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-6">
-            <Image
-              width={80}
-              height={80}
-              src="https://i.pravatar.cc/150?img=45"
-              alt="Profile"
-              className="w-16 h-16 rounded-full object-cover"
-            />
-            <h2 className="text-2xl font-semibold text-gray-800">
-              Basic Information
-            </h2>
+        <div className='mb-8'>
+          <div className='flex items-start gap-6 mb-6'>
+            {/* Avatar Section */}
+            <div className='relative shrink-0'>
+              <div className='relative group'>
+                <Image
+                  width={80}
+                  height={80}
+                  src={displayAvatar}
+                  alt='Profile'
+                  className='w-20 h-20 rounded-full object-cover border-4 border-white shadow-lg'
+                />
+
+                {/* Upload Overlay */}
+                <div className='absolute inset-0 bg-black bg-opacity-40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity'>
+                  <label
+                    htmlFor='avatar-upload'
+                    className='cursor-pointer p-2 bg-white rounded-full hover:bg-gray-100 transition-colors'>
+                    <BiUpload size={20} className='text-gray-700' />
+                    <input
+                      id='avatar-upload'
+                      type='file'
+                      accept='image/*'
+                      className='hidden'
+                      onChange={handleImageUpload}
+                      disabled={uploading}
+                    />
+                  </label>
+                </div>
+
+                {/* Remove Avatar Button */}
+                {profileData.avatar && (
+                  <button
+                    onClick={handleRemoveAvatar}
+                    disabled={uploading}
+                    className='absolute -top-2 -right-2 w-8 h-8 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors shadow-lg'>
+                    <BiX size={18} />
+                  </button>
+                )}
+              </div>
+
+              {/* Uploading Indicator */}
+              {uploading && (
+                <div className='absolute inset-0 bg-white bg-opacity-80 rounded-full flex items-center justify-center'>
+                  <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500'></div>
+                </div>
+              )}
+
+              <div className='mt-3 text-center'>
+                <label
+                  htmlFor='avatar-upload'
+                  className='text-sm text-purple-600 hover:text-purple-700 cursor-pointer font-medium'>
+                  {uploading ? "Uploading..." : "Change photo"}
+                </label>
+                <p className='text-xs text-gray-500 mt-1'>JPG, PNG up to 5MB</p>
+              </div>
+            </div>
+
+            {/* Profile Title */}
+            <div className='flex-1'>
+              <h2 className='text-2xl font-semibold text-gray-800'>
+                Basic Information
+              </h2>
+              <p className='text-gray-600 mt-2'>
+                Update your personal information and profile photo
+              </p>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-6 mb-6">
+          <div className='grid grid-cols-2 gap-6 mb-6'>
             {/* First Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
                 First Name
               </label>
               <input
-                type="text"
-                defaultValue={myPofile?.data?.user?.firstName}
+                type='text'
                 value={profileData.firstName}
                 onChange={(e) => handleInputChange("firstName", e.target.value)}
                 disabled={!isEditing}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
+                className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600'
               />
             </div>
 
             {/* Last Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
                 Last Name
               </label>
               <input
-                type="text"
-                defaultValue={myPofile?.data?.user?.lastName}
+                type='text'
                 value={profileData.lastName}
                 onChange={(e) => handleInputChange("lastName", e.target.value)}
                 disabled={!isEditing}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
+                className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600'
               />
             </div>
 
             {/* Email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
                 Email
               </label>
               <input
-                type="email"
+                type='email'
                 readOnly
-                defaultValue={myPofile?.data?.user?.email}
                 value={profileData.email}
-                onChange={(e) => handleInputChange("email", e.target.value)}
-                disabled={!isEditing}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
+                className='w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600'
               />
             </div>
 
-            {/* Subject */}
+            {/* Subjects */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Subject
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                Subjects
               </label>
-              <div className="relative">
+              <div className='relative'>
                 <select
-                  value={profileData.subject}
-                  defaultValue={myPofile?.data?.profile?.subjects[0]}
-                  onChange={(e) => handleInputChange("subject", e.target.value)}
+                  multiple
+                  value={profileData.subjects}
+                  onChange={handleSubjectChange}
                   disabled={!isEditing}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
-                >
-                  <option value="MATH">Math</option>
-                  <option value="ENGLISH">English</option>
-                  <option value="SCIENCE">Science</option>
-                  {/* <option value="History">History</option> */}
+                  className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600 min-h-[100px]'
+                  size={5}>
+                  {subjectOptions.map((subject) => (
+                    <option
+                      key={subject.value}
+                      value={subject.value}
+                      className='px-2 py-1 hover:bg-purple-50'>
+                      {subject.label}
+                    </option>
+                  ))}
                 </select>
-                <BiChevronDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  size={20}
-                />
+                {!isEditing && profileData.subjects.length === 0 && (
+                  <span className='absolute left-4 top-2 text-gray-500'>
+                    No subjects selected
+                  </span>
+                )}
+              </div>
+              <p className='mt-2 text-sm text-gray-500'>
+                {isEditing
+                  ? "Hold Ctrl (Windows) or Cmd (Mac) to select multiple subjects"
+                  : ""}
+                {!isEditing && profileData.subjects.length > 0 && (
+                  <span className='font-medium ml-2'>
+                    Selected: {profileData.subjects.length} subject(s)
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* Hourly Rates Section */}
+          <div className='mb-6'>
+            <h3 className='text-lg font-semibold text-gray-800 mb-4'>
+              Hourly Rates
+            </h3>
+            <div className='grid grid-cols-2 gap-6'>
+              {/* One-on-One Rate */}
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  One-on-One Session Rate (€)
+                </label>
+                <div className='relative'>
+                  <span className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500'>
+                    €
+                  </span>
+                  <input
+                    type='number'
+                    value={profileData.oneOnOneHourlyRate}
+                    onChange={(e) =>
+                      handleInputChange("oneOnOneHourlyRate", e.target.value)
+                    }
+                    disabled={!isEditing}
+                    min='0'
+                    step='0.01'
+                    className='w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600'
+                    placeholder='0.00'
+                  />
+                </div>
+                <p className='mt-1 text-xs text-gray-500 flex items-center'>
+                  <span className='inline-block w-3 h-3 bg-blue-500 rounded-full mr-2'></span>
+                  Rate for individual tutoring sessions
+                </p>
+              </div>
+
+              {/* Group Rate */}
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  Group Session Rate (€)
+                </label>
+                <div className='relative'>
+                  <span className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500'>
+                    €
+                  </span>
+                  <input
+                    type='number'
+                    value={profileData.groupHourlyRate}
+                    onChange={(e) =>
+                      handleInputChange("groupHourlyRate", e.target.value)
+                    }
+                    disabled={!isEditing}
+                    min='0'
+                    step='0.01'
+                    className='w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600'
+                    placeholder='0.00'
+                  />
+                </div>
+                <p className='mt-1 text-xs text-gray-500 flex items-center'>
+                  <span className='inline-block w-3 h-3 bg-green-500 rounded-full mr-2'></span>
+                  Rate for group tutoring sessions
+                </p>
               </div>
             </div>
           </div>
 
           {/* Bio */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className='block text-sm font-medium text-gray-700 mb-2'>
               Bio
             </label>
             <textarea
               value={profileData.bio}
-              defaultValue={myPofile?.data?.user?.bio}
               onChange={(e) => handleInputChange("bio", e.target.value)}
               disabled={!isEditing}
-              rows={3}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600 resize-none"
+              rows={4}
+              className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600 resize-none'
+              placeholder='Tell students about your teaching experience, qualifications, and approach...'
             />
           </div>
         </div>
 
-        {/* Payment Information */}
-        <div>
-          {/* <h2 className="text-2xl font-semibold text-gray-800 mb-6">
-            Payment Information
-          </h2> */}
-
-          {/* Stripe Button */}
-          {/* <div className="flex items-center justify-center gap-2 py-6 mb-6 border border-gray-200 rounded-lg bg-gray-50">
-            <BiCreditCard size={20} className="text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">Stripe</span>
-          </div> */}
-
-          {/* <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Name
-            </label>
-            <input
-              type="text"
-              value={profileData.paymentName}
-              onChange={(e) => handleInputChange("paymentName", e.target.value)}
-              disabled={!isEditing}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
-            />
-          </div> */}
-
-          {/* <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Card number
-            </label>
-            <input
-              type="text"
-              value={profileData.cardNumber}
-              onChange={(e) => handleInputChange("cardNumber", e.target.value)}
-              disabled={!isEditing}
-              placeholder="1234 5678 9012 3456"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
-            />
-          </div> */}
-
-          {/* <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Expires
-              </label>
-              <div className="relative">
-                <select
-                  value={profileData.expiresMonth}
-                  onChange={(e) =>
-                    handleInputChange("expiresMonth", e.target.value)
-                  }
-                  disabled={!isEditing}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
-                >
-                  <option>January</option>
-                  <option>February</option>
-                  <option>March</option>
-                  <option>April</option>
-                  <option>May</option>
-                  <option>June</option>
-                  <option>July</option>
-                  <option>August</option>
-                  <option>September</option>
-                  <option>October</option>
-                  <option>November</option>
-                  <option>December</option>
-                </select>
-                <BiChevronDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  size={20}
-                />
-              </div>
+        {/* Preview of selected subjects */}
+        {profileData.subjects.length > 0 && (
+          <div className='mb-6'>
+            <h3 className='text-lg font-medium text-gray-700 mb-2'>
+              Selected Subjects:
+            </h3>
+            <div className='flex flex-wrap gap-2'>
+              {profileData.subjects.map((subjectValue) => (
+                <span
+                  key={subjectValue}
+                  className='px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm font-medium'>
+                  {getSubjectLabel(subjectValue)}
+                </span>
+              ))}
             </div>
+          </div>
+        )}
 
+        {/* Change Password Section */}
+        <div className="mt-8 p-6 bg-white border border-gray-200 rounded-xl shadow-sm">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Change Password</h2>
+          
+          <div className="grid grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Year
-              </label>
-              <div className="relative">
-                <select
-                  value={profileData.expiresYear}
-                  onChange={(e) =>
-                    handleInputChange("expiresYear", e.target.value)
-                  }
-                  disabled={!isEditing}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
-                >
-                  <option>2024</option>
-                  <option>2025</option>
-                  <option>2026</option>
-                  <option>2027</option>
-                  <option>2028</option>
-                  <option>2029</option>
-                  <option>2030</option>
-                </select>
-                <BiChevronDown
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  size={20}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                CVC
+                Old Password
               </label>
               <input
-                type="text"
-                value={profileData.cvc}
-                onChange={(e) => handleInputChange("cvc", e.target.value)}
-                disabled={!isEditing}
-                maxLength={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600"
+                type="password"
+                value={passwordData.oldPassword}
+                onChange={(e) => handlePasswordChange("oldPassword", e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Enter your old password"
               />
             </div>
-          </div> */}
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Password
+              </label>
+              <input
+                type="password"
+                value={passwordData.newPassword}
+                onChange={(e) => handlePasswordChange("newPassword", e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Enter your new password"
+              />
+            </div>
+          </div>
+          
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={handlePasswordHandler}
+              disabled={passwordLoading}
+              className="px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow disabled:opacity-70 disabled:cursor-not-allowed"
+            >
+              {passwordLoading ? "Changing..." : "Change Password"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

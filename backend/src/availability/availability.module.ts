@@ -2,26 +2,30 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { jwtConfig } from 'common/jwt.config';
-import { TimeSlot, TimeSlotSchema } from '../models/timeSlot.model';
+import {
+  TutorProfile,
+  TutorProfileSchema,
+} from 'src/models/TutorProfile.model';
+import { TimeSlot, TimeSlotSchema } from '../models/TimeSlot.model';
 import {
   TutorAvailability,
   TutorAvailabilitySchema,
-} from '../models/tutorAvailability.model';
+} from '../models/TutorAvailability.model';
 import { AvailabilityController } from './availability.controller';
 import { AvailabilityService } from './availability.service';
 
 /**
  * Availability feature module.
  *
- * Manages tutor availability dates and time slots. Exports the
- * `AvailabilityService` so other modules (for example `TutorsModule`)
- * can query availability.
+ * Registers the `TutorAvailability`, `TimeSlot`, and `TutorProfile` schemas and
+ * exposes the `AvailabilityService` and `AvailabilityController` for the app.
  */
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: TutorAvailability.name, schema: TutorAvailabilitySchema },
       { name: TimeSlot.name, schema: TimeSlotSchema },
+      { name: TutorProfile.name, schema: TutorProfileSchema },
     ]),
     JwtModule.register(jwtConfig),
   ],

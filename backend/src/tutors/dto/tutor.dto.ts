@@ -1,33 +1,56 @@
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { TutorSubject } from 'src/models/TutorProfile.model';
 
-export class TutorSearchQueryDto {
-  @IsOptional()
-  @IsString({ message: 'Subject must be a string' })
-  @IsEnum(['MATH', 'SCIENCE', 'ENGLISH'], {
-    message: 'Subject must be one of MATH | SCIENCE | ENGLISH',
-  })
-  subject?: string;
+export class TutorSearchPaginationDto {
+  /* ---------- Search filters ---------- */
 
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsEnum(TutorSubject)
+  subject?: TutorSubject;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @Type(() => Number)
-  @IsNumber({}, { message: 'Maximum hourly rate must be a number' })
+  @IsNumber()
   maxHourlyRate?: number;
 
   @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   @Type(() => Number)
-  @IsNumber({}, { message: 'Minimum tutor rating must be a number' })
+  @IsNumber()
+  minHourlyRate?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @Type(() => Number)
+  @IsNumber()
   minRating?: number;
 
   @IsOptional()
-  @IsString({ message: 'First name must be a string' })
-  firstName?: string;
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsString()
+  search?: string;
+
+  /* ---------- Pagination ---------- */
 
   @IsOptional()
-  @IsString({ message: 'Last name must be a string' })
-  lastName?: string;
+  @Type(() => Number)
+  @IsNumber()
+  page: number = 1;
 
   @IsOptional()
-  @IsString({ message: 'Bio must be a string' })
-  bio?: string;
+  @Type(() => Number)
+  @IsNumber()
+  limit: number = 10;
+}
+
+export class PaymentRequestDto {
+  @IsNumber({}, { message: 'Amount must be a number' })
+  amount: number;
+
+  @IsOptional()
+  @IsString({ message: 'Method must be a string' })
+  method?: string;
 }

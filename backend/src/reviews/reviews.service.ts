@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Review } from '../models/review.model';
+import { Review } from '../models/Review.model';
 import { CreateReviewDto } from './dto/review.dto';
 
 @Injectable()
