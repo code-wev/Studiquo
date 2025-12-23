@@ -1,4 +1,6 @@
-import FindTutorPage from "@/components/findTutor/FIndTutorPage";
+import FindTutorPage from "@/components/findTutor/FindTutorPage";
+
+
 
 const page = () => {
   return (
