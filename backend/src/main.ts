@@ -21,9 +21,32 @@ async function bootstrap() {
 
   // Enable CORS for the frontend and allow credentials so cookies are sent
   // across origins (frontend must send requests with `credentials: 'include'`).
+  const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+  /**
+   * CORS Configuration
+   *
+   * Allows requests from the specified frontend origin.
+   * Supports credentials for cross-origin requests.
+   * Specifies allowed HTTP methods and headers.
+   * Handles preflight OPTIONS requests with a success status.
+   */
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // allow server-to-server or curl
+      if (origin === frontendOrigin) return callback(null, true);
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With',
+      'Content-Type',
+      'Accept',
+      'Authorization',
+    ],
+    optionsSuccessStatus: 204,
   });
 
   // Enable global validation pipe with strict options:
@@ -53,30 +76,8 @@ async function bootstrap() {
     res.status(200).send({ status: 'ok' });
   });
 
-  // Ensure consistent CORS headers for all responses (useful on serverless hosts)
-  app.use(
-    (
-      req: express.Request,
-      res: express.Response,
-      next: express.NextFunction,
-    ) => {
-      const origin = process.env.FRONTEND_URL || 'http://localhost:3000';
-      res.header('Access-Control-Allow-Origin', origin);
-      res.header('Access-Control-Allow-Credentials', 'true');
-      res.header(
-        'Access-Control-Allow-Methods',
-        'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-      );
-      res.header(
-        'Access-Control-Allow-Headers',
-        'Origin, X-Requested-With, Content-Type, Accept, Authorization',
-      );
-      if (req.method === 'OPTIONS') return res.sendStatus(204);
-      next();
-    },
-  );
-
-  await app.listen(process.env.PORT ?? 8080);
+  const port = Number(process.env.PORT) || 8080;
+  await app.listen(port, '0.0.0.0');
 
   const logger = new Logger('Bootstrap');
   try {
@@ -90,7 +91,7 @@ async function bootstrap() {
     logger.error('Error ensuring default admin user', err);
   }
 
-  console.log(`App running at port ${process.env.PORT ?? 8080}`);
+  console.log(`App running at port ${port}`);
 }
 
 void bootstrap();
