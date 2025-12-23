@@ -73,24 +73,47 @@ export class PaymentsController {
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
     let event: any;
 
-    // Prefer rawBody (registered in main.ts) but fall back to parsed body
-    const payload: string | Buffer = (req as any).rawBody
-      ? (req as any).rawBody
-      : typeof body === 'string'
-        ? body
-        : JSON.stringify(body || {});
+    // Determine raw payload: prefer req.body when it's a Buffer (raw parser),
+    // then req.rawBody (if some middleware attached it), otherwise fall back
+    // to the parsed body string. Stripe requires the exact raw bytes for
+    // signature verification.
+    const maybeRaw = (req as any).body;
+    const payload: string | Buffer = Buffer.isBuffer(maybeRaw)
+      ? maybeRaw
+      : (req as any).rawBody
+        ? (req as any).rawBody
+        : typeof body === 'string'
+          ? body
+          : JSON.stringify(body || {});
 
     try {
-      event = this.paymentsService.constructEvent(
-        payload,
-        sig || '',
-        endpointSecret,
-      );
+      if (!endpointSecret) {
+        // If endpoint secret isn't configured, skip verification and parse
+        // the payload directly. This is less secure but useful for local
+        // testing where signing isn't set up.
+        this.logger.warn(
+          'No webhook endpoint secret configured — skipping signature verification.',
+        );
+        event =
+          typeof payload === 'string'
+            ? JSON.parse(payload)
+            : JSON.parse(payload.toString());
+      } else {
+        event = this.paymentsService.constructEvent(
+          payload,
+          sig || '',
+          endpointSecret,
+        );
+      }
     } catch (err: any) {
-      this.logger.error(
-        'Webhook signature verification failed.',
-        err?.message || err,
-      );
+      this.logger.error('Webhook signature verification failed.', {
+        message: err?.message || err,
+        signatureHeader: sig,
+        payloadType: typeof payload,
+        payloadLength: Buffer.isBuffer(payload)
+          ? payload.length
+          : String(payload).length,
+      } as any);
       throw new BadRequestException('Webhook signature verification failed.');
     }
 
