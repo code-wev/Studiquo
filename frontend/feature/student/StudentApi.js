@@ -17,10 +17,12 @@ export const StudentApi = createApi({
   }),
 
   endpoints: (builder) => ({
+
     getExamBoard: builder.query({
       query: () => `/exam-board`,
       providesTags: ["Student"],
     }),
+
     updateBoard: builder.mutation({
       query: (data) => ({
         url: "/exam-board",
@@ -29,7 +31,38 @@ export const StudentApi = createApi({
       }),
       invalidatesTags: ["Student"],
     }),
+
+    getParentRequest: builder.query({
+      query:()=>'users/me/children/requests',
+      providesTags:['StatusUpdate']
+    }),
+
+    myParents: builder.query({
+      query:()=>'users/my/parents',
+      providesTags:['StatusUpdate']
+    }),
+
+    acceptOrRejectRequest: builder.mutation({
+      query: ({id , accept}) => ({
+        url:`users/me/children/requests/${id}/respond`,
+        method:"POST",
+        body:{accept:true}
+      }),
+          invalidatesTags: ["StatusUpdate"],
+    }),
+        onlyRejectRequest: builder.mutation({
+      query: ({id , accept}) => ({
+        url:`users/me/children/requests/${id}/respond`,
+        method:"POST",
+        body:{accept: false}
+      }),
+          invalidatesTags: ["StatusUpdate"],
+    }),
+
+
   }),
 });
 
-export const { useGetExamBoardQuery, useUpdateBoardMutation } = StudentApi;
+export const { useGetExamBoardQuery, useUpdateBoardMutation , useGetParentRequestQuery, useMyParentsQuery, useAcceptOrRejectRequestMutation, useOnlyRejectRequestMutation} = StudentApi;
+
+

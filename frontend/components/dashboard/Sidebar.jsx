@@ -15,6 +15,7 @@ import {
   FaUserCircle,
   FaUsers,
 } from "react-icons/fa";
+import { FaChildren } from "react-icons/fa6";
 import {
   MdAttachMoney,
   MdClose,
@@ -119,8 +120,11 @@ const Sidebar = () => {
       },
       { label: "chat", icon: MdMessage, href: "/dashboard/parent/chat" },
       { label: "Profile", icon: MdPerson, href: "/dashboard/parent/profile" },
+      { label: "My Children", icon: FaChildren, href: "/dashboard/parent/my-children" },
     ],
   };
+
+
 
   const navItems = navigationByRole[currentRole] || navigationByRole.admin;
 
