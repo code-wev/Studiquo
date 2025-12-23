@@ -1,6 +1,6 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
-import { NestFactory, Reflector } from '@nestjs/core';
-import * as express from 'express';
+import { NestFactory } from '@nestjs/core';
+import * as bodyParser from 'body-parser';
 import { ResponseInterceptor } from '../common/response.interceptor';
 import { AppModule } from './app.module';
 import { UsersService } from './users/users.service';
@@ -14,7 +14,18 @@ import { UsersService } from './users/users.service';
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const reflector = app.get(Reflector);
+
+  
+  // Use raw body for Stripe webhook endpoint so signature verification works.
+  // The app has a global prefix of `/api` so the webhook path is `/api/payments/webhook`.
+  app.use(
+    '/api/payments/webhook',
+    bodyParser.raw({ type: 'application/json' }),
+  );
+
+  // Normal JSON parsing for all other routes
+  app.use(bodyParser.json());
+  app.use(bodyParser.urlencoded({ extended: true }));
 
   // Set a global API prefix so all routes are prefixed with `/api`.
   app.setGlobalPrefix('api');
@@ -58,9 +69,6 @@ async function bootstrap() {
   // Global response formatting (wraps responses into a consistent shape).
   app.useGlobalInterceptors(new ResponseInterceptor());
 
-  // Use raw body for Stripe webhook endpoint so signature verification works.
-  // The app has a global prefix of `/api` so the webhook path is `/api/payments/webhook`.
-  app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
   app.use('/health', (_, res) => {
     res.status(200).send({ status: 'ok' });
