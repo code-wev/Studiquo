@@ -1,12 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-@Schema()
+@Schema({ timestamps: true })
 export class LessonReport extends Document {
   @Prop({ type: Types.ObjectId, ref: 'Booking', required: true })
   booking: Types.ObjectId;
 
-  @Prop({ type: String, required: true })
+  @Prop({ type: String, default: '' })
   description: string;
 
   @Prop({ type: Date, required: true })

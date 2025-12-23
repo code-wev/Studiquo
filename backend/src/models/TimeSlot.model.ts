@@ -1,7 +1,13 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { TutorSubject } from './TutorProfile.model';
 
-@Schema()
+export enum TimeSlotType {
+  ONE_TO_ONE = 'ONE_TO_ONE',
+  GROUP = 'GROUP',
+}
+
+@Schema({ timestamps: true })
 export class TimeSlot extends Document {
   @Prop({ type: Types.ObjectId, ref: 'TutorAvailability', required: true })
   tutorAvailability: Types.ObjectId;
@@ -12,8 +18,14 @@ export class TimeSlot extends Document {
   @Prop({ required: true })
   endTime: Date;
 
-  @Prop({ default: false })
-  isBooked: boolean;
+  @Prop({
+    type: String,
+    enum: TutorSubject,
+  })
+  subject: TutorSubject;
+
+  @Prop({ required: true, enum: TimeSlotType, default: TimeSlotType.GROUP })
+  type: TimeSlotType;
 
   @Prop()
   meetLink: string;

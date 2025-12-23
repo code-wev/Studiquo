@@ -4,14 +4,14 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { PassportModule } from '@nestjs/passport';
 import { jwtConfig } from 'common/jwt.config';
 import { MailModule } from 'src/mail/mail.module';
-import { User, UserSchema } from '../models/user.model';
+import { User, UserSchema } from '../models/User.model';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { GoogleStrategy } from './google.strategy';
 import { JwtStrategy } from './jwt.strategy';
 
 /**
- * Authentication module.
+ * Authentication feature module.
  *
  * Registers the `User` schema and provides the `AuthService` and
  * `AuthController`. Also wires in the `JwtModule` and `MailModule`.

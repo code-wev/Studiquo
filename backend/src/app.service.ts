@@ -14,7 +14,7 @@ export class AppService {
    *
    * @returns greeting message
    */
-  getHello(): string {
-    return 'Hello World!';
+  getHello(): { status: string } {
+    return { status: 'ok' };
   }
 }

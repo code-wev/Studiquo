@@ -65,6 +65,15 @@ export const AuthApi = createApi({
       }),
       invalidatesTags: ["User"],
     }),
+
+    changePassword: builder.mutation({
+      query:(data)=>({
+        url:'auth/change-password',
+        method:"PUT",
+        body:data
+
+      })
+    })
   }),
 });
 
@@ -75,4 +84,5 @@ export const {
   useMyProfileQuery,
   useResetPasswordMutation,
   useUpdateProfileMutation,
+  useChangePasswordMutation
 } = AuthApi;

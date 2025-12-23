@@ -1,11 +1,13 @@
 import {
+  IsArray,
   IsEnum,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
 } from 'class-validator';
+import { TutorSubject } from 'src/models/TutorProfile.model';
 
 export class UpdateProfileDto {
   // User fields
@@ -23,9 +25,11 @@ export class UpdateProfileDto {
   @IsString({ message: 'Bio must be a string' })
   bio?: string;
 
+  /**
+   * Avatar image (validated in controller)
+   */
   @IsOptional()
-  @IsUrl({}, { message: 'Avatar link must be a valid URL' })
-  avatar?: string;
+  avatar?: Express.Multer.File;
 
   @IsOptional()
   @IsString({ message: 'DBS must be a string' })
@@ -33,30 +37,26 @@ export class UpdateProfileDto {
 
   // Tutor fields
   @IsOptional()
-  @IsString({ message: 'Subject must be a string' })
-  @IsEnum(['MATH', 'SCIENCE', 'ENGLISH'], {
-    message: 'Subject must be one of MATH|SCIENCE|ENGLISH',
+  @IsArray({ message: 'Subjects must be an array' })
+  @IsEnum(TutorSubject, {
+    each: true,
+    message: 'Each subject must be one of MATH, SCIENCE, ENGLISH',
   })
-  subject?: string;
+  subjects?: string[];
 
   @IsOptional()
-  @IsNumber({}, { message: 'Hourly rate must be a number' })
-  hourlyRate?: number;
-
-  // Student fields
-  @IsOptional()
-  @IsString({ message: 'Year group must be a string' })
-  yearGroup?: string;
+  @IsNumber({}, { message: 'Group hourly rate must be a number' })
+  groupHourlyRate?: number;
 
   @IsOptional()
-  @IsString({ message: 'Confidence level must be a string' })
-  confidenceLevel?: string;
+  @IsNumber({}, { message: 'One-on-one hourly rate must be a number' })
+  oneOnOneHourlyRate?: number;
+}
 
-  @IsOptional()
-  @IsString({ message: 'Current grade must be a string' })
-  currentGrade?: string;
-
-  @IsOptional()
-  @IsString({ message: 'Target grade must be a string' })
-  targetGrade?: string;
+export class RespondToParentRequestDto {
+  @IsNotEmpty()
+  @IsIn([true, false], {
+    message: 'Accept must be a boolean value',
+  })
+  accept: boolean;
 }

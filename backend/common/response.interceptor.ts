@@ -12,26 +12,53 @@ import { ServiceResponse } from './response.interface';
 export class ResponseInterceptor implements NestInterceptor {
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const req = context.switchToHttp().getRequest();
-    const method = req?.method ?? undefined;
+    const httpRes = context.switchToHttp().getResponse();
+
+    const method = req?.method;
+    const url: string = req?.originalUrl || req?.url || '';
+
+    if (url === '/api' || url === '/api/') {
+      return next.handle();
+    }
 
     return next.handle().pipe(
       map((data) => {
-        // If controller already returned formatted response, pass through
-        if (data && data.success !== undefined && data.timestamp) return data;
-
-        const res: ServiceResponse = {
-          success: true,
-          message: '',
-          method,
-          timestamp: new Date().toISOString(),
-          data: data === undefined ? null : data,
-        };
-        // If data is an object with 'message' or 'error', surface it
-        if (data && typeof data === 'object') {
-          if (data.message) res.message = data.message;
-          if (data.error) res.message = data.error;
+        // Pass-through if already formatted
+        if (data?.success !== undefined && data?.timestamp) {
+          return data;
         }
-        return res;
+
+        const statusCode = httpRes?.statusCode ?? 200;
+
+        let message = 'Request successful';
+        let responseData = data ?? null;
+
+        // Extract message cleanly
+        if (data && typeof data === 'object') {
+          if ('message' in data) {
+            message = data.message;
+            const { message: _, ...rest } = data;
+            responseData = Object.keys(rest).length ? rest : null;
+          }
+
+          if ('error' in data) {
+            message = data.error;
+            const { error: _, ...rest } = data;
+            responseData = Object.keys(rest).length ? rest : null;
+          }
+        }
+
+        const response: ServiceResponse = {
+          success: statusCode >= 200 && statusCode < 300,
+          message,
+          method,
+          endpoint: url,
+          statusCode,
+          timestamp: new Date().toISOString(),
+          data: responseData,
+        };
+
+        return response;
       }),
     );
   }

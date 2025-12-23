@@ -1,13 +1,21 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { GetUser } from 'common/decorators/get-user.decorator';
 import { Roles } from 'common/decorators/roles.decorator';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { JwtAuthGuard } from 'common/guards/jwt-auth.guard';
 import { RolesGuard } from 'common/guards/roles.guard';
 import { AvailabilityService } from 'src/availability/availability.service';
-import { UserRole } from 'src/models/user.model';
+import { UserRole } from 'src/models/User.model';
 import { ReviewQueryDto } from 'src/reviews/dto/review.dto';
-import { TutorSearchQueryDto } from './dto/tutor.dto';
+import { PaymentRequestDto, TutorSearchPaginationDto } from './dto/tutor.dto';
 import { TutorsService } from './tutors.service';
 
 /**
@@ -31,18 +39,46 @@ export class TutorsController {
    * @returns list of tutor profiles matching the search criteria
    */
   @Get()
-  async searchTutors(@Query() query: TutorSearchQueryDto) {
+  async searchTutors(@Query() query: TutorSearchPaginationDto) {
     return this.tutorsService.searchTutors(query);
   }
 
   /**
    * Get an overview of tutors including statistics like total classes, students and average total board.
+   *
+   * @return overview data for tutors
    */
   @Get('overview')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Tutor)
   async myOverview(@GetUser() user: any) {
     return this.tutorsService.getMyOverview(user);
+  }
+
+  /**
+   * Get authenticated tutor wallet
+   *
+   * @return tutor's wallet information
+   */
+  @Get('wallet')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.Tutor)
+  async myWallet(@GetUser() user: any) {
+    return this.tutorsService.getMyWallet(user);
+  }
+
+  /**
+   * Request a payout from the wallet
+   *
+   * @param user - authenticated tutor user
+   * @param body - payout request details
+   * @returns payout request confirmation
+   */
+  @Post('payouts/request')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.Tutor)
+  async requestPayout(@GetUser() user: any, @Body() body: PaymentRequestDto) {
+    return this.tutorsService.requestPayout(user, body);
   }
 
   /**
@@ -76,7 +112,10 @@ export class TutorsController {
    * GET /api/tutors/:tutorId/availability
    */
   @Get(':tutorId/availability')
-  async tutorAvailability(@Param('tutorId') tutorId: MongoIdDto['id']) {
-    return this.availabilityService.getTutorAvailability(tutorId);
+  async tutorAvailability(
+    @GetUser() user: any,
+    @Param('tutorId') tutorId: MongoIdDto['id'],
+  ) {
+    return this.availabilityService.getTutorAvailability(user, tutorId);
   }
 }

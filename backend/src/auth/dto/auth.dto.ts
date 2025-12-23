@@ -6,6 +6,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
+import { UserRole } from 'src/models/User.model';
 
 export class RegisterDto {
   @IsString({ message: 'First name must be a string' })
@@ -23,7 +24,7 @@ export class RegisterDto {
   @MinLength(6, { message: 'Password must be at least 6 characters' })
   password: string;
 
-  @IsEnum(['Tutor', 'Student', 'Parent'], {
+  @IsEnum(UserRole, {
     message: 'Role must be one of Tutor|Student|Parent',
   })
   role: string;
