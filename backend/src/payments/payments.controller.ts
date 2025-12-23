@@ -3,7 +3,6 @@ import {
   Body,
   Controller,
   Get,
-  Headers,
   Logger,
   Post,
   Req,
@@ -65,13 +64,21 @@ export class PaymentsController {
    * Stripe webhook endpoint.
    */
   @Post('webhook')
-  async handleWebhook(
-    @Req() req: Request,
-    @Body() body: any,
-    @Headers('stripe-signature') sig?: string,
-  ) {
+  async handleWebhook(@Req() req: Request, @Body() body: any) {
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
     let event: any;
+
+    // Extract signature from headers or query (some forwarding tools drop headers)
+    const sigHeader =
+      (req.headers &&
+        (req.headers['stripe-signature'] || req.headers['Stripe-Signature'])) ||
+      (req.query &&
+        (req.query['stripe-signature'] ||
+          req.query.sig ||
+          req.query.signature));
+    const sig = Array.isArray(sigHeader)
+      ? String(sigHeader[0])
+      : String(sigHeader || '');
 
     // Determine raw payload: prefer req.body when it's a Buffer (raw parser),
     // then req.rawBody (if some middleware attached it), otherwise fall back
@@ -99,6 +106,7 @@ export class PaymentsController {
             ? JSON.parse(payload)
             : JSON.parse(payload.toString());
       } else {
+        // Ensure we pass a Buffer or string exactly as received to Stripe
         event = this.paymentsService.constructEvent(
           payload,
           sig || '',
