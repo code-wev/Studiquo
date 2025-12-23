@@ -53,7 +53,9 @@ async function bootstrap() {
     res.status(200).send({ status: 'ok' });
   });
 
-  await app.listen(process.env.PORT ?? 8080);
+  const port = Number(process.env.PORT) || 8080;
+  // Bind to 0.0.0.0 so container orchestrators (Render, Docker, etc.) can detect the open port
+  await app.listen(port, '0.0.0.0');
 
   const logger = new Logger('Bootstrap');
   try {
@@ -67,7 +69,7 @@ async function bootstrap() {
     logger.error('Error ensuring default admin user', err);
   }
 
-  console.log(`App running at port ${process.env.PORT ?? 8080}`);
+  console.log(`App running at port ${port}`);
 }
 
 void bootstrap();
