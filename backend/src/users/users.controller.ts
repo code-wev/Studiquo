@@ -19,11 +19,7 @@ import { UserRole } from 'src/models/User.model';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import {
-  RespondToParentRequestDto,
-  UpdatePasswordDto,
-  UpdateProfileDto,
-} from './dto/user.dto';
+import { RespondToParentRequestDto, UpdateProfileDto } from './dto/user.dto';
 import { UsersService } from './users.service';
 
 /**
@@ -159,21 +155,5 @@ export class UsersController {
       parentId,
       body.accept,
     );
-  }
-
-  /**
-   * Update the current authenticated user's password.
-   *
-   * Expects an object with `newPassword` (and optionally `oldPassword`)
-   * depending on the application's policy.
-   *
-   * @param req - the request object containing `user` set by the auth guard
-   * @param body - data containing the new password
-   * @returns a success message on completion
-   */
-  @Put('me/password')
-  @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
-  async updatePassword(@GetUser() user: any, @Body() body: UpdatePasswordDto) {
-    return this.usersService.updatePassword(user, body);
   }
 }
