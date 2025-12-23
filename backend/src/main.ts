@@ -67,7 +67,7 @@ async function bootstrap() {
     logger.error('Error ensuring default admin user', err);
   }
 
-  console.log(`App running at port ${process.env.PORT ?? 3000}`);
+  console.log(`App running at port ${process.env.PORT ?? 8080}`);
 }
 
 void bootstrap();
