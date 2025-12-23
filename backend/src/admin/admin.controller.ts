@@ -11,16 +11,6 @@ import { AdminService } from './admin.service';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @Get('users')
-  async getUsers() {
-    return this.adminService.getUsers();
-  }
-
-  @Get('bookings')
-  async getBookings() {
-    return this.adminService.getBookings();
-  }
-
   @Get('payments')
   async getPayments() {
     return this.adminService.getPayments();
@@ -44,5 +34,10 @@ export class AdminController {
   @Put('tutors/:tutorId/verify')
   async verifyTutor(@Param('tutorId') tutorId: MongoIdDto['id']) {
     return this.adminService.verifyTutor(tutorId);
+  }
+
+  @Put('tutors/:tutorId/reject')
+  async rejectTutor(@Param('tutorId') tutorId: MongoIdDto['id']) {
+    return this.adminService.rejectTutor(tutorId);
   }
 }

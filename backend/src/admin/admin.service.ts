@@ -19,14 +19,6 @@ export class AdminService {
     private tutorProfileModel: Model<TutorProfile>,
   ) {}
 
-  async getUsers() {
-    return this.userModel.find();
-  }
-
-  async getBookings() {
-    return this.bookingModel.find();
-  }
-
   async getPayments() {
     return this.paymentModel.find();
   }
@@ -44,10 +36,36 @@ export class AdminService {
   }
 
   async verifyTutor(tutorId: MongoIdDto['id']) {
-    return this.tutorProfileModel.findByIdAndUpdate(
+    const updatedTutor = await this.tutorProfileModel.findByIdAndUpdate(
       tutorId,
-      { verified: true },
+      { isApproved: true },
       { new: true },
     );
+
+    if (!updatedTutor) {
+      throw new Error('Tutor profile not found');
+    }
+
+    return {
+      message: 'Tutor verified successfully',
+      tutor: updatedTutor,
+    };
+  }
+
+  async rejectTutor(tutorId: MongoIdDto['id']) {
+    const updatedTutor = await this.tutorProfileModel.findByIdAndUpdate(
+      tutorId,
+      { isApproved: false },
+      { new: true },
+    );
+
+    if (!updatedTutor) {
+      throw new Error('Tutor profile not found');
+    }
+
+    return {
+      message: 'Tutor rejected successfully',
+      tutor: updatedTutor,
+    };
   }
 }
