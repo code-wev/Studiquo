@@ -2,104 +2,124 @@ import React from "react";
 import Image from "next/image";
 import bg1 from "@/public/hiw/hiwBg.png";
 import bg2 from "@/public/hiw/hiw2Bg.png";
-import step from "@/public/hiw/step11.png";
-import step2 from "@/public/hiw/step2.png";
-import step3 from "@/public/hiw/step3.png";
-import step4 from "@/public/hiw/step4.png";
+import step from "@/public/hiw/1.png";
+import step2 from "@/public/hiw/2.png";
+import step3 from "@/public/hiw/3.png";
+import step4 from "@/public/hiw/4.png";
+import { FaCheckCircle } from "react-icons/fa";
 
 export default function Hiw() {
   return (
-    <section className="relative w-full flex flex-col items-center justify-center py-20 px-4 bg-[#FFFFFF] overflow-hidden">
-      {/* Background Shapes */}
+    <section className="relative w-full flex flex-col items-center justify-center py-12 md:py-20 px-4 md:px-6 bg-[#FFFFFF] overflow-hidden">
+      {/* Background Shapes - Hidden on mobile to reduce clutter */}
       <div className="relative">
         <Image
-          src={bg1}
+          src={bg2}
           alt="img"
           width={652}
           height={645}
-          className="absolute"
+          className="absolute top-0 z-0 hidden md:block"
         />
       </div>
 
       {/* Main Title */}
-      <div className="relative">
-        <h2 className="text-center text-3xl md:text-4xl font-semibold text-black">
+      <div className="text-center">
+        <h2 className="text-2xl md:text-3xl lg:text-4xl font-semibold text-black">
           How <span className="font-light">Studiquo </span>
           <span className="text-black font-bold">works?</span>
         </h2>
-        <p className="text-center mt-4 text-gray-600 max-w-xl text-sm md:text-base">
-          We built this platform to connect students with expert <br /> tutors
-          who inspire confidence, curiosity, and <br /> academic success.
+        <p className="mt-3 md:mt-4 text-gray-600 text-sm md:text-base px-2">
+          We built this platform to connect students with expert <br className="hidden md:block" /> tutors
+          who inspire confidence, curiosity, and <br className="hidden md:block" /> academic success.
         </p>
 
         {/* Subheading */}
-        <h3 className="mt-16 text-center text-xl font-medium">
+        <h3 className="mt-10 md:mt-16 text-lg md:text-xl font-medium">
           How Studiquo works?
         </h3>
       </div>
 
       {/* Timeline Container */}
-      <div className="flex flex-col items-center mx-au mt-12 gap-8 w-full max-w-4xl mx-auto">
+      <div className="flex flex-col items-center mt-8 md:mt-12 gap-6 md:gap-8 w-full max-w-4xl mx-auto">
         {/* Step 1 */}
-        <div className="flex items-start w-full gap-8">
-          {/* Image on left */}
-          <div className="w-1/3 flex justify-end">
+        <div className="flex flex-col md:flex-row items-start w-full gap-4 md:gap-8">
+          {/* Image on left - Hidden on mobile, shown on desktop */}
+          <div className="w-full md:w-1/2 hidden md:flex justify-end">
             <Image
               src={step}
-              width={220}
-              height={200}
+              width={350}
+              height={350}
               alt="profile"
               className="rounded-md"
             />
           </div>
 
-          {/* Timeline line and number */}
-          <div className="flex flex-col items-center">
-            <div className="w-[35px] h-[35px] text-[#838383] flex items-center justify-center bg-primary outline-2 outline outline-[#838383] rounded-full text-[1rem] font-bold">
-              1
+          {/* Timeline line and number - Mobile centered */}
+          <div className="flex md:flex-col items-center justify-center w-full md:w-auto">
+            <div className="md:flex md:flex-col md:items-center">
+              <div className="w-10 h-10 md:w-8.75 md:h-8.75 text-[#838383] flex items-center justify-center bg-primary border-2 md:outline border-[#838383] md:border-none md:outline-[#838383] rounded-full text-base md:text-[1rem] font-bold">
+                1
+              </div>
+              <div className="hidden md:block w-[0.5px] h-full min-h-50 bg-[#000000] mt-2.5"></div>
             </div>
-            <div className="w-[0.5px] h-full min-h-[200px] bg-[#000000] mt-2.5"></div>
           </div>
 
-          {/* Content on right */}
-          <div className="w-1/2 pl-4">
-            <h4 className="font-semibold text-lg mb-2">Create your Profile</h4>
-            <p className="text-gray-600 leading-relaxed">
-              Upload your photo and fill your general info. Once your profile is
-              set, Studiquo will start sending your profile.
+          {/* Content on right - Full width on mobile */}
+          <div className="w-full md:w-1/2 pl-0 md:pl-4">
+            <h4 className="font-semibold text-lg mb-2">Create an Account</h4>
+            <p className="text-gray-600 leading-relaxed text-sm md:max-w-97.5">
+              Parents, students and tutors create a secure Studiquo account in
+              just a few minutes. <br className="hidden md:block" />
+              Parents share their child’s year group, confidence level and
+              learning goals. <br className="hidden md:block" />
+              Tutors create a profile highlighting their subjects, availability
+              and experience. <br className="hidden md:block" />
+              This allows us to understand exactly who you are and what you’re
+              looking for.
             </p>
           </div>
         </div>
 
         {/* Step 2 */}
-        <div className="flex items-start w-full gap-8">
-          {/* Content on left */}
-          <div className="w-1/3 pr-4 text-right">
+        <div className="flex flex-col md:flex-row items-start w-full gap-4 md:gap-8">
+          {/* Content on left - Full width on mobile, shown first */}
+          <div className="w-full md:w-1/2 pr-0 md:pr-4 text-left order-2 md:order-1">
             <h4 className="font-semibold text-lg mb-2">
-              Action steps as a tutor
+              Find the right tutor (or be matched)
             </h4>
-            <ul className="text-gray-600 text-sm leading-relaxed space-y-2">
-              <li>• Create Profile & Set Availability</li>
-              <li>• Get Discovered & Receive Bookings</li>
-              <li>• Conduct Lessons & Communicate via Zoom</li>
-              <li>• Track Earnings & Reviews</li>
-            </ul>
-          </div>
-
-          {/* Timeline line and number */}
-          <div className="flex flex-col items-center">
-            <div className="w-[35px] h-[35px] text-[#838383] flex items-center justify-center bg-primary outline-2 outline outline-[#838383] rounded-full text-[1rem] font-bold">
-              2
+            <div className="text-gray-600 text-sm leading-relaxed space-y-2">
+              <p>
+                Parents can browse available tutors or let us choose the right
+                match for them. Tutors are matched based on:
+              </p>
+              <div className="pl-2">
+                <p>• Subject Level</p>
+                <p>• Availability</p>
+                <p>• Teaching Style & Personality</p>
+              </div>
+              <p>
+                This ensures every student is paired with a tutor who suits
+                their learning needs.
+              </p>
             </div>
-            <div className="w-[0.5px] h-full min-h-[200px] bg-[#000000] mt-2.5"></div>
           </div>
 
-          {/* Image on right */}
-          <div className="w-1/2 flex justify-start">
+          {/* Timeline line and number - Mobile centered */}
+          <div className="flex md:flex-col items-center justify-center w-full md:w-auto order-1 md:order-2">
+            <div className="md:flex md:flex-col md:items-center">
+              <div className="w-10 h-10 md:w-8.75 md:h-8.75 text-[#838383] flex items-center justify-center bg-primary border-2 md:outline border-[#838383] md:border-none md:outline-[#838383] rounded-full text-base md:text-[1rem] font-bold">
+                2
+              </div>
+              <div className="hidden md:block w-[0.5px] h-full min-h-50 bg-[#000000] mt-2.5"></div>
+            </div>
+          </div>
+
+          {/* Image on right - Hidden on mobile, shown on desktop */}
+          <div className="w-full md:w-1/2 hidden md:flex justify-start order-3">
             <Image
               src={step2}
-              width={220}
-              height={200}
+              width={350}
+              height={350}
               alt="profile"
               className="rounded-md"
             />
@@ -107,42 +127,48 @@ export default function Hiw() {
         </div>
 
         {/* Step 3 */}
-        <div className="flex items-start w-full gap-8">
-          {/* Image on left */}
-          <div className="w-1/3 flex justify-end">
+        <div className="flex flex-col md:flex-row items-start w-full gap-4 md:gap-8">
+          {/* Image on left - Hidden on mobile, shown on desktop */}
+          <div className="w-full md:w-1/2 hidden md:flex justify-end">
             <Image
               src={step3}
-              width={220}
-              height={200}
+              width={350}
+              height={350}
               alt="profile"
               className="rounded-md"
             />
           </div>
 
-          {/* Timeline line and number */}
-          <div className="flex flex-col items-center">
-            <div className="w-[35px] h-[35px] text-[#838383] flex items-center justify-center bg-primary outline-2 outline outline-[#838383] rounded-full text-[1rem] font-bold">
-              3
+          {/* Timeline line and number - Mobile centered */}
+          <div className="flex md:flex-col items-center justify-center w-full md:w-auto">
+            <div className="md:flex md:flex-col md:items-center">
+              <div className="w-10 h-10 md:w-8.75 md:h-8.75 text-[#838383] flex items-center justify-center bg-primary border-2 md:outline border-[#838383] md:border-none md:outline-[#838383] rounded-full text-base md:text-[1rem] font-bold">
+                3
+              </div>
+              <div className="hidden md:block w-[0.5px] h-full min-h-50 bg-[#000000] mt-2.5"></div>
             </div>
-            <div className="w-[0.5px] h-full min-h-[200px] bg-[#000000] mt-2.5"></div>
           </div>
 
-          {/* Content on right */}
-          <div className="w-1/2 pl-4">
-            <h4 className="font-semibold text-lg mb-2">Find & Book Tutors</h4>
-            <ul className="text-gray-600 text-sm leading-relaxed space-y-2">
-              <li>• Browse Verified Tutor Profiles</li>
-              <li>• Compare Reviews & Ratings</li>
-              <li>• Book Available Time Slots</li>
-              <li>• Secure Payment Processing</li>
-            </ul>
+          {/* Content on right - Full width on mobile */}
+          <div className="w-full md:w-1/2 pl-0 md:pl-4">
+            <h4 className="font-semibold text-lg mb-2"> Meet online & start learning</h4>
+            
+            <div className="text-gray-600 text-sm leading-relaxed space-y-2">
+              <p className="text-gray-600">Students meet their tutor online for a free introductory session. They:</p>
+              <div className="pl-2">
+                <p>• Get to know their tutor</p>
+                <p>• Try a few questions</p>
+                <p>• Talk through what they find challenging</p>
+              </div>
+              <p className="text-gray-600 text-sm">Lessons then take place online in one-to-one sessions, with tutors and students communicating through the platform.</p>
+            </div>
           </div>
         </div>
 
         {/* Step 4 */}
-        <div className="flex items-start w-full gap-8">
-          {/* Content on left */}
-          <div className="w-1/3 pr-4 text-right">
+        <div className="flex flex-col md:flex-row items-start w-full gap-4 md:gap-8">
+          {/* Content on left - Full width on mobile, shown first */}
+          <div className="w-full md:w-1/2 pr-0 md:pr-4 text-left order-2 md:order-1">
             <h4 className="font-semibold text-lg mb-2">Overview</h4>
             <p className="text-gray-600 text-sm leading-relaxed">
               Students from all grades, book lessons, and enjoy high-quality
@@ -153,21 +179,22 @@ export default function Hiw() {
             </p>
           </div>
 
-          {/* Timeline line and number */}
-          <div className="flex flex-col items-center">
-            <div className="w-[35px] h-[35px] text-[#838383] flex items-center justify-center bg-primary outline-2 outline outline-[#838383] rounded-full text-[1rem] font-bold">
-              4
+          {/* Timeline line and number - Mobile centered */}
+          <div className="flex md:flex-col items-center justify-center w-full md:w-auto order-1 md:order-2">
+            <div className="md:flex md:flex-col md:items-center">
+              <div className="w-10 h-10 md:w-8.75 md:h-8.75 text-[#838383] flex items-center justify-center bg-primary border-2 md:outline border-[#838383] md:border-none md:outline-[#838383] rounded-full text-base md:text-[1rem] font-bold">
+                4
+              </div>
+              <div className="hidden md:block w-[0.5px] h-full min-h-50 bg-[#000000] mt-2.5"></div>
             </div>
-            {/* Last step doesn't need the line extending down */}
-            <div className="w-[0.5px] h-0 bg-[#000000] mt-2.5"></div>
           </div>
 
-          {/* Image on right */}
-          <div className="w-1/3 flex justify-start">
+          {/* Image on right - Hidden on mobile, shown on desktop */}
+          <div className="w-full md:w-1/2 hidden md:flex justify-start order-3">
             <Image
               src={step4}
-              width={220}
-              height={200}
+              width={350}
+              height={350}
               alt="profile"
               className="rounded-md"
             />

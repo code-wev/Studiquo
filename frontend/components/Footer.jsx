@@ -4,14 +4,19 @@ import Link from "next/link";
 import Image from "next/image";
 import { FaGithub } from "react-icons/fa";
 import { CiLinkedin, CiFacebook } from "react-icons/ci";
+import { usePathname } from "next/navigation";
 
 export default function Footer() {
+    const pathname = usePathname();
+    if(pathname.includes('dashboard')){
+      return null;
+    }
   return (
     <div className="relative bg-[#0F1729]">
       <div className="animate-gradient-x text-white">
-        <footer className="footer footer-center pt-20 w-10/12 mx-auto">
+        <footer className="footer footer-center pt-20  mx-auto">
 
-          <div className="flex flex-col md:flex-row items-start md:justify-between pl-4 container mx-auto text-white space-y-5">
+          <div className="flex flex-col md:flex-row items-start md:justify-between pl-4 mx-auto text-white space-y-5">
 
             {/* About Us */}
             <div className="text-start space-y-3">

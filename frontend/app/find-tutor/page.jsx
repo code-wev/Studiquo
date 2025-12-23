@@ -1,12 +1,13 @@
-import FIndTutorPage from '@/components/findTutor/FIndTutorPage';
-import React from 'react';
+import FindTutorPage from "@/components/findTutor/FindTutorPage";
+
+
 
 const page = () => {
-    return (
-        <div>
-            <FIndTutorPage/>
-        </div>
-    );
+  return (
+    <div>
+      <FindTutorPage />
+    </div>
+  );
 };
 
 export default page;
