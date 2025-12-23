@@ -23,6 +23,14 @@ async function bootstrap() {
   // across origins (frontend must send requests with `credentials: 'include'`).
   const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
 
+  /**
+   * CORS Configuration
+   *
+   * Allows requests from the specified frontend origin.
+   * Supports credentials for cross-origin requests.
+   * Specifies allowed HTTP methods and headers.
+   * Handles preflight OPTIONS requests with a success status.
+   */
   app.enableCors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true); // allow server-to-server or curl
