@@ -7,12 +7,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { GetUser } from 'common/decorators/get-user.decorator';
 import { memoryStorage } from 'multer';
-import { UserRole } from 'src/models/User.model';
+import { GetUser } from '../../common/decorators/get-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { UserRole } from '../models/User.model';
 import { DocumentsService } from './documents.service';
 import { UploadDocumentDto } from './dto/document.dto';
 

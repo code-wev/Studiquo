@@ -7,7 +7,7 @@ import {
   IsOptional,
   IsString,
 } from 'class-validator';
-import { TutorSubject } from 'src/models/TutorProfile.model';
+import { TutorSubject } from '../../models/TutorProfile.model';
 
 export class UpdateProfileDto {
   // User fields

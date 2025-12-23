@@ -1,13 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import {
-  ExamBoardEntry,
-  ExamBoardEntrySchema,
-} from 'src/models/ExamBoardModel';
+import { ExamBoardEntry, ExamBoardEntrySchema } from '../models/ExamBoardModel';
 import {
   StudentProfile,
   StudentProfileSchema,
-} from 'src/models/StudentProfile.model';
+} from '../models/StudentProfile.model';
 import { ExamBoardController } from './exam-board.controller';
 import { ExamBoardService } from './exam-board.service';
 

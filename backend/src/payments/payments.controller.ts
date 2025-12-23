@@ -9,11 +9,11 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model, Types } from 'mongoose';
-import { MailService } from 'src/mail/mail.service';
-import { ChatGroup } from 'src/models/ChatGroup.model';
-import { Payment } from 'src/models/Payment.model';
-import { Wallet } from 'src/models/Wallet.model';
+import { MailService } from '../mail/mail.service';
 import { Booking } from '../models/Booking.model';
+import { ChatGroup } from '../models/ChatGroup.model';
+import { Payment } from '../models/Payment.model';
+import { Wallet } from '../models/Wallet.model';
 import { PaymentsService } from './payments.service';
 
 @Controller('payments')

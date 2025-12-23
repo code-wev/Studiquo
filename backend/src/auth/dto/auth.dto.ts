@@ -6,7 +6,7 @@ import {
   IsString,
   MinLength,
 } from 'class-validator';
-import { UserRole } from 'src/models/User.model';
+import { UserRole } from '../../models/User.model';
 
 export class RegisterDto {
   @IsString({ message: 'First name must be a string' })
