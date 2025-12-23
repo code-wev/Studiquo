@@ -53,6 +53,29 @@ async function bootstrap() {
     res.status(200).send({ status: 'ok' });
   });
 
+  // Ensure consistent CORS headers for all responses (useful on serverless hosts)
+  app.use(
+    (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction,
+    ) => {
+      const origin = process.env.FRONTEND_URL || 'http://localhost:3000';
+      res.header('Access-Control-Allow-Origin', origin);
+      res.header('Access-Control-Allow-Credentials', 'true');
+      res.header(
+        'Access-Control-Allow-Methods',
+        'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+      );
+      res.header(
+        'Access-Control-Allow-Headers',
+        'Origin, X-Requested-With, Content-Type, Accept, Authorization',
+      );
+      if (req.method === 'OPTIONS') return res.sendStatus(204);
+      next();
+    },
+  );
+
   await app.listen(process.env.PORT ?? 8080);
 
   const logger = new Logger('Bootstrap');
