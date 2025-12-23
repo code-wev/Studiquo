@@ -2,30 +2,32 @@
 
 import TitleSection from "@/components/dashboard/shared/TitleSection";
 import {
+  useChangePasswordMutation,
   useMyProfileQuery,
   useUpdateProfileMutation,
 } from "@/feature/shared/AuthApi";
 import { useAcceptOrRejectRequestMutation, useGetParentRequestQuery, useMyParentsQuery, useOnlyRejectRequestMutation } from "@/feature/student/StudentApi";
 import Image from "next/image";
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 export default function ExamBoard() {
   const [isEditing, setIsEditing] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [updateProfile, { isLoading, loading }] = useUpdateProfileMutation();
   const { data: myPofile } = useMyProfileQuery();
-  console.log(myPofile?.data?.user?.avatar, "my profile is here");
+
 
 
   const { data } = useGetParentRequestQuery();
   const { data: myParents } = useMyParentsQuery();
   
-  console.log(myParents, `kmn aso abbara`);
-  console.log(data, 'chole asca abbagolo');
-  console.log(myPofile?.data?.user?.avatar, "my profile is here");
+
+
   const [ acceptOrRejectRequest] = useAcceptOrRejectRequestMutation();
   const [  onlyRejectRequest] = useOnlyRejectRequestMutation();
-
+  const [ changePassword, {isLoading:passwordLoading}] = useChangePasswordMutation();
+ 
     const handleAcceptRequest = async(id) => {
 
 
@@ -77,6 +79,11 @@ export default function ExamBoard() {
     bio: myPofile?.data?.user?.bio,
   });
 
+  const [passwordData, setPasswordData] = useState({
+    oldPassword: "",
+    newPassword: ""
+  });
+
   const avatarOptions = [
     "https://i.pravatar.cc/150?img=1",
     "https://i.pravatar.cc/150?img=2",
@@ -100,6 +107,47 @@ export default function ExamBoard() {
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePasswordChange = (field, value) => {
+    setPasswordData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handlePasswordHandler = async() => {
+    console.log("Old Password:", passwordData.oldPassword);
+    console.log("New Password:", passwordData.newPassword);
+  try {
+      const payload = {
+       oldPassword: passwordData.oldPassword,
+  newPassword: passwordData.newPassword
+    };
+
+    const result = await changePassword(payload);
+
+     if(result.error){
+
+      toast.error(result?.error?.data?.message);
+      return;
+    }
+    toast.success("Password change succesfully")
+    console.log(result, "Password chnage successfully");
+   
+    
+
+     setPasswordData({
+      oldPassword: "",
+      newPassword: ""
+    });
+  } catch (error) {
+    toast.error('Something went wrong! Please try again later!')
+  }
+
+
+
+
+    
+    // Reset the form
+   
   };
 
   const handleSave = async () => {
@@ -264,6 +312,47 @@ export default function ExamBoard() {
           </div>
         )}
 
+        {/* Change Password Section */}
+        <div className="mt-8 p-6 bg-white border border-gray-200 rounded-xl shadow-sm">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Change Password</h2>
+          
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Old Password
+              </label>
+              <input
+                type="password"
+                value={passwordData.oldPassword}
+                onChange={(e) => handlePasswordChange("oldPassword", e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Enter your old password"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New Password
+              </label>
+              <input
+                type="password"
+                value={passwordData.newPassword}
+                onChange={(e) => handlePasswordChange("newPassword", e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+                placeholder="Enter your new password"
+              />
+            </div>
+          </div>
+          
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={handlePasswordHandler}
+              className="px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow"
+            >
+              Change Password
+            </button>
+          </div>
+        </div>
 
          {/* Pending Parents Requests Section */}
         <div className="mt-8">

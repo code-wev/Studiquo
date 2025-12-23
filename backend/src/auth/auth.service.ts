@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { MailService } from 'src/mail/mail.service';
 import { User } from '../models/User.model';
 import {
@@ -148,7 +148,7 @@ export class AuthService {
    * @returns a success message on completion
    */
   async changePassword(user: any, data: ChangePasswordDto) {
-    const existingUser = await this.userModel.findById(user._id);
+    const existingUser = await this.userModel.findById(new Types.ObjectId(user.userId));
     if (!existingUser) throw new UnauthorizedException('User not found');
     if (!(await bcrypt.compare(data.oldPassword, existingUser.password))) {
       throw new UnauthorizedException('Old password is incorrect');
