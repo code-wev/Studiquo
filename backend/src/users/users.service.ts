@@ -17,11 +17,7 @@ import { StudentProfile } from 'src/models/StudentProfile.model';
 import { TutorProfile } from 'src/models/TutorProfile.model';
 import { BaseService } from '../../common/base.service';
 import { User, UserRole } from '../models/User.model';
-import {
-  RespondToParentRequestDto,
-  UpdatePasswordDto,
-  UpdateProfileDto,
-} from './dto/user.dto';
+import { RespondToParentRequestDto, UpdateProfileDto } from './dto/user.dto';
 
 @Injectable()
 export class UsersService extends BaseService<User> {
@@ -591,21 +587,6 @@ export class UsersService extends BaseService<User> {
     }
 
     return { message: 'Parent request declined' };
-  }
-
-  /**
-   * Change the authenticated user's password.
-   *
-   * @param req - the request object that contains `user` (set by auth guard)
-   * @param data - object containing `newPassword` property
-   * @returns an object with a message on success
-   */
-  async updatePassword(user: any, data: UpdatePasswordDto) {
-    const userDoc = await this.model.findById(user.userId);
-    if (!userDoc) throw new UnauthorizedException('User not found');
-    userDoc.password = await bcrypt.hash(data.newPassword, 10);
-    await userDoc.save();
-    return { message: 'Password updated' };
   }
 
   /**

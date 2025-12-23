@@ -1,9 +1,10 @@
-import { Controller, Get, Param, Put, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
 import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { UserRole } from 'src/models/User.model';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { AdminService } from './admin.service';
+import { AdminOverViewQueryDto } from './dto/admin.dto';
 
 @Controller('admin')
 @UseGuards(RolesGuard)
@@ -11,14 +12,15 @@ import { AdminService } from './admin.service';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @Get('users')
-  async getUsers() {
-    return this.adminService.getUsers();
-  }
-
-  @Get('bookings')
-  async getBookings() {
-    return this.adminService.getBookings();
+  /**
+   * Get an overview of platform statistics including user counts and revenue.
+   *
+   * @param query - optional month and year for filtering revenue stats
+   * @returns overview data including user counts and revenue breakdowns
+   */
+  @Get('overview')
+  async getOverview(@Query() query: AdminOverViewQueryDto) {
+    return this.adminService.getOverview(query);
   }
 
   @Get('payments')
@@ -41,8 +43,25 @@ export class AdminController {
     return this.adminService.updatePayoutStatus(payoutId, 'rejected');
   }
 
+  /**
+   * Verify a tutor's profile by setting isApproved to true.
+   *
+   * @param tutorId - ID of the tutor profile to verify
+   * @returns success message and updated tutor profile
+   */
   @Put('tutors/:tutorId/verify')
   async verifyTutor(@Param('tutorId') tutorId: MongoIdDto['id']) {
     return this.adminService.verifyTutor(tutorId);
+  }
+
+  /**
+   * Reject a tutor's profile by setting isApproved to false.
+   *
+   * @param tutorId - ID of the tutor profile to reject
+   * @returns success message and updated tutor profile
+   */
+  @Put('tutors/:tutorId/reject')
+  async rejectTutor(@Param('tutorId') tutorId: MongoIdDto['id']) {
+    return this.adminService.rejectTutor(tutorId);
   }
 }

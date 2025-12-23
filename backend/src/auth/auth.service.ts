@@ -148,7 +148,9 @@ export class AuthService {
    * @returns a success message on completion
    */
   async changePassword(user: any, data: ChangePasswordDto) {
-    const existingUser = await this.userModel.findById(new Types.ObjectId(user.userId));
+    const existingUser = await this.userModel.findById(
+      new Types.ObjectId(user.userId),
+    );
     if (!existingUser) throw new UnauthorizedException('User not found');
     if (!(await bcrypt.compare(data.oldPassword, existingUser.password))) {
       throw new UnauthorizedException('Old password is incorrect');

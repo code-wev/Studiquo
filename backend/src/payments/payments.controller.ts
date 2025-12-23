@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import mongoose, { Model, Types } from 'mongoose';
+import { MailService } from 'src/mail/mail.service';
 import { ChatGroup } from 'src/models/ChatGroup.model';
 import { Payment } from 'src/models/Payment.model';
 import { Wallet } from 'src/models/Wallet.model';
@@ -21,6 +22,7 @@ export class PaymentsController {
 
   constructor(
     private readonly paymentsService: PaymentsService,
+    private readonly mailService: MailService,
     @InjectModel(Booking.name) private bookingModel: Model<Booking>,
     @InjectModel(Payment.name) private paymentModel: Model<Payment>,
     @InjectModel(Wallet.name) private walletModel: Model<Wallet>,
@@ -86,6 +88,8 @@ export class PaymentsController {
         const parentIds = event.data.object.metadata?.parentIds;
         const slotEndTime = event.data.object.metadata?.slotEndTime;
         const subject = event.data.object.metadata?.subject;
+        const parentEmail = event.data.object.metadata?.parentEmail;
+        const shortBookingId = event.data.object.metadata?.shortBookingId;
         const amount = event.data.object.amount_received;
         const currency = event.data.object.currency;
         if (bookingId) {
@@ -172,6 +176,13 @@ export class PaymentsController {
             });
 
             await this.logger.log(`Booking ${bookingId} updated to SCHEDULED`);
+
+            await this.mailService.sendPaymentConfirmationEmail(
+              parentEmail,
+              amt,
+              currency,
+              shortBookingId,
+            );
           } catch (e: any) {
             this.logger.error('Failed to update booking status', e.message);
           }

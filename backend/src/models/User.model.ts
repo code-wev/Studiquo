@@ -10,13 +10,13 @@ export enum UserRole {
 
 @Schema({ timestamps: true })
 export class User extends Document {
-  @Prop()
+  @Prop({ default: '' })
   avatar: string;
 
-  @Prop({})
+  @Prop({ default: '' })
   avatarKey: string; // S3 object key
 
-  @Prop()
+  @Prop({ default: '' })
   googleId: string;
 
   @Prop({ unique: true, sparse: true })

@@ -104,6 +104,7 @@ export class TutorsService {
      * Aggregation Pipeline
      * -------------------*/
     const pipeline: any[] = [
+      { $match: { isApproved: true } },
       { $match: tutorMatch },
 
       // Join user
@@ -197,7 +198,7 @@ export class TutorsService {
    */
   async getPublicProfile(tutorId: MongoIdDto['id']) {
     const tutorProfile = await this.tutorProfileModel
-      .findOne({ user: new Types.ObjectId(tutorId) })
+      .findOne({ user: new Types.ObjectId(tutorId), isApproved: true })
       .populate({
         path: 'user',
         select: 'firstName lastName avatar bio role',
@@ -241,6 +242,15 @@ export class TutorsService {
    * @param query - pagination and filter options for reviews
    */
   async getTutorReviews(tutorId: MongoIdDto['id'], query: ReviewQueryDto) {
+    // Only approve profile reviews
+    const tutorProfile = await this.tutorProfileModel
+      .findOne({ user: new Types.ObjectId(tutorId), isApproved: true })
+      .lean();
+
+    if (!tutorProfile) {
+      throw new NotFoundException('Tutor profile not found or not approved');
+    }
+
     const { page = 1, limit = 10, rating } = query;
 
     const filter: any = { tutor: tutorId };
@@ -282,11 +292,11 @@ export class TutorsService {
     const userId = user.userId;
 
     const tutorProfile = await this.tutorProfileModel
-      .findOne({ user: new Types.ObjectId(userId) })
+      .findOne({ user: new Types.ObjectId(userId), isApproved: true })
       .lean();
 
     if (!tutorProfile) {
-      throw new NotFoundException('Tutor profile not found');
+      throw new NotFoundException('Tutor profile not found or not approved');
     }
 
     // Aggregate key metrics in parallel
@@ -392,6 +402,15 @@ export class TutorsService {
    */
   async getMyWallet(user: any) {
     const userId = user.userId;
+
+    const tutorProfile = await this.tutorProfileModel
+      .findOne({ user: new Types.ObjectId(userId), isApproved: true })
+      .lean();
+
+    if (!tutorProfile) {
+      throw new NotFoundException('Tutor profile not found or not approved');
+    }
+
     const wallet = await this.walletModel.findOne({ tutorId: userId }).lean();
     return {
       balance: (wallet && wallet.balance) || 0,
@@ -405,6 +424,15 @@ export class TutorsService {
    */
   async requestPayout(user: any, dto: PaymentRequestDto) {
     const userId = user.userId;
+
+    const tutorProfile = await this.tutorProfileModel
+      .findOne({ user: new Types.ObjectId(userId), isApproved: true })
+      .lean();
+
+    if (!tutorProfile) {
+      throw new NotFoundException('Tutor profile not found or not approved');
+    }
+
     const { amount, method } = dto;
 
     if (!amount || amount <= 0) {
