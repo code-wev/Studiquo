@@ -81,8 +81,13 @@ export class User extends Document {
   @Prop({ default: '' })
   dbsLink: string;
 
-  @Prop({ default: '' })
-  referralSource: string;
+  @Prop({
+    type: String,
+    required: false,
+    trim: true,
+    default: null,
+  })
+  referralSource?: string | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
