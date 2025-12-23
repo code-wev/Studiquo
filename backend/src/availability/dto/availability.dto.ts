@@ -8,8 +8,8 @@ import {
   IsString,
   IsUrl,
 } from 'class-validator';
-import { TimeSlotType } from 'src/models/TimeSlot.model';
-import { TutorSubject } from 'src/models/TutorProfile.model';
+import { TimeSlotType } from '../../models/TimeSlot.model';
+import { TutorSubject } from '../../models/TutorProfile.model';
 
 export class CreateAvailabilityDto {
   @IsDateString(

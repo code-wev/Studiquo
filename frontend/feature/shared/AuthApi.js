@@ -10,6 +10,7 @@ export const AuthApi = createApi({
 
   baseQuery: fetchBaseQuery({
     baseUrl: base_url,
+    credentials:'include',
     prepareHeaders: (headers) => {
       const token = Cookies.get("token");
       if (token) {

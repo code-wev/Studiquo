@@ -4,15 +4,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model, Types } from 'mongoose';
-import { Booking } from 'src/models/Booking.model';
-import { Payment } from 'src/models/Payment.model';
-import { Payout } from 'src/models/Payout.model';
-import { Review } from 'src/models/Review.model';
-import { Wallet } from 'src/models/Wallet.model';
-import { ReviewQueryDto } from 'src/reviews/dto/review.dto';
+import { MongoIdDto } from '../../common/dto/mongoId.dto';
+import { Booking } from '../models/Booking.model';
+import { Payment } from '../models/Payment.model';
+import { Payout } from '../models/Payout.model';
+import { Review } from '../models/Review.model';
 import { TutorProfile } from '../models/TutorProfile.model';
+import { Wallet } from '../models/Wallet.model';
+import { ReviewQueryDto } from '../reviews/dto/review.dto';
 import { PaymentRequestDto, TutorSearchPaginationDto } from './dto/tutor.dto';
 
 @Injectable()

@@ -1,6 +1,6 @@
 import { IsEnum, IsMongoId, IsNotEmpty, IsString } from 'class-validator';
-import { TimeSlotType } from 'src/models/TimeSlot.model';
-import { TutorSubject } from 'src/models/TutorProfile.model';
+import { TimeSlotType } from '../../models/TimeSlot.model';
+import { TutorSubject } from '../../models/TutorProfile.model';
 
 export class CreateBookingDto {
   @IsMongoId({ message: 'Tutor ID must be a valid Mongo ID' })

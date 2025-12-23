@@ -1,16 +1,16 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { PaginationDto } from 'common/dto/pagination.dto';
-import { formatAmPm } from 'common/utils/time.util';
 import { Model, Types } from 'mongoose';
-import { TimeSlot } from 'src/models/TimeSlot.model';
-import { TutorAvailability } from 'src/models/TutorAvailability.model';
-import { TutorProfile } from 'src/models/TutorProfile.model';
-import { User } from 'src/models/User.model';
-import { PaymentsService } from 'src/payments/payments.service';
+import { PaginationDto } from '../../common/dto/pagination.dto';
+import { formatAmPm } from '../../common/utils/time.util';
 import { Booking } from '../models/Booking.model';
 import { BookingStudents } from '../models/BookingStudents.model';
 import { LessonReport } from '../models/LessonReport.model';
+import { TimeSlot } from '../models/TimeSlot.model';
+import { TutorAvailability } from '../models/TutorAvailability.model';
+import { TutorProfile } from '../models/TutorProfile.model';
+import { User } from '../models/User.model';
+import { PaymentsService } from '../payments/payments.service';
 import { CreateBookingDto, CreatePaymentLinkDto } from './dto/booking.dto';
 
 @Injectable()

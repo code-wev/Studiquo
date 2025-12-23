@@ -1,5 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
-import { UserRole } from 'src/models/User.model';
+import { UserRole } from '../../src/models/User.model';
 
 /**
  * Decorator to attach required roles metadata to route handlers.

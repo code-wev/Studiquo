@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsEnum, IsNotEmpty, IsString } from 'class-validator';
-import { MessageType } from 'src/models/Message.model';
+import { MessageType } from '../../models/Message.model';
 
 export class SendMessageDto {
   @Transform(({ value }) => (value === '' ? undefined : value))

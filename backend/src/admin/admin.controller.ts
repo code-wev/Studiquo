@@ -1,8 +1,8 @@
 import { Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
-import { MongoIdDto } from 'common/dto/mongoId.dto';
-import { UserRole } from 'src/models/User.model';
 import { Roles } from '../../common/decorators/roles.decorator';
+import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { UserRole } from '../models/User.model';
 import { AdminService } from './admin.service';
 import { AdminOverViewQueryDto } from './dto/admin.dto';
 
