@@ -21,33 +21,11 @@ async function bootstrap() {
 
   // Enable CORS for the frontend and allow credentials so cookies are sent
   // across origins (frontend must send requests with `credentials: 'include'`).
-  const frontendOrigin = process.env.FRONTEND_URL || 'http://localhost:3000';
-
-  /**
-   * CORS Configuration
-   *
-   * Allows requests from the specified frontend origin.
-   * Supports credentials for cross-origin requests.
-   * Specifies allowed HTTP methods and headers.
-   * Handles preflight OPTIONS requests with a success status.
-   */
-  app.enableCors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true); // allow server-to-server or curl
-      if (origin === frontendOrigin) return callback(null, true);
-      return callback(new Error('Not allowed by CORS'));
-    },
-    credentials: true,
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Origin',
-      'X-Requested-With',
-      'Content-Type',
-      'Accept',
-      'Authorization',
-    ],
-    optionsSuccessStatus: 204,
-  });
+  // app.enableCors({
+  //   origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  //   credentials: true,
+  // });
+  app.enableCors({ origin: '*' });
 
   // Enable global validation pipe with strict options:
   // - `whitelist` removes unexpected properties
@@ -76,8 +54,7 @@ async function bootstrap() {
     res.status(200).send({ status: 'ok' });
   });
 
-  const port = Number(process.env.PORT) || 8080;
-  await app.listen(port, '0.0.0.0');
+  await app.listen(process.env.PORT ?? 8080);
 
   const logger = new Logger('Bootstrap');
   try {
@@ -91,7 +68,7 @@ async function bootstrap() {
     logger.error('Error ensuring default admin user', err);
   }
 
-  console.log(`App running at port ${port}`);
+  console.log(`App running at port ${process.env.PORT ?? 3000}`);
 }
 
 void bootstrap();
