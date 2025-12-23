@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { MailService } from 'src/mail/mail.service';
 import { Booking, BookingSchema } from 'src/models/Booking.model';
 import { ChatGroup, ChatGroupSchema } from 'src/models/ChatGroup.model';
 import { Payment, PaymentSchema } from 'src/models/Payment.model';
@@ -23,7 +24,7 @@ import { PaymentsService } from './payments.service';
     ]),
   ],
   controllers: [PaymentsController],
-  providers: [PaymentsService],
+  providers: [PaymentsService, MailService],
   exports: [PaymentsService],
 })
 export class PaymentsModule {}
