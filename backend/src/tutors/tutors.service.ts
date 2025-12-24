@@ -411,11 +411,14 @@ export class TutorsService {
       throw new NotFoundException('Tutor profile not found or not approved');
     }
 
-    const wallet = await this.walletModel.findOne({ tutorId: userId }).lean();
+    const wallet = await this.walletModel
+      .findOne({ tutorId: new Types.ObjectId(userId) })
+      .select('-__v -transactions')
+      .lean();
+
     return {
-      balance: (wallet && wallet.balance) || 0,
-      currency:
-        (wallet && wallet.currency) || process.env.STRIPE_CURRENCY || 'gbp', // Pound sterling GBP not supported in Stripe test mode
+      message: 'Wallet fetched successfully',
+      wallet,
     };
   }
 
