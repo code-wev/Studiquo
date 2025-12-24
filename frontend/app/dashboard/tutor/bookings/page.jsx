@@ -3,7 +3,12 @@
 import TitleSection from "@/components/dashboard/shared/TitleSection";
 import { useGetTutorBookingsQuery } from "@/feature/student/BookingApi";
 import { useEffect, useState } from "react";
-import { BiChevronRight, BiMessageRounded, BiX } from "react-icons/bi";
+import {
+  BiChevronLeft,
+  BiChevronRight,
+  BiMessageRounded,
+  BiX,
+} from "react-icons/bi";
 
 export default function Bookings() {
   const { data: apiData, isLoading, error } = useGetTutorBookingsQuery();
@@ -12,31 +17,44 @@ export default function Bookings() {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [showStudentsModal, setShowStudentsModal] = useState(false);
   const [currentStudentsList, setCurrentStudentsList] = useState([]);
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
   // Process API data when loaded
   useEffect(() => {
     if (apiData?.data) {
       setBookingData(apiData.data);
 
-      // Set selected date to first booking date
-      if (apiData.data.bookings.length > 0) {
-        const firstBooking = apiData.data.bookings[0];
-        setSelectedDate(firstBooking);
+      // Set current month/year from API data if available
+      if (apiData.data.currentMonth) {
+        const apiDate = new Date(apiData.data.currentMonth.start);
+        setCurrentMonth(apiDate.getMonth());
+        setCurrentYear(apiDate.getFullYear());
 
-        // Set first time slot as default
-        if (firstBooking.timeSlots && firstBooking.timeSlots.length > 0) {
-          setSelectedSlot(firstBooking.timeSlots[0]);
+        // Find a booking in this month to select
+        const bookingsInMonth = apiData.data.bookings.filter((booking) => {
+          const bookingDate = new Date(booking.date);
+          return (
+            bookingDate.getMonth() === apiDate.getMonth() &&
+            bookingDate.getFullYear() === apiDate.getFullYear()
+          );
+        });
+
+        if (bookingsInMonth.length > 0) {
+          const firstBookingInMonth = bookingsInMonth[0];
+          setSelectedDate(firstBookingInMonth);
+          if (
+            firstBookingInMonth.timeSlots &&
+            firstBookingInMonth.timeSlots.length > 0
+          ) {
+            setSelectedSlot(firstBookingInMonth.timeSlots[0]);
+          }
         }
       }
     }
   }, [apiData]);
 
-  // Get current month and year for display
-  const today = new Date();
-  const currentYear = today.getFullYear();
-  const currentMonth = today.getMonth();
-
-  // Calendar functions - only for current month
+  // Calendar functions
   const getDaysInMonth = (year, month) => {
     return new Date(year, month + 1, 0).getDate();
   };
@@ -45,11 +63,32 @@ export default function Bookings() {
     return new Date(year, month, 1).getDay();
   };
 
-  const handleDayClick = (day, hasBooking = false) => {
-    if (!hasBooking || !bookingData) return;
+  const handlePrevMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(currentYear - 1);
+    } else {
+      setCurrentMonth(currentMonth - 1);
+    }
+    // Clear selections when changing month
+    setSelectedDate(null);
+    setSelectedSlot(null);
+  };
 
-    const clickedDate = new Date(currentYear, currentMonth, day);
-    const dateString = clickedDate.toISOString().split("T")[0];
+  const handleNextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(currentYear + 1);
+    } else {
+      setCurrentMonth(currentMonth + 1);
+    }
+    // Clear selections when changing month
+    setSelectedDate(null);
+    setSelectedSlot(null);
+  };
+
+  const handleDayClick = (day, dateString) => {
+    if (!bookingData) return;
 
     // Find booking for this date
     const bookingForDate = bookingData.bookings.find(
@@ -64,6 +103,10 @@ export default function Bookings() {
       } else {
         setSelectedSlot(null);
       }
+    } else {
+      // If no booking for this date, clear selection
+      setSelectedDate(null);
+      setSelectedSlot(null);
     }
   };
 
@@ -71,7 +114,8 @@ export default function Bookings() {
     setSelectedSlot(slot);
   };
 
-  const handleViewStudents = (slot) => {
+  const handleViewStudents = (slot, e) => {
+    e.stopPropagation();
     if (slot?.bookings && slot.bookings.length > 0) {
       // Get all students from all bookings in this slot
       const allStudents = slot.bookings.flatMap((booking) => {
@@ -93,7 +137,8 @@ export default function Bookings() {
     }
   };
 
-  const handleJoinChat = (student) => {
+  const handleJoinChat = (student, e) => {
+    e.stopPropagation();
     console.log("Join chat with student:", student);
     // Implement chat functionality here
     alert(`Opening chat with ${student.studentName}`);
@@ -101,7 +146,7 @@ export default function Bookings() {
 
   // Format date for display
   const formatSelectedDate = () => {
-    if (!selectedDate) return "Select a date";
+    if (!selectedDate) return "Select a date with bookings";
 
     const date = new Date(selectedDate.date);
     const options = {
@@ -133,7 +178,12 @@ export default function Bookings() {
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDayOfMonth = getFirstDayOfMonth(currentYear, currentMonth);
 
-  // Generate days array with booking information - only current month
+  // Get today's date for highlighting
+  const today = new Date();
+  const isCurrentMonth =
+    today.getMonth() === currentMonth && today.getFullYear() === currentYear;
+
+  // Generate days array with booking information
   const days = [];
 
   // Previous month days (empty cells to fill the first week)
@@ -141,27 +191,24 @@ export default function Bookings() {
     days.push({
       day: "",
       isCurrentMonth: false,
-      isSelected: false,
-      hasBooking: false,
       isEmpty: true,
     });
   }
 
   // Current month days
   for (let i = 1; i <= daysInMonth; i++) {
-    const isToday = today.getDate() === i;
-
     const dateString = `${currentYear}-${String(currentMonth + 1).padStart(
       2,
       "0"
     )}-${String(i).padStart(2, "0")}`;
 
     // Check if this date has bookings
-    const hasBooking =
-      bookingData?.bookings?.some(
-        (booking) => booking.dateString === dateString
-      ) || false;
+    const bookingForDate = bookingData?.bookings?.find(
+      (booking) => booking.dateString === dateString
+    );
 
+    const hasBooking = !!bookingForDate;
+    const isToday = isCurrentMonth && today.getDate() === i;
     const isSelected = selectedDate?.dateString === dateString;
 
     days.push({
@@ -171,11 +218,23 @@ export default function Bookings() {
       isSelected,
       hasBooking,
       isEmpty: false,
+      dateString,
+      booking: bookingForDate,
     });
   }
 
+  // Check if there are any bookings in the current month
+  const hasBookingsInCurrentMonth = days.some((day) => day.hasBooking);
+
+  // Get all bookings for the selected date
+  const getSelectedDateBookings = () => {
+    if (!selectedDate) return [];
+    return selectedDate.timeSlots || [];
+  };
+
   // Handle class actions
-  const handleJoinClass = (meetLink) => {
+  const handleJoinClass = (meetLink, e) => {
+    e.stopPropagation();
     if (meetLink) {
       window.open(meetLink, "_blank");
     } else {
@@ -183,7 +242,8 @@ export default function Bookings() {
     }
   };
 
-  const handleCancelClass = (bookingId, subject) => {
+  const handleCancelClass = (bookingId, subject, e) => {
+    e.stopPropagation();
     if (confirm(`Are you sure you want to cancel ${subject} class?`)) {
       // Implement cancel logic here
       console.log(`Canceling booking ${bookingId}`);
@@ -197,6 +257,7 @@ export default function Bookings() {
     return time.toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit",
+      hour12: true,
     });
   };
 
@@ -235,11 +296,21 @@ export default function Bookings() {
 
           {/* Calendar Box */}
           <div className='border border-gray-200 rounded-2xl p-6 mb-6'>
-            {/* Month Header - Only shows current month, no navigation buttons */}
-            <div className='flex justify-center items-center mb-6'>
+            {/* Month Header with Navigation */}
+            <div className='flex justify-between items-center mb-6'>
+              <button
+                onClick={handlePrevMonth}
+                className='p-2 hover:bg-gray-100 rounded-full transition-colors'>
+                <BiChevronLeft size={24} className='text-gray-600' />
+              </button>
               <p className='font-semibold text-gray-900 text-lg'>
                 {monthName} {currentYear}
               </p>
+              <button
+                onClick={handleNextMonth}
+                className='p-2 hover:bg-gray-100 rounded-full transition-colors'>
+                <BiChevronRight size={24} className='text-gray-600' />
+              </button>
             </div>
 
             {/* Week Days */}
@@ -253,7 +324,7 @@ export default function Bookings() {
               <p>Sa</p>
             </div>
 
-            {/* Calendar Days - Only current month */}
+            {/* Calendar Days */}
             <div className='grid grid-cols-7 gap-2 text-center text-sm'>
               {days.map((dayData, index) => {
                 const {
@@ -263,6 +334,7 @@ export default function Bookings() {
                   isSelected,
                   hasBooking,
                   isEmpty,
+                  dateString,
                 } = dayData;
 
                 if (isEmpty) {
@@ -272,7 +344,8 @@ export default function Bookings() {
                 return (
                   <button
                     key={index}
-                    onClick={() => handleDayClick(day, hasBooking)}
+                    onClick={() => handleDayClick(day, dateString)}
+                    disabled={!hasBooking}
                     className={`
                       py-3 rounded-xl transition-all duration-200 relative
                       ${
@@ -282,12 +355,17 @@ export default function Bookings() {
                       }
                       ${
                         !isSelected && hasBooking
-                          ? "bg-purple-200 text-purple-700 font-semibold"
+                          ? "bg-purple-200 text-purple-700 font-semibold hover:bg-purple-300"
                           : ""
                       }
-                      ${!isSelected && !hasBooking ? "hover:bg-gray-100" : ""}
-                      ${!hasBooking ? "cursor-default" : "cursor-pointer"}
+                      ${
+                        !isSelected && !hasBooking
+                          ? "text-gray-900 hover:bg-gray-100"
+                          : ""
+                      }
                       ${isToday ? "ring-2 ring-purple-400" : ""}
+                      ${!hasBooking ? "cursor-default" : "cursor-pointer"}
+                      ${!isCurrentMonth ? "text-gray-400" : ""}
                     `}>
                     {day}
                     {hasBooking && !isSelected && (
@@ -297,29 +375,46 @@ export default function Bookings() {
                 );
               })}
             </div>
+
+            {/* No bookings message */}
+            {!hasBookingsInCurrentMonth && (
+              <div className='mt-4 text-center text-gray-500 text-sm'>
+                No bookings scheduled for {monthName} {currentYear}
+              </div>
+            )}
           </div>
 
-          {/* Time Slots List */}
+          {/* Time Slots List - Only show if a date is selected */}
           {selectedDate &&
             selectedDate.timeSlots &&
             selectedDate.timeSlots.length > 0 && (
               <div className='bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden'>
                 <div className='px-6 py-4 bg-gray-50 border-b border-gray-200'>
                   <h3 className='text-sm font-medium text-gray-600'>
-                    Time Slots for {selectedDate.dateString}
+                    Time Slots for{" "}
+                    {new Date(selectedDate.date).toLocaleDateString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
                   </h3>
+                  <p className='text-xs text-gray-500 mt-1'>
+                    {selectedDate.totalBookings} booking(s),{" "}
+                    {selectedDate.totalStudents} student(s)
+                  </p>
                 </div>
                 <div className='max-h-96 overflow-y-auto'>
                   {selectedDate.timeSlots.map((slot, index) => (
                     <div
-                      key={index}
+                      key={slot.slotId || index}
                       onClick={() => handleSlotClick(slot)}
                       className={`
                       px-6 py-4 border-b border-gray-100 last:border-b-0 
                       transition-colors cursor-pointer hover:bg-gray-50
                       ${
                         selectedSlot?.slotId === slot.slotId
-                          ? "bg-purple-50"
+                          ? "bg-purple-50 border-l-4 border-l-purple-500"
                           : ""
                       }
                     `}>
@@ -337,14 +432,21 @@ export default function Bookings() {
                             {slot.slotBookingsCount} booking(s)
                           </p>
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewStudents(slot);
-                          }}
-                          className='px-3 py-1 text-xs font-medium text-purple-600 bg-purple-100 rounded-full hover:bg-purple-200 transition-colors'>
-                          View Students
-                        </button>
+                        <div className='flex items-center gap-2'>
+                          <button
+                            onClick={(e) => handleViewStudents(slot, e)}
+                            className='px-3 py-1 text-xs font-medium text-purple-600 bg-purple-100 rounded-full hover:bg-purple-200 transition-colors'>
+                            View Students
+                          </button>
+                          {slot.meetLink && (
+                            <button
+                              onClick={(e) => handleJoinClass(slot.meetLink, e)}
+                              className='flex items-center gap-1 px-3 py-1 text-xs font-medium text-green-600 bg-green-100 rounded-full hover:bg-green-200 transition-colors'>
+                              <BiChevronRight size={14} />
+                              Join
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -384,7 +486,9 @@ export default function Bookings() {
                       </div>
                       {selectedSlot.meetLink && (
                         <button
-                          onClick={() => handleJoinClass(selectedSlot.meetLink)}
+                          onClick={(e) =>
+                            handleJoinClass(selectedSlot.meetLink, e)
+                          }
                           className='flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors'>
                           <BiChevronRight size={18} />
                           Join Class
@@ -429,10 +533,11 @@ export default function Bookings() {
                             </div>
                             {booking.status === "SCHEDULED" && (
                               <button
-                                onClick={() =>
+                                onClick={(e) =>
                                   handleCancelClass(
                                     booking._id,
-                                    booking.subject
+                                    booking.subject,
+                                    e
                                   )
                                 }
                                 className='flex items-center gap-1 text-sm font-medium text-red-500 hover:text-red-600 transition-colors'>
@@ -472,7 +577,9 @@ export default function Bookings() {
                                         </p>
                                       </div>
                                       <button
-                                        onClick={() => handleJoinChat(student)}
+                                        onClick={(e) =>
+                                          handleJoinChat(student, e)
+                                        }
                                         className='flex items-center gap-1 px-3 py-1 text-xs font-medium text-green-600 bg-green-50 rounded hover:bg-green-100 transition-colors'>
                                         <BiMessageRounded size={14} />
                                         Chat
@@ -500,7 +607,7 @@ export default function Bookings() {
                 <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center text-gray-500'>
                   {selectedDate
                     ? "Select a time slot to view details"
-                    : "Select a date with bookings to view classes"}
+                    : "Select a date with bookings from the calendar"}
                 </div>
               )}
             </div>
@@ -549,7 +656,7 @@ export default function Bookings() {
       {/* Students List Modal */}
       {showStudentsModal && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
-          <div className='bg-white rounded-lg shadow-xl w-full max-h-[80vh] overflow-hidden'>
+          <div className='bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[80vh] overflow-hidden'>
             <div className='px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center'>
               <h3 className='text-lg font-semibold text-gray-900'>
                 Students List
@@ -592,25 +699,20 @@ export default function Bookings() {
                   {currentStudentsList.map((student, index) => (
                     <tr
                       key={`${student.studentId}-${index}`}
-                      className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                      className='hover:bg-gray-50'>
                       <td className='px-6 py-4 whitespace-nowrap'>
                         <span className='text-sm font-medium text-gray-900'>
                           {student.studentId}
                         </span>
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap'>
-                        <div>
-                          <span className='text-sm text-gray-900'>
-                            {student.studentName}
-                          </span>
-                        </div>
+                        <span className='text-sm text-gray-900'>
+                          {student.studentName}
+                        </span>
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap'>
                         <span className='text-sm text-gray-900'>
-                          {student.parentsNames ||
-                            (Array.isArray(student.parents)
-                              ? student.parents.join(", ")
-                              : student.parents)}
+                          {student.parentsNames}
                         </span>
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap'>
@@ -637,14 +739,12 @@ export default function Bookings() {
                         </span>
                       </td>
                       <td className='px-6 py-4 whitespace-nowrap'>
-                        <div className='flex gap-2'>
-                          <button
-                            onClick={() => handleJoinChat(student)}
-                            className='inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-green-800 bg-green-100 hover:bg-green-200 transition-colors'>
-                            <BiMessageRounded className='mr-1' />
-                            Chat
-                          </button>
-                        </div>
+                        <button
+                          onClick={(e) => handleJoinChat(student, e)}
+                          className='inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-green-800 bg-green-100 hover:bg-green-200 transition-colors'>
+                          <BiMessageRounded className='mr-1' />
+                          Chat
+                        </button>
                       </td>
                     </tr>
                   ))}

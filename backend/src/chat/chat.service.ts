@@ -38,7 +38,7 @@ export class ChatService {
             { parentIds: { $in: [objId] } },
           ],
           // Chat can start after this time in this group
-          // startsAt: { $gte: new Date() },
+          startsAt: { $lte: new Date() },
         },
       },
 
@@ -117,7 +117,7 @@ export class ChatService {
     // First check if chat group exists and has started
     const chatGroup = await this.chatGroupModel.findOne({
       _id: new mongoose.Types.ObjectId(chatGroupId),
-      // startsAt: { $lte: new Date() },
+      startsAt: { $lte: new Date() },
     });
 
     if (!chatGroup) {
@@ -183,7 +183,7 @@ export class ChatService {
   }) {
     const chatGroup = await this.chatGroupModel.findOne({
       _id: new mongoose.Types.ObjectId(data.chatGroup),
-      // startsAt: { $lte: new Date() },
+      startsAt: { $lte: new Date() },
     });
 
     if (!chatGroup) {
