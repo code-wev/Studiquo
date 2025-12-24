@@ -4,7 +4,8 @@ import TitleSection from "@/components/dashboard/shared/TitleSection";
 import {
   useGetPaymentHistoryQuery,
   useGetWalletDetailsQuery,
-} from "@/feature/student/TutorApi";
+} from "@/feature/shared/TutorApi";
+
 import { useEffect, useState } from "react";
 
 export default function Earnings() {
