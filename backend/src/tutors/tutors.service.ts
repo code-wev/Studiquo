@@ -69,7 +69,7 @@ export class TutorsService {
      * -------------------*/
     const tutorMatch: any = {};
 
-    if (user.role !== UserRole.Admin) {
+    if (!user || user.role !== UserRole.Admin) {
       tutorMatch.isApproved = true;
     }
 
