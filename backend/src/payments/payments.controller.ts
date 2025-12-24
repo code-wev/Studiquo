@@ -3,18 +3,17 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Logger,
   Post,
-  Req,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import type { Request } from 'express';
 import mongoose, { Model, Types } from 'mongoose';
-import { MailService } from '../mail/mail.service';
+import { MailService } from 'src/mail/mail.service';
+import { ChatGroup } from 'src/models/ChatGroup.model';
+import { Payment } from 'src/models/Payment.model';
+import { Wallet } from 'src/models/Wallet.model';
 import { Booking } from '../models/Booking.model';
-import { ChatGroup } from '../models/ChatGroup.model';
-import { Payment } from '../models/Payment.model';
-import { Wallet } from '../models/Wallet.model';
 import { PaymentsService } from './payments.service';
 
 @Controller('payments')
@@ -64,81 +63,27 @@ export class PaymentsController {
    * Stripe webhook endpoint.
    */
   @Post('webhook')
-  async handleWebhook(@Req() req: Request, @Body() body: any) {
+  async handleWebhook(
+    @Body() rawBody: Buffer,
+    @Headers('stripe-signature') sig: string,
+  ) {
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
     let event: any;
 
-    // Extract signature from headers or query (some forwarding tools drop headers)
-    const sigHeader =
-      (req.headers &&
-        (req.headers['stripe-signature'] || req.headers['Stripe-Signature'])) ||
-      (req.query &&
-        (req.query['stripe-signature'] ||
-          req.query.sig ||
-          req.query.signature));
-    const sig = Array.isArray(sigHeader)
-      ? String(sigHeader[0])
-      : String(sigHeader || '');
-
-    // Determine raw payload: prefer req.body when it's a Buffer (raw parser),
-    // then req.rawBody (if some middleware attached it), otherwise fall back
-    // to the parsed body string. Stripe requires the exact raw bytes for
-    // signature verification.
-    const maybeRaw = (req as any).body;
-    const payload: string | Buffer = Buffer.isBuffer(maybeRaw)
-      ? maybeRaw
-      : (req as any).rawBody
-        ? (req as any).rawBody
-        : typeof body === 'string'
-          ? body
-          : JSON.stringify(body || {});
-
     try {
-      if (!endpointSecret) {
-        // If endpoint secret isn't configured, skip verification and parse
-        // the payload directly. This is less secure but useful for local
-        // testing where signing isn't set up.
-        this.logger.warn(
-          'No webhook endpoint secret configured — skipping signature verification.',
-        );
-        event =
-          typeof payload === 'string'
-            ? JSON.parse(payload)
-            : JSON.parse(payload.toString());
-      } else {
-        // Ensure we pass a Buffer or string exactly as received to Stripe
-        event = this.paymentsService.constructEvent(
-          payload,
-          sig || '',
-          endpointSecret,
-        );
-      }
+      event = this.paymentsService.constructEvent(rawBody, sig, endpointSecret);
     } catch (err: any) {
-      this.logger.error('Webhook signature verification failed.', {
-        message: err?.message || err,
-        signatureHeader: sig,
-        payloadType: typeof payload,
-        payloadLength: Buffer.isBuffer(payload)
-          ? payload.length
-          : String(payload).length,
-      } as any);
+      this.logger.error('Webhook signature verification failed.', err.message);
       throw new BadRequestException('Webhook signature verification failed.');
     }
 
-    // Some webhook providers (or different API versions) may nest the type
-    // in different places — provide a robust fallback extraction.
-    const eventType =
-      event?.type ||
-      event?.data?.type ||
-      event?.event ||
-      event?.event_type ||
-      event?.data?.object?.type;
+    this.logger.log(`Received webhook event ${event.type}`);
 
-    this.logger.log(`Received webhook event ${eventType}`);
+    switch (event.type) {
 
-    switch (eventType) {
+      
       case 'payment_intent.succeeded': {
-        console.log('Payment succeeded:', event.data.object.id);
+        console.log(event, 'success event');
         this.logger.log('Payment succeeded:', event.data.object.id);
         const bookingId = event.data.object.metadata?.bookingId;
         const studentId = event.data.object.metadata?.studentId;
@@ -158,10 +103,10 @@ export class PaymentsController {
             const tutorEarning = Math.max(0, amt - commission);
 
             // Create payment record including commission and tutor earning
-            await this.paymentModel.create({
-              booking: bookingId,
-              student: studentId,
-              tutor: tutorId,
+            const payment = await this.paymentModel.create({
+              booking: new Types.ObjectId(bookingId),
+              student: new Types.ObjectId(studentId),
+              tutor: new Types.ObjectId(tutorId),
               amount: amt,
               currency,
               method: 'stripe',
@@ -170,6 +115,12 @@ export class PaymentsController {
               commission,
               tutorEarning,
             });
+
+            console.log(event, 'event data after payment record');
+            console.log(payment, 'payment data after payment');
+            this.logger.log(
+              `Payment record created for booking ${bookingId} with amount ${amt}, commission ${commission}, tutor earning ${tutorEarning}`,
+            );
 
             // Credit tutor wallet (create if missing)
             try {
@@ -183,19 +134,24 @@ export class PaymentsController {
                   },
                   { upsert: true, new: true },
                 );
+                console.log(wallet, 'wallet data after the payment');
                 this.logger.log(
                   `Credited tutor ${tutorObjectId} wallet by ${tutorEarning} (new balance ${wallet.balance})`,
                 );
               }
             } catch (err: any) {
+              console.log('Failed to credit tutor wallet', err.message);
               this.logger.error('Failed to credit tutor wallet', err.message);
             }
 
-            await this.bookingModel.findByIdAndUpdate(
-              bookingId,
+            const booking = await this.bookingModel.findByIdAndUpdate(
+              new Types.ObjectId(bookingId),
               { status: 'SCHEDULED' },
               { new: true },
             );
+
+            console.log(booking, 'booking data after successful payment');
+            this.logger.log(`Booking ${bookingId} updated to SCHEDULED`);
 
             // check the chat group exist or not with the same tutor, student and booking
             const existingChatGroup = await this.chatGroupModel.findOne({
@@ -219,8 +175,13 @@ export class PaymentsController {
               return { received: true };
             }
 
+            console.log(
+              existingChatGroup,
+              'existing chat group data after check',
+            );
+
             // Create chat group for the booking
-            await this.chatGroupModel.create({
+            const chatGroup = await this.chatGroupModel.create({
               booking: new mongoose.Types.ObjectId(bookingId),
               tutorId: new mongoose.Types.ObjectId(tutorId),
               studentId: new mongoose.Types.ObjectId(studentId),
@@ -233,6 +194,10 @@ export class PaymentsController {
               startsAt: new Date(slotEndTime),
             });
 
+            console.log(chatGroup, 'chat group data after creation');
+            this.logger.log(
+              `Chat group created for subject: ${subject}, tutor ${tutorId}, student ${studentId}`,
+            );
             await this.logger.log(`Booking ${bookingId} updated to SCHEDULED`);
 
             await this.mailService.sendPaymentConfirmationEmail(
@@ -242,13 +207,14 @@ export class PaymentsController {
               shortBookingId,
             );
           } catch (e: any) {
+            console.log('Failed to update booking status', e.message);
             this.logger.error('Failed to update booking status', e.message);
           }
         }
         break;
       }
       case 'payment_intent.payment_failed': {
-        console.log('Payment failed:', event.data.object.id);
+        console.log(event, 'event data on failed payment');
 
         this.logger.log('Payment failed:', event.data.object.id);
         const bookingId = event.data.object.metadata?.bookingId;
@@ -260,10 +226,10 @@ export class PaymentsController {
           try {
             const amt = Number(amount) || 0;
             // For failed payments, commission and tutor earnings are zero
-            await this.paymentModel.create({
-              booking: bookingId,
-              student: studentId,
-              tutor: tutorId,
+            const payment = await this.paymentModel.create({
+              booking: new Types.ObjectId(bookingId),
+              student: new Types.ObjectId(studentId),
+              tutor: new Types.ObjectId(tutorId),
               amount: amt,
               currency,
               method: 'stripe',
@@ -273,11 +239,14 @@ export class PaymentsController {
               tutorEarning: 0,
             });
 
-            await this.bookingModel.findByIdAndUpdate(
-              bookingId,
+            const booking = await this.bookingModel.findByIdAndUpdate(
+              new Types.ObjectId(bookingId),
               { status: 'CANCELLED' },
               { new: true },
             );
+
+            console.log(payment, 'payment data after failed payment');
+            console.log(booking, 'booking data after failed payment');
 
             this.logger.log(`Booking ${bookingId} updated to CANCELLED`);
           } catch (e: any) {
@@ -288,19 +257,26 @@ export class PaymentsController {
       }
       case 'checkout.session.completed': {
         // Handle Checkout Session completion
+        console.log(event, 'event data on checkout session completed');
+
         this.logger.log('Checkout session completed:', event.data.object.id);
         const bookingId = event.data.object.metadata?.bookingId;
         if (bookingId) {
           try {
-            await this.bookingModel.findByIdAndUpdate(
-              bookingId,
+            const booking = await this.bookingModel.findByIdAndUpdate(
+              new Types.ObjectId(bookingId),
               { status: 'SCHEDULED' },
               { new: true },
             );
             this.logger.log(
               `Booking ${bookingId} updated to SCHEDULED via Checkout`,
             );
+
+            console.log(booking, 'booking data after checkout completed');
           } catch (e: any) {
+
+            console.log('Failed to update booking status from checkout',
+              e.message);
             this.logger.error(
               'Failed to update booking status from checkout',
               e.message,
@@ -310,7 +286,7 @@ export class PaymentsController {
         break;
       }
       default:
-        this.logger.log(`Unhandled event type ${eventType}`);
+        this.logger.log(`Unhandled event type ${event.type}`);
     }
 
     return { received: true };

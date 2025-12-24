@@ -18,27 +18,10 @@ async function bootstrap() {
   // Stripe webhook needs the exact raw body bytes for signature verification.
   // Use a flexible `type` function so requests with the Stripe signature header
   // or `application/json` content-type are parsed as raw bytes.
+  // Stripe webhook needs the raw body — register it before the JSON parser
   app.use(
     '/api/payments/webhook',
-    bodyParser.raw({
-      type: (req) => {
-        const ct =
-          (req.headers &&
-            (req.headers['content-type'] || req.headers['Content-Type'])) ||
-          '';
-        const hasSig = !!(
-          req.headers &&
-          (req.headers['stripe-signature'] || req.headers['Stripe-Signature'])
-        );
-        if (hasSig) return 'application/json';
-        if (
-          typeof ct === 'string' &&
-          ct.toLowerCase().includes('application/json')
-        )
-          return 'application/json';
-        return false;
-      },
-    }),
+    bodyParser.raw({ type: 'application/json' }),
   );
 
   // Normal JSON parsing for all other routes
