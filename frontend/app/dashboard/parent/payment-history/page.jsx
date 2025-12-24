@@ -5,7 +5,6 @@ import {
   useGetMyChildrenBookingsQuery,
   useMakePaymentMutation,
 } from "@/feature/student/BookingApi";
-import Link from "next/link";
 
 import { useState } from "react";
 
@@ -249,11 +248,10 @@ export default function PaymentHistory() {
                             <div className='text-gray-800'>
                               {booking.slot.startTime} - {booking.slot.endTime}
                             </div>
-                            <Link href={booking.slot.meetLink} target="_blank">
                             <div className='text-xs text-blue-600 truncate max-w-[200px]'>
                               {booking.slot.meetLink ||
                                 "Meet link available after payment"}
-                            </div></Link>
+                            </div>
                           </div>
                         ) : (
                           <span className='text-gray-500'>No time slot</span>

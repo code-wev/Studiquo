@@ -31,9 +31,11 @@ export class PaymentsController {
 
   /**
    * Get Stripe publishable key for client-side use.
+   * @returns {Object} Object containing the Stripe publishable key
    */
   @Get('config')
   getConfig() {
+    this.logger.log('Fetching Stripe configuration');
     return {
       publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
     };
@@ -41,26 +43,334 @@ export class PaymentsController {
 
   /**
    * Create a Stripe PaymentIntent for a booking.
+   * @param {Object} body - Request body containing amount, currency, and bookingId
+   * @param {number} body.amount - Amount in smallest currency unit (cents)
+   * @param {string} [body.currency='eur'] - Currency code
+   * @param {string} [body.bookingId] - Optional booking ID
+   * @returns {Promise<Object>} PaymentIntent client secret and ID
+   * @throws {BadRequestException} If amount is invalid
    */
   @Post('create-payment-intent')
   async createPaymentIntent(
     @Body() body: { amount: number; currency?: string; bookingId?: string },
   ) {
     const { amount, currency = 'eur', bookingId } = body;
+
+    this.logger.debug(
+      `Creating PaymentIntent: amount=${amount}, currency=${currency}, bookingId=${bookingId}`,
+    );
+
     if (!amount || amount <= 0) {
+      this.logger.warn('Invalid amount provided for PaymentIntent creation');
       throw new BadRequestException('Invalid amount');
     }
+
     const metadata = bookingId ? { bookingId: String(bookingId) } : undefined;
+
     const paymentIntent = await this.paymentsService.createPaymentIntent(
       amount,
       currency,
       metadata,
     );
-    return { clientSecret: paymentIntent.client_secret, id: paymentIntent.id };
+
+    this.logger.log(`PaymentIntent created: ${paymentIntent.id}`);
+
+    return {
+      clientSecret: paymentIntent.client_secret,
+      id: paymentIntent.id,
+    };
   }
 
   /**
-   * Stripe webhook endpoint.
+   * Handle successful payment event.
+   * @param {any} eventData - Stripe event data object
+   * @param {string} transactionId - Stripe transaction ID
+   * @returns {Promise<void>}
+   */
+  private async handleSuccessfulPayment(
+    eventData: any,
+    transactionId: string,
+  ): Promise<void> {
+    const metadata = eventData.metadata || {};
+    const {
+      bookingId,
+      studentId,
+      tutorId,
+      parentIds,
+      slotEndTime,
+      subject,
+      parentEmail,
+      shortBookingId,
+    } = metadata;
+
+    const amount = eventData.amount_received || eventData.amount_total || 0;
+    const currency = eventData.currency || 'eur';
+    const amt = Number(amount) || 0;
+
+    if (!bookingId) {
+      this.logger.warn('No bookingId found in successful payment metadata');
+      return;
+    }
+
+    this.logger.log(`Processing successful payment for booking ${bookingId}`);
+
+    try {
+      // Calculate commission and tutor earnings (20% commission)
+      const commission = Math.round(amt * 0.2);
+      const tutorEarning = Math.max(0, amt - commission);
+
+      // Create payment record
+      const payment = await this.paymentModel.create({
+        booking: new Types.ObjectId(bookingId),
+        student: studentId ? new Types.ObjectId(studentId) : undefined,
+        tutor: tutorId ? new Types.ObjectId(tutorId) : undefined,
+        amount: amt,
+        currency,
+        method: 'stripe',
+        status: 'COMPLETED',
+        transactionId,
+        commission,
+        tutorEarning,
+      });
+
+      this.logger.log(
+        `Payment record created: ${payment._id}, amount: ${amt}, commission: ${commission}, tutor earning: ${tutorEarning}`,
+      );
+
+      // Credit tutor wallet
+      if (tutorId) {
+        await this.creditTutorWallet(tutorId, tutorEarning);
+      }
+
+      // Update booking status
+      const booking = await this.bookingModel.findByIdAndUpdate(
+        new Types.ObjectId(bookingId),
+        { status: 'SCHEDULED' },
+        { new: true },
+      );
+
+      this.logger.log(`Booking ${bookingId} status updated to SCHEDULED`);
+
+      // Create chat group if needed
+      if (tutorId && studentId && subject) {
+        await this.createChatGroup(
+          bookingId,
+          tutorId,
+          studentId,
+          parentIds,
+          subject,
+          slotEndTime,
+        );
+      }
+
+      // Send payment confirmation email
+      if (parentEmail) {
+        await this.sendPaymentConfirmationEmail(
+          parentEmail,
+          amt,
+          currency,
+          shortBookingId,
+        );
+      }
+
+      this.logger.log(
+        `Successfully processed payment for booking ${bookingId}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to process successful payment for booking ${bookingId}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Handle failed payment event.
+   * @param {any} eventData - Stripe event data object
+   * @param {string} transactionId - Stripe transaction ID
+   * @returns {Promise<void>}
+   */
+  private async handleFailedPayment(
+    eventData: any,
+    transactionId: string,
+  ): Promise<void> {
+    const metadata = eventData.metadata || {};
+    const { bookingId, studentId, tutorId } = metadata;
+    const amount = eventData.amount || 0;
+    const currency = eventData.currency || 'eur';
+    const amt = Number(amount) || 0;
+
+    if (!bookingId) {
+      this.logger.warn('No bookingId found in failed payment metadata');
+      return;
+    }
+
+    this.logger.log(`Processing failed payment for booking ${bookingId}`);
+
+    try {
+      // Create failed payment record
+      const payment = await this.paymentModel.create({
+        booking: new Types.ObjectId(bookingId),
+        student: studentId ? new Types.ObjectId(studentId) : undefined,
+        tutor: tutorId ? new Types.ObjectId(tutorId) : undefined,
+        amount: amt,
+        currency,
+        method: 'stripe',
+        status: 'FAILED',
+        transactionId,
+        commission: 0,
+        tutorEarning: 0,
+      });
+
+      this.logger.log(`Failed payment record created: ${payment._id}`);
+
+      // Update booking status to CANCELLED
+      await this.bookingModel.findByIdAndUpdate(
+        new Types.ObjectId(bookingId),
+        { status: 'CANCELLED' },
+        { new: true },
+      );
+
+      this.logger.log(`Booking ${bookingId} status updated to CANCELLED`);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to process failed payment for booking ${bookingId}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Credit tutor wallet with earnings.
+   * @param {string} tutorId - Tutor ID
+   * @param {number} amount - Amount to credit
+   * @returns {Promise<void>}
+   */
+  private async creditTutorWallet(
+    tutorId: string,
+    amount: number,
+  ): Promise<void> {
+    try {
+      const wallet = await this.walletModel.findOneAndUpdate(
+        { tutorId: new Types.ObjectId(tutorId) },
+        {
+          $inc: { balance: amount },
+          $set: { updatedAt: new Date() },
+        },
+        { upsert: true, new: true },
+      );
+
+      this.logger.log(
+        `Credited tutor ${tutorId} wallet by ${amount} (new balance: ${wallet.balance})`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to credit tutor ${tutorId} wallet: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Create chat group for booking if it doesn't exist.
+   * @param {string} bookingId - Booking ID
+   * @param {string} tutorId - Tutor ID
+   * @param {string} studentId - Student ID
+   * @param {string} parentIds - Comma-separated parent IDs
+   * @param {string} subject - Subject
+   * @param {string} slotEndTime - Slot end time
+   * @returns {Promise<void>}
+   */
+  private async createChatGroup(
+    bookingId: string,
+    tutorId: string,
+    studentId: string,
+    parentIds: string,
+    subject: string,
+    slotEndTime: string,
+  ): Promise<void> {
+    try {
+      const parentIdsArray = parentIds
+        ? parentIds
+            .split(',')
+            .map((id: string) => new mongoose.Types.ObjectId(id))
+        : [];
+
+      // Check if chat group already exists
+      const existingChatGroup = await this.chatGroupModel.findOne({
+        tutorId: new mongoose.Types.ObjectId(tutorId),
+        studentId: new mongoose.Types.ObjectId(studentId),
+        parentIds: { $in: parentIdsArray },
+        subject,
+      });
+
+      if (existingChatGroup) {
+        this.logger.log(
+          `Chat group already exists for subject: ${subject}, tutor: ${tutorId}, student: ${studentId}`,
+        );
+        return;
+      }
+
+      // Create new chat group
+      const chatGroup = await this.chatGroupModel.create({
+        booking: new mongoose.Types.ObjectId(bookingId),
+        tutorId: new mongoose.Types.ObjectId(tutorId),
+        studentId: new mongoose.Types.ObjectId(studentId),
+        parentIds: parentIdsArray,
+        subject,
+        startsAt: new Date(slotEndTime),
+      });
+
+      this.logger.log(`Chat group created: ${chatGroup._id}`);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to create chat group for booking ${bookingId}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Send payment confirmation email.
+   * @param {string} parentEmail - Parent email address
+   * @param {number} amount - Payment amount
+   * @param {string} currency - Currency code
+   * @param {string} shortBookingId - Short booking ID for reference
+   * @returns {Promise<void>}
+   */
+  private async sendPaymentConfirmationEmail(
+    parentEmail: string,
+    amount: number,
+    currency: string,
+    shortBookingId: string,
+  ): Promise<void> {
+    try {
+      await this.mailService.sendPaymentConfirmationEmail(
+        parentEmail,
+        amount,
+        currency,
+        shortBookingId,
+      );
+      this.logger.log(`Payment confirmation email sent to ${parentEmail}`);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to send payment confirmation email to ${parentEmail}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Stripe webhook endpoint for handling payment events.
+   * @param {Buffer} rawBody - Raw request body
+   * @param {string} sig - Stripe signature from header
+   * @returns {Promise<Object>} Acknowledgement response
+   * @throws {BadRequestException} If signature verification fails
    */
   @Post('webhook')
   async handleWebhook(
@@ -70,226 +380,69 @@ export class PaymentsController {
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
     let event: any;
 
+    this.logger.debug('Received webhook request');
+
+    // Verify webhook signature
     try {
-      event = await this.paymentsService.constructEvent(rawBody, sig, endpointSecret);
-      console.log(event);
-    } catch (err: any) {
-      this.logger.error('Webhook signature verification failed.', err.message);
+      event = await this.paymentsService.constructEvent(
+        rawBody,
+        sig,
+        endpointSecret,
+      );
+      this.logger.debug(`Webhook event constructed: ${event.type}`);
+    } catch (error: any) {
+      this.logger.error(
+        `Webhook signature verification failed: ${error.message}`,
+      );
       throw new BadRequestException('Webhook signature verification failed.');
     }
 
-    this.logger.log(`Received webhook event ${event.type}`);
+    this.logger.log(`Processing webhook event: ${event.type}`);
 
-    switch (event.type) {
-
-      
-      case 'payment_intent.succeeded': {
-        console.log(event, 'success event');
-        this.logger.log('Payment succeeded:', event.data.object.id);
-        const bookingId = event.data.object.metadata?.bookingId;
-        const studentId = event.data.object.metadata?.studentId;
-        const tutorId = event.data.object.metadata?.tutorId;
-        const parentIds = event.data.object.metadata?.parentIds;
-        const slotEndTime = event.data.object.metadata?.slotEndTime;
-        const subject = event.data.object.metadata?.subject;
-        const parentEmail = event.data.object.metadata?.parentEmail;
-        const shortBookingId = event.data.object.metadata?.shortBookingId;
-        const amount = event.data.object.amount_received;
-        const currency = event.data.object.currency;
-        if (bookingId) {
-          try {
-            // amount is in smallest currency unit (cents)
-            const amt = Number(amount) || 0;
-            const commission = Math.round(amt * 0.2); // 20% commission
-            const tutorEarning = Math.max(0, amt - commission);
-
-            // Create payment record including commission and tutor earning
-            const payment = await this.paymentModel.create({
-              booking: new Types.ObjectId(bookingId),
-              student: new Types.ObjectId(studentId),
-              tutor: new Types.ObjectId(tutorId),
-              amount: amt,
-              currency,
-              method: 'stripe',
-              status: 'COMPLETED',
-              transactionId: event.data.object.id,
-              commission,
-              tutorEarning,
-            });
-
-            console.log(event, 'event data after payment record');
-            console.log(payment, 'payment data after payment');
-            this.logger.log(
-              `Payment record created for booking ${bookingId} with amount ${amt}, commission ${commission}, tutor earning ${tutorEarning}`,
-            );
-
-            // Credit tutor wallet (create if missing)
-            try {
-              const tutorObjectId = tutorId ? tutorId : null;
-              if (tutorObjectId) {
-                const wallet = await this.walletModel.findOneAndUpdate(
-                  { tutorId: new Types.ObjectId(tutorObjectId) },
-                  {
-                    $inc: { balance: tutorEarning },
-                    $set: { updatedAt: new Date() },
-                  },
-                  { upsert: true, new: true },
-                );
-                console.log(wallet, 'wallet data after the payment');
-                this.logger.log(
-                  `Credited tutor ${tutorObjectId} wallet by ${tutorEarning} (new balance ${wallet.balance})`,
-                );
-              }
-            } catch (err: any) {
-              console.log('Failed to credit tutor wallet', err.message);
-              this.logger.error('Failed to credit tutor wallet', err.message);
-            }
-
-            const booking = await this.bookingModel.findByIdAndUpdate(
-              new Types.ObjectId(bookingId),
-              { status: 'SCHEDULED' },
-              { new: true },
-            );
-
-            console.log(booking, 'booking data after successful payment');
-            this.logger.log(`Booking ${bookingId} updated to SCHEDULED`);
-
-            // check the chat group exist or not with the same tutor, student and booking
-            const existingChatGroup = await this.chatGroupModel.findOne({
-              tutorId: new mongoose.Types.ObjectId(tutorId),
-              studentId: new mongoose.Types.ObjectId(studentId),
-              // Single parentId or multiple parentIds if one parent is matched then okay
-              parentIds: {
-                $in: parentIds
-                  ? parentIds
-                      .split(',')
-                      .map((id: string) => new mongoose.Types.ObjectId(id))
-                  : [],
-              },
-              subject: subject,
-            });
-
-            if (existingChatGroup) {
-              this.logger.log(
-                `Chat group already exists for subject: ${subject}, tutor ${tutorId}, student ${studentId}`,
-              );
-              return { received: true };
-            }
-
-            console.log(
-              existingChatGroup,
-              'existing chat group data after check',
-            );
-
-            // Create chat group for the booking
-            const chatGroup = await this.chatGroupModel.create({
-              booking: new mongoose.Types.ObjectId(bookingId),
-              tutorId: new mongoose.Types.ObjectId(tutorId),
-              studentId: new mongoose.Types.ObjectId(studentId),
-              parentIds: parentIds
-                ? parentIds
-                    .split(',')
-                    .map((id: string) => new mongoose.Types.ObjectId(id))
-                : [],
-              subject: event.data.object.metadata?.subject,
-              startsAt: new Date(slotEndTime),
-            });
-
-            console.log(chatGroup, 'chat group data after creation');
-            this.logger.log(
-              `Chat group created for subject: ${subject}, tutor ${tutorId}, student ${studentId}`,
-            );
-            await this.logger.log(`Booking ${bookingId} updated to SCHEDULED`);
-
-            await this.mailService.sendPaymentConfirmationEmail(
-              parentEmail,
-              amt,
-              currency,
-              shortBookingId,
-            );
-          } catch (e: any) {
-            console.log('Failed to update booking status', e.message);
-            this.logger.error('Failed to update booking status', e.message);
-          }
+    // Handle different event types
+    try {
+      switch (event.type) {
+        case 'payment_intent.succeeded': {
+          this.logger.log(`PaymentIntent succeeded: ${event.data.object.id}`);
+          await this.handleSuccessfulPayment(
+            event.data.object,
+            event.data.object.id,
+          );
+          break;
         }
-        break;
-      }
-      case 'payment_intent.payment_failed': {
-        console.log(event, 'event data on failed payment');
 
-        this.logger.log('Payment failed:', event.data.object.id);
-        const bookingId = event.data.object.metadata?.bookingId;
-        const studentId = event.data.object.metadata?.studentId;
-        const tutorId = event.data.object.metadata?.tutorId;
-        const amount = event.data.object.amount;
-        const currency = event.data.object.currency;
-        if (bookingId) {
-          try {
-            const amt = Number(amount) || 0;
-            // For failed payments, commission and tutor earnings are zero
-            const payment = await this.paymentModel.create({
-              booking: new Types.ObjectId(bookingId),
-              student: new Types.ObjectId(studentId),
-              tutor: new Types.ObjectId(tutorId),
-              amount: amt,
-              currency,
-              method: 'stripe',
-              status: 'FAILED',
-              transactionId: event.data.object.id,
-              commission: 0,
-              tutorEarning: 0,
-            });
-
-            const booking = await this.bookingModel.findByIdAndUpdate(
-              new Types.ObjectId(bookingId),
-              { status: 'CANCELLED' },
-              { new: true },
-            );
-
-            console.log(payment, 'payment data after failed payment');
-            console.log(booking, 'booking data after failed payment');
-
-            this.logger.log(`Booking ${bookingId} updated to CANCELLED`);
-          } catch (e: any) {
-            this.logger.error('Failed to update booking status', e.message);
-          }
+        case 'payment_intent.payment_failed': {
+          this.logger.log(`PaymentIntent failed: ${event.data.object.id}`);
+          await this.handleFailedPayment(
+            event.data.object,
+            event.data.object.id,
+          );
+          break;
         }
-        break;
-      }
-      case 'checkout.session.completed': {
-        // Handle Checkout Session completion
-        console.log(event, 'event data on checkout session completed');
 
-        this.logger.log('Checkout session completed:', event.data.object.id);
-        const bookingId = event.data.object.metadata?.bookingId;
-        if (bookingId) {
-          try {
-            const booking = await this.bookingModel.findByIdAndUpdate(
-              new Types.ObjectId(bookingId),
-              { status: 'SCHEDULED' },
-              { new: true },
-            );
-            this.logger.log(
-              `Booking ${bookingId} updated to SCHEDULED via Checkout`,
-            );
-
-            console.log(booking, 'booking data after checkout completed');
-          } catch (e: any) {
-
-            console.log('Failed to update booking status from checkout',
-              e.message);
-            this.logger.error(
-              'Failed to update booking status from checkout',
-              e.message,
-            );
-          }
+        case 'checkout.session.completed': {
+          this.logger.log(
+            `Checkout session completed: ${event.data.object.id}`,
+          );
+          const transactionId =
+            event.data.object.payment_intent || event.data.object.id;
+          await this.handleSuccessfulPayment(event.data.object, transactionId);
+          break;
         }
-        break;
+
+        default:
+          this.logger.debug(`Unhandled event type: ${event.type}`);
       }
-      default:
-        this.logger.log(`Unhandled event type ${event.type}`);
+
+      this.logger.log(`Successfully processed webhook event: ${event.type}`);
+      return { received: true };
+    } catch (error: any) {
+      this.logger.error(
+        `Error processing webhook event ${event.type}: ${error.message}`,
+        error.stack,
+      );
+      // Still return 200 to Stripe to prevent retries for processing errors
+      return { received: true };
     }
-
-    return { received: true };
   }
 }
