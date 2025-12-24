@@ -423,6 +423,11 @@ export class TutorsService {
     };
   }
 
+  /**
+   * Get payment history for the authenticated tutor
+   *
+   * @return list of payments made to the tutor
+   */
   async getPaymentHistory(user: any, dto: PaginationDto) {
     const userId = user.userId;
 
