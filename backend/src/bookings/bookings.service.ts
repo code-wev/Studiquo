@@ -248,13 +248,13 @@ export class BookingsService {
     const parentId = new Types.ObjectId(user.userId);
 
     const bookings = await this.userModel.aggregate([
-      // 1️. Match parent
+      /** 1. Match parent */
       { $match: { _id: parentId } },
 
-      // 2️. Project children
+      /** 2. Project children */
       { $project: { children: 1 } },
 
-      // 3️. Lookup bookingStudents
+      /** 3. bookingStudents */
       {
         $lookup: {
           from: 'bookingstudents',
@@ -265,7 +265,7 @@ export class BookingsService {
       },
       { $unwind: '$bookingStudent' },
 
-      // 4️. Lookup booking
+      /** 4. booking */
       {
         $lookup: {
           from: 'bookings',
@@ -276,7 +276,7 @@ export class BookingsService {
       },
       { $unwind: '$booking' },
 
-      // 5. Lookup timeSlot
+      /** 5. timeSlot */
       {
         $lookup: {
           from: 'timeslots',
@@ -287,7 +287,7 @@ export class BookingsService {
       },
       { $unwind: '$timeSlot' },
 
-      // 6. TutorAvailability
+      /** 6. tutorAvailability */
       {
         $lookup: {
           from: 'tutoravailabilities',
@@ -298,7 +298,7 @@ export class BookingsService {
       },
       { $unwind: '$availability' },
 
-      // 7. TutorProfile
+      /** 7. tutorProfile */
       {
         $lookup: {
           from: 'tutorprofiles',
@@ -309,7 +309,40 @@ export class BookingsService {
       },
       { $unwind: '$tutorProfile' },
 
-      // 8. Add status order for sorting
+      /** 8. payment check (booking + student + COMPLETED) */
+      {
+        $lookup: {
+          from: 'payments',
+          let: {
+            bookingId: '$booking._id',
+            studentId: '$bookingStudent.student',
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ['$booking', '$$bookingId'] },
+                    { $eq: ['$student', '$$studentId'] },
+                    { $eq: ['$status', 'COMPLETED'] },
+                  ],
+                },
+              },
+            },
+            { $limit: 1 },
+          ],
+          as: 'payment',
+        },
+      },
+
+      /** 9. payment boolean */
+      {
+        $addFields: {
+          hasPaid: { $gt: [{ $size: '$payment' }, 0] },
+        },
+      },
+
+      /** 10. status priority */
       {
         $addFields: {
           statusOrder: {
@@ -326,20 +359,20 @@ export class BookingsService {
         },
       },
 
-      // 9. Sort: PENDING first, then by date (earliest first)
+      /** 11. sorting */
       {
         $sort: {
-          statusOrder: 1, // PENDING (1) appears first
-          'availability.date': 1, // Earliest dates first
-          'timeSlot.startTime': 1, // Earliest times first
+          statusOrder: 1,
+          'availability.date': 1,
+          'timeSlot.startTime': 1,
         },
       },
 
-      // 10. Pagination
+      /** 12. pagination */
       { $skip: (page - 1) * limit },
       { $limit: limit },
 
-      // 11. Final Projection
+      /** 13. final projection */
       {
         $project: {
           _id: 0,
@@ -357,14 +390,18 @@ export class BookingsService {
             },
           },
 
-          // TODO: booking er against e ze student ache tar payment ache kina seta dekhe meet link show korte hbe
           slot: {
             id: '$timeSlot._id',
             subject: '$timeSlot.subject',
             type: '$timeSlot.type',
             meetLink: {
               $cond: {
-                if: { $in: ['$booking.status', ['SCHEDULED', 'COMPLETED']] },
+                if: {
+                  $and: [
+                    { $in: ['$booking.status', ['SCHEDULED', 'COMPLETED']] },
+                    '$hasPaid',
+                  ],
+                },
                 then: '$timeSlot.meetLink',
                 else: null,
               },
@@ -377,6 +414,7 @@ export class BookingsService {
       },
     ]);
 
+    /** 14. format time */
     const result = bookings.map((b) => ({
       ...b,
       slot: {
@@ -390,7 +428,7 @@ export class BookingsService {
       message: 'Children bookings retrieved successfully',
       page,
       limit,
-      total: bookings.length,
+      total: result.length,
       bookings: result,
     };
   }
