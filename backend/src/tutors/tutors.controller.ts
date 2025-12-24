@@ -7,6 +7,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { PaginationDto } from 'common/dto/pagination.dto';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
@@ -65,6 +66,18 @@ export class TutorsController {
   @Roles(UserRole.Tutor)
   async myWallet(@GetUser() user: any) {
     return this.tutorsService.getMyWallet(user);
+  }
+
+  /**
+   * Get payment history for the authenticated tutor
+   *
+   * @return list of payments made to the tutor
+   */
+  @Get('payments/history')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.Tutor)
+  async paymentHistory(@GetUser() user: any, @Query() dto: PaginationDto) {
+    return this.tutorsService.getPaymentHistory(user, dto);
   }
 
   /**

@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { PaginationDto } from 'common/dto/pagination.dto';
 import { Model, Types } from 'mongoose';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { Booking } from '../models/Booking.model';
@@ -419,6 +420,38 @@ export class TutorsService {
     return {
       message: 'Wallet fetched successfully',
       wallet,
+    };
+  }
+
+  async getPaymentHistory(user: any, dto: PaginationDto) {
+    const userId = user.userId;
+
+    const tutorProfile = await this.tutorProfileModel
+      .findOne({ user: new Types.ObjectId(userId), isApproved: true })
+      .lean();
+
+    if (!tutorProfile) {
+      throw new NotFoundException('Tutor profile not found or not approved');
+    }
+
+    const { page = 1, limit = 10 } = dto;
+
+    const skip = (page - 1) * limit;
+
+    const payments = await this.paymentModel
+      .find({ tutor: new Types.ObjectId(userId), status: 'COMPLETED' })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    return {
+      message: 'Payment history fetched successfully',
+      payments,
+      meta: {
+        page,
+        limit,
+      },
     };
   }
 
