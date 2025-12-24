@@ -706,6 +706,76 @@ export class BookingsService {
                 bookingDate: { $gte: new Date() },
               },
             },
+
+            // Lookup students for each booking and enrich with parent names and exam boards
+            {
+              $lookup: {
+                from: 'bookingstudents',
+                let: { bookingId: '$_id' },
+                pipeline: [
+                  { $match: { $expr: { $eq: ['$booking', '$$bookingId'] } } },
+                  {
+                    $lookup: {
+                      from: 'users',
+                      localField: 'student',
+                      foreignField: '_id',
+                      as: 'studentUser',
+                    },
+                  },
+                  { $unwind: '$studentUser' },
+                  {
+                    $lookup: {
+                      from: 'studentprofiles',
+                      localField: 'studentUser._id',
+                      foreignField: 'user',
+                      as: 'studentProfile',
+                    },
+                  },
+                  {
+                    $unwind: {
+                      path: '$studentProfile',
+                      preserveNullAndEmptyArrays: true,
+                    },
+                  },
+                  {
+                    $lookup: {
+                      from: 'users',
+                      localField: 'studentUser.parents',
+                      foreignField: '_id',
+                      as: 'parentUsers',
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 0,
+                      studentId: '$studentUser._id',
+                      studentName: {
+                        $concat: [
+                          '$studentUser.firstName',
+                          ' ',
+                          '$studentUser.lastName',
+                        ],
+                      },
+                      parents: {
+                        $map: {
+                          input: '$parentUsers',
+                          as: 'p',
+                          in: {
+                            id: '$$p._id',
+                            name: {
+                              $concat: ['$$p.firstName', ' ', '$$p.lastName'],
+                            },
+                          },
+                        },
+                      },
+                      examBoards: '$studentProfile.examBoards',
+                    },
+                  },
+                ],
+                as: 'studentsList',
+              },
+            },
+
             // Format individual booking documents
             {
               $project: {
@@ -736,6 +806,7 @@ export class BookingsService {
                   avatar: '$tutorDetails.avatar',
                 },
                 bookingDate: 1,
+                studentsList: 1,
               },
             },
             // Group by date
@@ -942,20 +1013,126 @@ export class BookingsService {
               },
             },
           ],
+          as: 'paidPayments',
+        },
+      },
+
+      // 5. Lookup Student details for each paid payment
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'paidPayments.student',
+          foreignField: '_id',
           as: 'paidStudents',
         },
       },
 
-      // 5. Computed fields
+      // 6. Lookup StudentProfile for exam board information
+      {
+        $lookup: {
+          from: 'studentprofiles',
+          localField: 'paidPayments.student',
+          foreignField: 'user',
+          as: 'studentProfiles',
+        },
+      },
+
+      // 7. Lookup Parent information for each student
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'paidStudents.parents',
+          foreignField: '_id',
+          as: 'parentDetails',
+        },
+      },
+
+      // 8. Process and format student data
       {
         $addFields: {
           bookingDate: '$tutorAvailability.date',
+
+          // Format students list with required information
+          studentsList: {
+            $map: {
+              input: '$paidStudents',
+              as: 'student',
+              in: {
+                studentId: '$$student.studentId',
+                studentName: {
+                  $concat: ['$$student.firstName', ' ', '$$student.lastName'],
+                },
+                // Find parent names for this student
+                parents: {
+                  $map: {
+                    input: {
+                      $filter: {
+                        input: '$parentDetails',
+                        as: 'parent',
+                        cond: {
+                          $in: ['$$parent._id', '$$student.parents'],
+                        },
+                      },
+                    },
+                    as: 'parent',
+                    in: {
+                      $concat: ['$$parent.firstName', ' ', '$$parent.lastName'],
+                    },
+                  },
+                },
+                // Find exam board for this booking's subject
+                examBoard: {
+                  $let: {
+                    vars: {
+                      studentProfile: {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: '$studentProfiles',
+                              as: 'profile',
+                              cond: {
+                                $eq: ['$$profile.user', '$$student._id'],
+                              },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    },
+                    in: {
+                      $let: {
+                        vars: {
+                          boardEntry: {
+                            $arrayElemAt: [
+                              {
+                                $filter: {
+                                  input: '$$studentProfile.examBoards',
+                                  as: 'board',
+                                  cond: {
+                                    $eq: ['$$board.subject', '$subject'],
+                                  },
+                                },
+                              },
+                              0,
+                            ],
+                          },
+                        },
+                        in: {
+                          $ifNull: ['$$boardEntry.board', 'Not Specified'],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
 
           // FIXED COUNT
           studentsCount: {
             $cond: [
               { $ne: ['$status', 'CANCELLED'] },
-              { $size: '$paidStudents' },
+              { $size: '$paidPayments' },
               0,
             ],
           },
@@ -987,7 +1164,7 @@ export class BookingsService {
         },
       },
 
-      // 6. FACET: grouped bookings + stats
+      // 9. FACET: grouped bookings + stats
       {
         $facet: {
           groupedBookings: [
@@ -1001,6 +1178,7 @@ export class BookingsService {
                 updatedAt: 1,
                 bookingDate: 1,
                 studentsCount: 1,
+                studentsList: 1, // Include studentsList in projection
                 timeSlot: {
                   _id: '$timeSlotDetails._id',
                   startTime: '$timeSlotDetails.startTime',
@@ -1028,6 +1206,7 @@ export class BookingsService {
                     createdAt: '$createdAt',
                     updatedAt: '$updatedAt',
                     studentsCount: '$studentsCount',
+                    studentsList: '$studentsList', // Include studentsList in bookings
                   },
                 },
                 totalStudentsInSlot: { $sum: '$studentsCount' },
@@ -1132,7 +1311,7 @@ export class BookingsService {
         },
       },
 
-      // 7. Final shape
+      // 10. Final shape
       {
         $project: {
           bookings: { $ifNull: ['$groupedBookings', []] },

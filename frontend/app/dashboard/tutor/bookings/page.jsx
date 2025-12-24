@@ -3,55 +3,56 @@
 import TitleSection from "@/components/dashboard/shared/TitleSection";
 import { useGetTutorBookingsQuery } from "@/feature/student/BookingApi";
 import { useEffect, useState } from "react";
-import { BiChevronRight, BiX } from "react-icons/bi";
-
-const students = [
-  {
-    id: "454895",
-    studentName: "Saaaf Rayhan",
-    parentsName: "Saaaf Rayhan",
-    examBoard: "AQA",
-  },
-  {
-    id: "345678",
-    studentName: "Tamim Makbul",
-    parentsName: "Tamim Makbul",
-    examBoard: "Pearson Edexcel",
-  },
-  {
-    id: "096878",
-    studentName: "Sadia Semi",
-    parentsName: "Sadia Semi",
-    examBoard: "OCR",
-  },
-  {
-    id: "478678",
-    studentName: "John Doe",
-    parentsName: "John Doe",
-    examBoard: "WJEC (Eduqas)",
-  },
-  {
-    id: "879797",
-    studentName: "Sarah L",
-    parentsName: "Sarah L",
-    examBoard: "CCEA",
-  },
-];
+import { BiChevronRight, BiMessageRounded, BiX } from "react-icons/bi";
 
 export default function Bookings() {
   const { data: apiData, isLoading, error } = useGetTutorBookingsQuery();
   const [bookingData, setBookingData] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedSlot, setSelectedSlot] = useState(null);
+  const [showStudentsModal, setShowStudentsModal] = useState(false);
+  const [currentStudentsList, setCurrentStudentsList] = useState([]);
 
   // Process API data when loaded
   useEffect(() => {
     if (apiData?.data) {
-      setBookingData(apiData.data);
+      const data = apiData.data;
 
-      // Set selected date to first booking date or today
-      if (apiData.data.bookings.length > 0) {
-        const firstBooking = apiData.data.bookings[0];
+      // Filter bookings to show only current month data
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth();
+
+      // Create date strings for current month
+      const currentMonthStart = new Date(currentYear, currentMonth, 1);
+      const currentMonthEnd = new Date(currentYear, currentMonth + 1, 0);
+
+      // Filter bookings for current month only
+      const filteredBookings = data.bookings.filter((booking) => {
+        if (!booking.date) return false;
+        const bookingDate = new Date(booking.date);
+        return (
+          bookingDate >= currentMonthStart && bookingDate <= currentMonthEnd
+        );
+      });
+
+      // Create new data object with filtered bookings
+      const filteredData = {
+        ...data,
+        bookings: filteredBookings,
+      };
+
+      setBookingData(filteredData);
+
+      // Set selected date to first available booking date in current month
+      if (filteredBookings.length > 0) {
+        const firstBooking = filteredBookings[0];
         setSelectedDate(firstBooking);
+
+        // Set first time slot as default
+        if (firstBooking.timeSlots && firstBooking.timeSlots.length > 0) {
+          setSelectedSlot(firstBooking.timeSlots[0]);
+        }
       }
     }
   }, [apiData]);
@@ -83,7 +84,45 @@ export default function Bookings() {
 
     if (bookingForDate) {
       setSelectedDate(bookingForDate);
+      // Reset selected slot when changing date
+      if (bookingForDate.timeSlots && bookingForDate.timeSlots.length > 0) {
+        setSelectedSlot(bookingForDate.timeSlots[0]);
+      } else {
+        setSelectedSlot(null);
+      }
     }
+  };
+
+  const handleSlotClick = (slot) => {
+    setSelectedSlot(slot);
+  };
+
+  const handleViewStudents = (slot) => {
+    if (slot?.bookings && slot.bookings.length > 0) {
+      // Get all students from all bookings in this slot
+      const allStudents = slot.bookings.flatMap((booking) => {
+        if (booking.studentsList && booking.studentsList.length > 0) {
+          return booking.studentsList.map((student) => ({
+            ...student,
+            bookingSubject: booking.subject,
+            bookingType: booking.type,
+            bookingStatus: booking.status,
+            parentsNames: Array.isArray(student.parents)
+              ? student.parents.join(", ")
+              : student.parents,
+          }));
+        }
+        return [];
+      });
+      setCurrentStudentsList(allStudents);
+      setShowStudentsModal(true);
+    }
+  };
+
+  const handleJoinChat = (student) => {
+    console.log("Join chat with student:", student);
+    // Implement chat functionality here
+    alert(`Opening chat with ${student.studentName}`);
   };
 
   // Format date for display
@@ -212,12 +251,13 @@ export default function Bookings() {
     <div className='w-full min-h-screen bg-gray-50 py-10 px-4'>
       <TitleSection bg={"#FFFFFF"} title={"Bookings"} />
 
-      <div className='w-full max-w-400 bg-[#F7F7F7] shadow-sm grid grid-cols-1 lg:grid-cols-4 gap-8 p-8'>
+      <div className='w-full mx-auto bg-[#F7F7F7] shadow-sm grid grid-cols-1 lg:grid-cols-4 gap-8 p-8'>
         {/* ---------------- LEFT SECTION ---------------- */}
         <div className='lg:col-span-2'>
           {/* Toggle Buttons */}
           <div className='flex items-center justify-between mb-6'>
             <p className='text-xl font-semibold text-gray-900'>Calendar</p>
+            {/* Removed month navigation buttons */}
           </div>
 
           {/* Calendar Box */}
@@ -285,6 +325,59 @@ export default function Bookings() {
               })}
             </div>
           </div>
+
+          {/* Time Slots List */}
+          {selectedDate &&
+            selectedDate.timeSlots &&
+            selectedDate.timeSlots.length > 0 && (
+              <div className='bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden'>
+                <div className='px-6 py-4 bg-gray-50 border-b border-gray-200'>
+                  <h3 className='text-sm font-medium text-gray-600'>
+                    Time Slots for {selectedDate.dateString}
+                  </h3>
+                </div>
+                <div className='max-h-96 overflow-y-auto'>
+                  {selectedDate.timeSlots.map((slot, index) => (
+                    <div
+                      key={index}
+                      onClick={() => handleSlotClick(slot)}
+                      className={`
+                      px-6 py-4 border-b border-gray-100 last:border-b-0 
+                      transition-colors cursor-pointer hover:bg-gray-50
+                      ${
+                        selectedSlot?.slotId === slot.slotId
+                          ? "bg-purple-50"
+                          : ""
+                      }
+                    `}>
+                      <div className='flex justify-between items-center'>
+                        <div>
+                          <p className='text-sm font-semibold text-gray-900'>
+                            {slot.subject} - {slot.type}
+                          </p>
+                          <p className='text-xs text-gray-500 mt-1'>
+                            {formatTime(slot.startTime)} -{" "}
+                            {formatTime(slot.endTime)}
+                          </p>
+                          <p className='text-xs text-gray-500 mt-1'>
+                            {slot.totalStudentsInSlot} student(s) in{" "}
+                            {slot.slotBookingsCount} booking(s)
+                          </p>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewStudents(slot);
+                          }}
+                          className='px-3 py-1 text-xs font-medium text-purple-600 bg-purple-100 rounded-full hover:bg-purple-200 transition-colors'>
+                          View Students
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
         </div>
 
         {/* ---------------- RIGHT SECTION ---------------- */}
@@ -302,95 +395,139 @@ export default function Bookings() {
                 )}
               </div>
 
-              {selectedDate ? (
+              {selectedSlot ? (
                 <div className='bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden'>
-                  {/* Table Header */}
-                  <div className='grid grid-cols-4 gap-4 px-6 py-4 bg-gray-50 border-b border-gray-200'>
-                    <div className='text-sm font-medium text-gray-600'>
-                      Subject
-                    </div>
-                    <div className='text-sm font-medium text-gray-600'>
-                      Students
-                    </div>
-                    <div className='text-sm font-medium text-gray-600'>
-                      Time Slot
-                    </div>
-                    <div className='text-sm font-medium text-gray-600'>
-                      Action
+                  {/* Slot Details Header */}
+                  <div className='px-6 py-4 bg-gray-50 border-b border-gray-200'>
+                    <div className='flex justify-between items-center'>
+                      <div>
+                        <h3 className='text-lg font-semibold text-gray-900'>
+                          {selectedSlot.subject} - {selectedSlot.type}
+                        </h3>
+                        <p className='text-sm text-gray-500'>
+                          {formatTime(selectedSlot.startTime)} -{" "}
+                          {formatTime(selectedSlot.endTime)}
+                        </p>
+                      </div>
+                      {selectedSlot.meetLink && (
+                        <button
+                          onClick={() => handleJoinClass(selectedSlot.meetLink)}
+                          className='flex items-center gap-2 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors'>
+                          <BiChevronRight size={18} />
+                          Join Class
+                        </button>
+                      )}
                     </div>
                   </div>
 
-                  {/* Table Body */}
-                  {selectedDate.timeSlots &&
-                  selectedDate.timeSlots.length > 0 ? (
-                    selectedDate.timeSlots.map((timeSlot, index) => (
-                      <div
-                        key={index}
-                        className='grid grid-cols-4 gap-4 px-6 py-4 items-center border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors'>
-                        {/* Subject */}
-                        <div className='text-sm font-semibold text-green-600'>
-                          {timeSlot.subject}
-                          <div className='text-xs text-gray-500'>
-                            {timeSlot.type}
-                          </div>
-                        </div>
-
-                        {/* Students */}
-                        <div className='text-sm text-gray-700'>
-                          {timeSlot.totalStudentsInSlot} student
-                          {timeSlot.totalStudentsInSlot !== 1 ? "s" : ""}
-                          <div className='text-xs text-gray-500'>
-                            {timeSlot.slotBookingsCount} booking
-                            {timeSlot.slotBookingsCount !== 1 ? "s" : ""}
-                          </div>
-                        </div>
-
-                        {/* Time Slot */}
-                        <div className='text-sm text-gray-700'>
-                          {formatTime(timeSlot.startTime)} -{" "}
-                          {formatTime(timeSlot.endTime)}
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className='flex items-center gap-3'>
-                          {timeSlot.meetLink && (
-                            <button
-                              onClick={() => handleJoinClass(timeSlot.meetLink)}
-                              className='flex items-center gap-1 text-sm font-medium text-green-600 hover:text-green-700 transition-colors'>
-                              Join Class
-                              <BiChevronRight size={16} />
-                            </button>
-                          )}
-                          {timeSlot.bookings &&
-                            timeSlot.bookings.map(
-                              (booking) =>
-                                booking.status === "SCHEDULED" && (
-                                  <button
-                                    key={booking._id}
-                                    onClick={() =>
-                                      handleCancelClass(
-                                        booking._id,
-                                        booking.subject
-                                      )
-                                    }
-                                    className='flex items-center gap-1 text-sm font-medium text-red-500 hover:text-red-600 transition-colors'>
-                                    Cancel
-                                    <BiX size={16} />
-                                  </button>
-                                )
+                  {/* Bookings List */}
+                  <div className='max-h-96 overflow-y-auto'>
+                    {selectedSlot.bookings &&
+                    selectedSlot.bookings.length > 0 ? (
+                      selectedSlot.bookings.map((booking, index) => (
+                        <div
+                          key={booking._id || index}
+                          className='px-6 py-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50'>
+                          <div className='flex justify-between items-start mb-3'>
+                            <div>
+                              <p className='text-sm font-semibold text-gray-900'>
+                                Booking #{index + 1}
+                              </p>
+                              <div className='flex items-center gap-2 mt-1'>
+                                <span
+                                  className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                    booking.status === "SCHEDULED"
+                                      ? "bg-green-100 text-green-800"
+                                      : booking.status === "COMPLETED"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : booking.status === "PENDING"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-red-100 text-red-800"
+                                  }`}>
+                                  {booking.status}
+                                </span>
+                                <span className='text-xs text-gray-500'>
+                                  Created:{" "}
+                                  {new Date(
+                                    booking.createdAt
+                                  ).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                            {booking.status === "SCHEDULED" && (
+                              <button
+                                onClick={() =>
+                                  handleCancelClass(
+                                    booking._id,
+                                    booking.subject
+                                  )
+                                }
+                                className='flex items-center gap-1 text-sm font-medium text-red-500 hover:text-red-600 transition-colors'>
+                                Cancel
+                                <BiX size={16} />
+                              </button>
                             )}
+                          </div>
+
+                          {/* Students in this booking */}
+                          <div className='mt-3'>
+                            <p className='text-xs font-medium text-gray-500 mb-2'>
+                              Students ({booking.studentsCount || 0})
+                            </p>
+                            {booking.studentsList &&
+                            booking.studentsList.length > 0 ? (
+                              <div className='space-y-2'>
+                                {booking.studentsList.map(
+                                  (student, studentIndex) => (
+                                    <div
+                                      key={studentIndex}
+                                      className='flex items-center justify-between p-2 bg-gray-50 rounded'>
+                                      <div>
+                                        <p className='text-sm font-medium text-gray-900'>
+                                          {student.studentName}
+                                        </p>
+                                        <p className='text-xs text-gray-500'>
+                                          ID: {student.studentId}
+                                        </p>
+                                        <p className='text-xs text-gray-500 mt-1'>
+                                          Parents:{" "}
+                                          {Array.isArray(student.parents)
+                                            ? student.parents.join(", ")
+                                            : student.parents}{" "}
+                                          | Exam:{" "}
+                                          {student.examBoard || "Not specified"}
+                                        </p>
+                                      </div>
+                                      <button
+                                        onClick={() => handleJoinChat(student)}
+                                        className='flex items-center gap-1 px-3 py-1 text-xs font-medium text-green-600 bg-green-50 rounded hover:bg-green-100 transition-colors'>
+                                        <BiMessageRounded size={14} />
+                                        Chat
+                                      </button>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            ) : (
+                              <p className='text-xs text-gray-500 italic'>
+                                No students in this booking
+                              </p>
+                            )}
+                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className='px-6 py-8 text-center text-gray-500'>
+                        No bookings in this time slot
                       </div>
-                    ))
-                  ) : (
-                    <div className='px-6 py-8 text-center text-gray-500'>
-                      No classes scheduled for this date
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className='bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center text-gray-500'>
-                  Select a date with bookings to view classes
+                  {selectedDate
+                    ? "Select a time slot to view details"
+                    : "Select a date with bookings to view classes"}
                 </div>
               )}
             </div>
@@ -399,162 +536,168 @@ export default function Bookings() {
       </div>
 
       {/* Stats Summary */}
-      {bookingData && (
-        <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 mt-8'>
-          <div className='bg-white p-4 rounded-lg shadow-sm border border-gray-200'>
-            <h3 className='text-sm font-medium text-gray-500'>
-              Total Bookings
-            </h3>
-            <p className='text-2xl font-bold text-purple-600'>
-              {bookingData.stats.totalBookings}
-            </p>
-          </div>
-          <div className='bg-white p-4 rounded-lg shadow-sm border border-gray-200'>
-            <h3 className='text-sm font-medium text-gray-500'>
-              Total Students
-            </h3>
-            <p className='text-2xl font-bold text-green-600'>
-              {bookingData.stats.totalStudents}
-            </p>
-          </div>
-          <div className='bg-white p-4 rounded-lg shadow-sm border border-gray-200'>
-            <h3 className='text-sm font-medium text-gray-500'>
-              Today's Bookings
-            </h3>
-            <p className='text-2xl font-bold text-blue-600'>
-              {bookingData.stats.todayBookings}
-            </p>
-          </div>
-          <div className='bg-white p-4 rounded-lg shadow-sm border border-gray-200'>
-            <h3 className='text-sm font-medium text-gray-500'>Completed</h3>
-            <p className='text-2xl font-bold text-yellow-600'>
-              {bookingData.stats.completedBookings}
-            </p>
+      {bookingData && bookingData.stats && (
+        <div className='mx-auto'>
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 mt-8'>
+            <div className='bg-white p-4 rounded-lg shadow-sm border border-gray-200'>
+              <h3 className='text-sm font-medium text-gray-500'>
+                Total Bookings
+              </h3>
+              <p className='text-2xl font-bold text-purple-600'>
+                {bookingData.stats.totalBookings}
+              </p>
+            </div>
+            <div className='bg-white p-4 rounded-lg shadow-sm border border-gray-200'>
+              <h3 className='text-sm font-medium text-gray-500'>
+                Total Students
+              </h3>
+              <p className='text-2xl font-bold text-green-600'>
+                {bookingData.stats.totalStudents}
+              </p>
+            </div>
+            <div className='bg-white p-4 rounded-lg shadow-sm border border-gray-200'>
+              <h3 className='text-sm font-medium text-gray-500'>
+                Today's Bookings
+              </h3>
+              <p className='text-2xl font-bold text-blue-600'>
+                {bookingData.stats.todayBookings}
+              </p>
+            </div>
+            <div className='bg-white p-4 rounded-lg shadow-sm border border-gray-200'>
+              <h3 className='text-sm font-medium text-gray-500'>Completed</h3>
+              <p className='text-2xl font-bold text-yellow-600'>
+                {bookingData.stats.completedBookings}
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      {/* TODO: Students List Table of specific slot  */}
-      <div className='p-6 bg-white rounded-lg shadow-md'>
-        <p className='text-xl font-semibold text-gray-900'>Students List</p>
-
-        <div className='overflow-x-auto'>
-          <table className='min-w-full divide-y divide-gray-200'>
-            <thead className='bg-gray-50'>
-              <tr>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  Student ID
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  Student Name
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  Parents Name
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  Exam Board
-                </th>
-                <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                  Action
-                </th>
-              </tr>
-            </thead>
-            <tbody className='bg-white divide-y divide-gray-200'>
-              {students.map((student, index) => (
-                <tr
-                  key={student.id}
-                  className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                  <td className='px-6 py-4 whitespace-nowrap'>
-                    <span className='text-sm font-medium text-gray-900'>
-                      ID: {student.id}
-                    </span>
-                  </td>
-                  <td className='px-6 py-4 whitespace-nowrap'>
-                    <span className='text-sm text-gray-900'>
-                      {student.studentName}
-                    </span>
-                  </td>
-                  <td className='px-6 py-4 whitespace-nowrap'>
-                    <span className='text-sm text-gray-900'>
-                      {student.parentsName}
-                    </span>
-                  </td>
-                  <td className='px-6 py-4 whitespace-nowrap'>
-                    <span className='text-sm text-gray-900'>
-                      {student.examBoard}
-                    </span>
-                  </td>
-                  <td className='px-6 py-4 whitespace-nowrap'>
-                    <button
-                      onClick={() =>
-                        handleJoinChat(student.id, student.studentName)
-                      }
-                      className='inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-green-800  transition-colors hover:bg-green-50 cursor-pointer'>
-                      Join Chat
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        <div className='flex items-center justify-between mt-6 px-4 py-3 bg-gray-50 sm:px-6'>
-          <div className='flex-1 flex justify-between sm:hidden'>
-            <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'>
-              Previous
-            </button>
-            <button className='ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 cursor-pointer'>
-              Next
-            </button>
-          </div>
-          <div className='hidden sm:flex-1 sm:flex sm:items-center sm:justify-between'>
-            <div>
-              <p className='text-sm text-gray-700'>
-                Showing <span className='font-medium'>1</span> to{" "}
-                <span className='font-medium'>5</span> of{" "}
-                <span className='font-medium'>5</span> students
-              </p>
-            </div>
-            <div>
-              <nav
-                className='relative z-0 inline-flex rounded-md shadow-sm -space-x-px'
-                aria-label='Pagination'>
-                <button className='relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 cursor-pointer'>
-                  <span className='sr-only'>Previous</span>
-                  Previous
-                </button>
-                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer'>
-                  1
-                </button>
-                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer'>
-                  2
-                </button>
-                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer'>
-                  3
-                </button>
-                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer'>
-                  4
-                </button>
-                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer'>
-                  5
-                </button>
-                <button className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer'>
-                  6
-                </button>
-                <span className='relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700'>
-                  ...
+      {/* Students List Modal */}
+      {showStudentsModal && (
+        <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
+          <div className='bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden'>
+            <div className='px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center'>
+              <h3 className='text-lg font-semibold text-gray-900'>
+                Students List
+                <span className='ml-2 text-sm font-normal text-gray-500'>
+                  ({currentStudentsList.length} students)
                 </span>
-                <button className='relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 cursor-pointer'>
-                  Next
-                  <span className='sr-only'>Next</span>
-                </button>
-              </nav>
+              </h3>
+              <button
+                onClick={() => setShowStudentsModal(false)}
+                className='text-gray-400 hover:text-gray-600 transition-colors'>
+                <BiX size={24} />
+              </button>
+            </div>
+
+            <div className='overflow-y-auto max-h-[60vh]'>
+              <table className='min-w-full divide-y divide-gray-200'>
+                <thead className='bg-gray-50 sticky top-0'>
+                  <tr>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                      Student ID
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                      Student Name
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                      Parents Name
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                      Exam Board
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                      Status
+                    </th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className='bg-white divide-y divide-gray-200'>
+                  {currentStudentsList.map((student, index) => (
+                    <tr
+                      key={`${student.studentId}-${index}`}
+                      className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                      <td className='px-6 py-4 whitespace-nowrap'>
+                        <span className='text-sm font-medium text-gray-900'>
+                          {student.studentId}
+                        </span>
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap'>
+                        <div>
+                          <span className='text-sm text-gray-900'>
+                            {student.studentName}
+                          </span>
+                        </div>
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap'>
+                        <span className='text-sm text-gray-900'>
+                          {student.parentsNames ||
+                            (Array.isArray(student.parents)
+                              ? student.parents.join(", ")
+                              : student.parents)}
+                        </span>
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap'>
+                        <span
+                          className={`text-sm px-2 py-1 rounded-full ${
+                            !student.examBoard ||
+                            student.examBoard === "Not specified"
+                              ? "text-gray-600 bg-gray-100"
+                              : "text-blue-600 bg-blue-100"
+                          }`}>
+                          {student.examBoard || "Not specified"}
+                        </span>
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap'>
+                        <span
+                          className={`px-2 py-1 text-xs font-medium rounded-full ${
+                            student.bookingStatus === "SCHEDULED"
+                              ? "bg-green-100 text-green-800"
+                              : student.bookingStatus === "COMPLETED"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}>
+                          {student.bookingStatus}
+                        </span>
+                      </td>
+                      <td className='px-6 py-4 whitespace-nowrap'>
+                        <div className='flex gap-2'>
+                          <button
+                            onClick={() => handleJoinChat(student)}
+                            className='inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-green-800 bg-green-100 hover:bg-green-200 transition-colors'>
+                            <BiMessageRounded className='mr-1' />
+                            Chat
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className='px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-between items-center'>
+              <div>
+                <p className='text-sm text-gray-700'>
+                  Showing{" "}
+                  <span className='font-medium'>
+                    {currentStudentsList.length}
+                  </span>{" "}
+                  students
+                </p>
+              </div>
+              <button
+                onClick={() => setShowStudentsModal(false)}
+                className='px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors'>
+                Close
+              </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
