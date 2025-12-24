@@ -1,6 +1,5 @@
 import { Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
-import { PaginationDto } from 'common/dto/pagination.dto';
-import { SearchDto } from 'common/dto/search.dto';
+import { searchPaginationQueryDto } from 'common/dto/searchPagination.dto';
 import { JwtAuthGuard } from 'common/guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
@@ -32,16 +31,18 @@ export class AdminController {
    * @returns list of payments with pagination
    */
   @Get('payments')
-  async getPayments(
-    @Query() { search }: SearchDto,
-    @Query() query: PaginationDto,
-  ) {
-    return this.adminService.getPayments(search, query);
+  async getPayments(@Query() query: searchPaginationQueryDto) {
+    return this.adminService.getPayments(query);
   }
 
+  /**
+   * Get all registered payouts.
+   *
+   * @returns list of payouts
+   */
   @Get('payouts')
-  async getPayouts() {
-    return this.adminService.getPayouts();
+  async getPayouts(@Query() query: searchPaginationQueryDto) {
+    return this.adminService.getPayouts(query);
   }
 
   /**
@@ -51,10 +52,9 @@ export class AdminController {
    */
   @Get('students')
   async getStudents(
-    @Query() { search }: SearchDto,
-    @Query() query: PaginationDto,
+    @Query() { search, page, limit }: searchPaginationQueryDto,
   ) {
-    return this.adminService.getStudents(search, query);
+    return this.adminService.getStudents(search, { page, limit });
   }
 
   @Put('payouts/:payoutId/approve')

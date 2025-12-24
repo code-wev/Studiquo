@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { PaginationDto } from 'common/dto/pagination.dto';
 import { SearchDto } from 'common/dto/search.dto';
+import { searchPaginationQueryDto } from 'common/dto/searchPagination.dto';
 import { Model, Types } from 'mongoose';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { Booking } from '../models/Booking.model';
@@ -141,14 +142,14 @@ export class AdminService {
    *
    * @returns list of payments with pagination
    */
-  async getPayments(search: SearchDto['search'], query: PaginationDto) {
-    const regex = new RegExp(search ?? '', 'i');
+  async getPayments(query: searchPaginationQueryDto) {
+    const regex = new RegExp(query.search ?? '', 'i');
 
     const page = query.page || 1;
     const limit = query.limit || 10;
     const skip = (page - 1) * limit;
 
-    const results = await this.paymentModel
+    const payments = await this.paymentModel
       .find({
         $or: [
           { transactionId: { $regex: regex } },
@@ -163,12 +164,79 @@ export class AdminService {
 
     return {
       message: 'Payments retrieved successfully',
-      results,
+      payments,
     };
   }
 
-  async getPayouts() {
-    return this.payoutModel.find();
+  /**
+   * Get all registered payouts.
+   *
+   * @returns list of payouts
+   */
+  async getPayouts(query: searchPaginationQueryDto) {
+    const regex = new RegExp(query.search ?? '', 'i');
+
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    // Create the base query with search
+    let baseQuery: any = {};
+
+    if (query.search) {
+      baseQuery = {
+        $or: [
+          { transactionId: { $regex: regex } },
+          { currency: { $regex: regex } },
+          { status: { $regex: regex } },
+        ],
+      };
+    }
+
+    // Get total count for pagination
+    const total = await this.payoutModel.countDocuments(baseQuery);
+
+    // Execute query with pagination and sorting
+    const results = await this.payoutModel
+      .find(baseQuery)
+      .populate({
+        path: 'tutorId',
+        select: 'firstName lastName email avatar',
+        // Apply search on tutor fields if search exists
+        ...(query.search
+          ? {
+              match: {
+                $or: [
+                  { firstName: { $regex: regex } },
+                  { lastName: { $regex: regex } },
+                  { email: { $regex: regex } },
+                ],
+              },
+            }
+          : {}),
+      })
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    // Filter out results where tutor doesn't match search criteria
+    // (when searching by tutor name/email, populate match may return null for tutorId)
+    const filteredResults = query.search
+      ? results.filter((payout) => payout.tutorId !== null)
+      : results;
+
+    return {
+      message: 'Payouts retrieved successfully',
+      results: filteredResults,
+      meta: {
+        total: query.search ? filteredResults.length : total,
+        page,
+        limit,
+        totalPages: Math.ceil(
+          (query.search ? filteredResults.length : total) / limit,
+        ),
+      },
+    };
   }
 
   /**
