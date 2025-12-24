@@ -130,18 +130,14 @@ export class PaymentsController {
         const subject = event.data.object.metadata?.subject;
         const parentEmail = event.data.object.metadata?.parentEmail;
         const shortBookingId = event.data.object.metadata?.shortBookingId;
-        const amount = event.data.object.amount_received;
+        // Amounts are in smallest currency unit (e.g., pence) - convert to standard unit
+        const amount = (event.data.object.amount_total / 100).toFixed(2);
         const currency = event.data.object.currency;
 
-        // amount is in smallest currency unit (cents)
+        // amount is in smallest currency unit (pence)
         const amt = Number(amount) || 0;
         const commission = Math.round(amt * 0.2); // 20% commission
         const tutorEarning = Math.max(0, amt - commission);
-
-        // Check any payment is already recorded for this booking
-        const existingPayment = await this.paymentModel.findOne({
-          booking: new mongoose.Types.ObjectId(bookingId),
-        });
 
         if (existingPayment) {
           this.logger.log(
@@ -183,14 +179,11 @@ export class PaymentsController {
           this.logger.error('Failed to credit tutor wallet', err.message);
         }
 
-        // Update booking status to SCHEDULED only if payment record created
-        if (existingPayment) {
-          await this.bookingModel.findByIdAndUpdate(
-            bookingId,
-            { status: 'SCHEDULED' },
-            { new: true },
-          );
-        }
+        // Update booking status to SCHEDULED only if payment record created but if already exists then skip
+        await this.bookingModel.updateOne(
+          { _id: new mongoose.Types.ObjectId(bookingId) },
+          { $set: { status: 'SCHEDULED' } },
+        );
 
         // check the chat group exist or not with the same tutor, student and booking
         const existingChatGroup = await this.chatGroupModel.findOne({

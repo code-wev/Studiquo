@@ -32,9 +32,11 @@ export class Payment extends Document {
   @Prop({ required: true, unique: true, index: true })
   transactionId: string;
 
+  // In smallest currency unit (e.g., )
   @Prop({ required: true, default: 0 })
   commission: number;
 
+  // In smallest currency unit (e.g., )
   @Prop({ required: true, default: 0 })
   tutorEarning: number;
 

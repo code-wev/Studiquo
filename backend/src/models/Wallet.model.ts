@@ -6,6 +6,7 @@ export class Wallet extends Document {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true, unique: true })
   tutorId: Types.ObjectId;
 
+  // British Pounds Sterling (GBP) in smallest currency unit (pence)
   @Prop({ required: true, default: 0 })
   balance: number;
 
