@@ -7,10 +7,11 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { formatAmPm } from '../../common/utils/time.util';
-import { TimeSlot, TimeSlotType } from '../models/TimeSlot.model';
+import { TimeSlotType } from '../models/TimeSlot.model';
 import { TutorAvailability } from '../models/TutorAvailability.model';
 import { TutorProfile, TutorSubject } from '../models/TutorProfile.model';
 import { UserRole } from '../models/User.model';
+import { TimeSlot } from './../models/TimeSlot.model';
 import {
   CreateAvailabilityDto,
   CreateTimeSlotDto,
@@ -116,15 +117,17 @@ export class AvailabilityService {
       throw new NotFoundException('Availability not found');
     }
 
-    const bookedSlots = await this.timeSlotModel.find({
-      tutorAvailability: availability._id,
-    });
+    // const TimeSlot = await this.timeSlotModel.find({
+    //   tutorAvailability: availability._id,
+    // });
 
-    if (bookedSlots.length > 0) {
-      throw new BadRequestException(
-        'Cannot delete availability with booked time slots',
-      );
-    }
+    // if (bookedSlots.length > 0) {
+    //   throw new BadRequestException(
+    //     'Cannot delete availability with booked time slots',
+    //   );
+    // }
+
+    // TODO: Can't delete availability with booked slots
 
     await this.timeSlotModel.deleteMany({
       tutorAvailability: availability._id,
@@ -289,6 +292,8 @@ export class AvailabilityService {
         'Tutor does not teach the specified subject',
       );
     }
+
+    // TODO: Can't update a booked slot
 
     const slot = await this.timeSlotModel
       .findOne({
