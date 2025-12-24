@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
 import { PaginationDto } from 'common/dto/pagination.dto';
 import { SearchDto } from 'common/dto/search.dto';
+import { JwtAuthGuard } from 'common/guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -9,7 +10,7 @@ import { AdminService } from './admin.service';
 import { AdminOverViewQueryDto } from './dto/admin.dto';
 
 @Controller('admin')
-@UseGuards(RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(UserRole.Admin)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
@@ -25,9 +26,17 @@ export class AdminController {
     return this.adminService.getOverview(query);
   }
 
+  /**
+   * Get all registered payments.
+   *
+   * @returns list of payments with pagination
+   */
   @Get('payments')
-  async getPayments() {
-    return this.adminService.getPayments();
+  async getPayments(
+    @Query() { search }: SearchDto,
+    @Query() query: PaginationDto,
+  ) {
+    return this.adminService.getPayments(search, query);
   }
 
   @Get('payouts')

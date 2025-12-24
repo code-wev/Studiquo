@@ -136,8 +136,35 @@ export class AdminService {
     };
   }
 
-  async getPayments() {
-    return this.paymentModel.find();
+  /**
+   * Get all registered payments.
+   *
+   * @returns list of payments with pagination
+   */
+  async getPayments(search: SearchDto['search'], query: PaginationDto) {
+    const regex = new RegExp(search ?? '', 'i');
+
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const results = await this.paymentModel
+      .find({
+        $or: [
+          { transactionId: { $regex: regex } },
+          { currency: { $regex: regex } },
+          { status: { $regex: regex } },
+        ],
+      })
+      .select('-metadata -__v')
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    return {
+      message: 'Payments retrieved successfully',
+      results,
+    };
   }
 
   async getPayouts() {
