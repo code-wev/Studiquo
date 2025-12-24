@@ -5,7 +5,7 @@ import { get } from "lodash";
 
 export const TutorApi = createApi({
   reducerPath: "TutorApi",
-  tagTypes: ["Tutor"],
+  tagTypes: ["Tutor", "Wallet", "Payments", "Payouts"],
   baseQuery: fetchBaseQuery({
     baseUrl: base_url,
     prepareHeaders: (headers) => {
@@ -68,7 +68,7 @@ export const TutorApi = createApi({
 
     getWalletDetails: builder.query({
       query: () => "/tutors/wallet",
-      providesTags: ["Tutor"],
+      providesTags: ["Wallet"],
     }),
 
     getPaymentHistory: builder.query({
@@ -82,7 +82,26 @@ export const TutorApi = createApi({
           method: "GET",
         };
       },
-      providesTags: ["Tutor"],
+      providesTags: ["Payments"],
+    }),
+
+    payoutRequest: builder.mutation({
+      query: (data) => ({
+        url: "/tutors/payouts/request",
+        method: "POST",
+        body: data,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }),
+      invalidatesTags: ["Wallet", "Payouts", "Payments"],
+      // Handle errors properly
+      transformErrorResponse: (response) => {
+        return {
+          status: response.status,
+          data: response.data,
+        };
+      },
     }),
   }),
 });
@@ -94,4 +113,5 @@ export const {
   useGetTutorOverviewQuery,
   useGetWalletDetailsQuery,
   useGetPaymentHistoryQuery,
+  usePayoutRequestMutation,
 } = TutorApi;

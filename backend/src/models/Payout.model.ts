@@ -16,7 +16,7 @@ export class Payout extends Document {
   })
   status: string;
 
-  @Prop({ required: true })
+  @Prop()
   transactionId: string;
 }
 

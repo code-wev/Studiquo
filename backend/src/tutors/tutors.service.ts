@@ -455,12 +455,17 @@ export class TutorsService {
       .limit(limit)
       .lean();
 
-    const payouts = await this.payoutModel
-      .find({ tutorId: new Types.ObjectId(userId) })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    console.log(userId);
+
+    const payouts = await this.payoutModel.find({
+      tutorId: new Types.ObjectId(userId),
+    });
+    // .sort({ createdAt: -1 })
+    // .skip(skip)
+    // .limit(limit)
+    // .lean();
+
+    console.log(payouts);
 
     return {
       message: 'Payment history fetched successfully',
@@ -494,8 +499,12 @@ export class TutorsService {
     }
 
     // Load wallet
-    const wallet = await this.walletModel.findOne({ tutorId: userId });
+    const wallet = await this.walletModel.findOne({
+      tutorId: new Types.ObjectId(userId),
+    });
+
     const balance = (wallet && wallet.balance) || 0;
+
     if (balance < amount) {
       throw new BadRequestException('Insufficient wallet balance');
     }
@@ -506,7 +515,7 @@ export class TutorsService {
     try {
       await this.walletModel
         .updateOne(
-          { tutorId: userId },
+          { tutorId: new Types.ObjectId(userId) },
           { $inc: { balance: -amount }, $set: { updatedAt: new Date() } },
         )
         .session(session);
@@ -514,7 +523,7 @@ export class TutorsService {
       const payout = await this.payoutModel.create(
         [
           {
-            tutorId: userId,
+            tutorId: new Types.ObjectId(userId),
             amount,
             status: 'PENDING',
             transactionId: '',
@@ -526,7 +535,10 @@ export class TutorsService {
       await session.commitTransaction();
       session.endSession();
 
-      return payout[0];
+      return {
+        message: 'Payout requested successfully',
+        payout: payout[0],
+      };
     } catch (err: any) {
       await session.abortTransaction();
       session.endSession();

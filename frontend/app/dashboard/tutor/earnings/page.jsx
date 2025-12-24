@@ -4,6 +4,7 @@ import TitleSection from "@/components/dashboard/shared/TitleSection";
 import {
   useGetPaymentHistoryQuery,
   useGetWalletDetailsQuery,
+  usePayoutRequestMutation,
 } from "@/feature/shared/TutorApi";
 
 import { useEffect, useState } from "react";
@@ -33,6 +34,10 @@ export default function Earnings() {
     error: paymentError,
     refetch: refetchPayments,
   } = useGetPaymentHistoryQuery({ page, limit });
+
+  // Payout request mutation
+  const [payoutRequest, { isLoading: isPayoutLoading }] =
+    usePayoutRequestMutation();
 
   // Refetch when page changes
   useEffect(() => {
@@ -90,14 +95,45 @@ export default function Earnings() {
   const paymentTotals = calculatePaymentTotals();
   const payoutTotals = calculatePayoutTotals();
 
-  // Format currency - DO NOT divide by 100 (data is already in correct format)
+  // Helper function to check if amount is in smallest unit (pence/cents)
+  const isAmountInSmallestUnit = (amount) => {
+    // If amount is large and has no decimal places, it's likely in smallest unit
+    return amount > 1000 && amount % 1 === 0;
+  };
+
+  // Format currency - automatically detect if amount is in pence/cents
   const formatCurrency = (amount, currency = "gbp") => {
+    // Convert to number if it's a string
+    const numAmount =
+      typeof amount === "string" ? parseFloat(amount) || 0 : amount;
+
+    // Check if amount is likely in smallest unit (pence/cents)
+    const isSmallestUnit = isAmountInSmallestUnit(numAmount);
+
+    // Convert to main currency unit if needed
+    const amountInMainUnit = isSmallestUnit ? numAmount / 100 : numAmount;
+
     return new Intl.NumberFormat("en-GB", {
       style: "currency",
       currency: currency.toUpperCase(),
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(amount);
+    }).format(amountInMainUnit);
+  };
+
+  // Get wallet balance in display format (always show in main unit)
+  const getDisplayBalance = () => {
+    if (!wallet) return 0;
+    return isAmountInSmallestUnit(wallet.balance)
+      ? wallet.balance / 100
+      : wallet.balance;
+  };
+
+  // Get wallet balance in API format (check what API expects)
+  const getApiBalance = () => {
+    if (!wallet) return 0;
+    // Return as is - API will handle the conversion
+    return wallet.balance;
   };
 
   // Handle withdraw request
@@ -118,11 +154,38 @@ export default function Earnings() {
       return;
     }
 
+    // Check minimum withdrawal
+    const minimumWithdrawal = 10;
+    if (amount < minimumWithdrawal) {
+      setWithdrawError(
+        `Minimum withdrawal amount is ${formatCurrency(
+          minimumWithdrawal,
+          wallet?.currency || "gbp"
+        )}`
+      );
+      return;
+    }
+
+    // Check decimal places
+    const decimalPlaces = (withdrawAmount.toString().split(".")[1] || "")
+      .length;
+    if (decimalPlaces > 2) {
+      setWithdrawError("Amount cannot have more than 2 decimal places");
+      return;
+    }
+
+    // IMPORTANT: Don't convert to smallest unit
+    // The API likely expects amount in main currency unit (pounds, dollars)
+    const amountToSend = amount;
+
+    // Get wallet balance for comparison (in same unit as amountToSend)
+    const walletBalanceForComparison = getDisplayBalance();
+
     // Check if wallet has sufficient balance
-    if (wallet && amount > wallet.balance) {
+    if (wallet && amountToSend > walletBalanceForComparison) {
       setWithdrawError(
         `Insufficient balance. Maximum withdrawal: ${formatCurrency(
-          wallet.balance,
+          walletBalanceForComparison,
           wallet.currency
         )}`
       );
@@ -132,35 +195,53 @@ export default function Earnings() {
     setIsProcessing(true);
 
     try {
-      // Simulate API call - Replace with actual API endpoint
-      console.log("Withdraw request submitted:", {
-        amount,
-        currency: wallet?.currency || "gbp",
+      // DEBUG: Log what we're sending
+      console.log("Sending withdrawal request:", {
+        amount: amountToSend,
+        walletBalance: wallet?.balance,
+        displayBalance: walletBalanceForComparison,
+        currency: wallet?.currency,
       });
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      // Call the actual payout API - send amount as is (in main currency unit)
+      const response = await payoutRequest({
+        amount: amountToSend,
+      }).unwrap();
 
       // Success - show success message and close modal
       alert(
         `Withdrawal request of ${formatCurrency(
           amount,
           wallet?.currency || "gbp"
-        )} submitted successfully!`
+        )} submitted successfully! Your payout is being processed.`
       );
 
       // Reset form
       setWithdrawAmount("");
       setShowWithdrawModal(false);
 
-      // Refresh wallet data
+      // Refresh wallet and payment data
       refetchWallet();
       refetchPayments();
     } catch (error) {
-      setWithdrawError(
-        "Failed to process withdrawal request. Please try again."
-      );
       console.error("Withdrawal error:", error);
+
+      // Handle specific error messages
+      if (error?.data?.message) {
+        setWithdrawError(error.data.message);
+      } else if (error?.status === 400) {
+        setWithdrawError(
+          "Invalid request. Please check the amount and try again."
+        );
+      } else if (error?.status === 404) {
+        setWithdrawError("Tutor profile not found or not approved.");
+      } else if (error?.status === 409) {
+        setWithdrawError("Insufficient wallet balance.");
+      } else {
+        setWithdrawError(
+          "Failed to process withdrawal request. Please try again."
+        );
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -168,6 +249,7 @@ export default function Earnings() {
 
   // Format date
   const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
     return date.toLocaleDateString("en-US", {
       year: "numeric",
@@ -178,6 +260,7 @@ export default function Earnings() {
 
   // Format time
   const formatTime = (dateString) => {
+    if (!dateString) return "N/A";
     const date = new Date(dateString);
     return date.toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -250,7 +333,7 @@ export default function Earnings() {
                 </div>
               </div>
               <p className='text-xs text-gray-500 mt-4'>
-                Last updated: {new Date(wallet.updatedAt).toLocaleDateString()}
+                Last updated: {formatDate(wallet.updatedAt)}
               </p>
             </div>
 
@@ -337,15 +420,18 @@ export default function Earnings() {
               </div>
               <button
                 onClick={() => setShowWithdrawModal(true)}
-                disabled={!wallet || wallet.balance < 10}
+                disabled={!wallet || getDisplayBalance() < 10}
                 className={`w-full mt-4 px-4 py-3 rounded-lg font-medium transition-colors ${
-                  wallet && wallet.balance >= 10
+                  wallet && getDisplayBalance() >= 10
                     ? "bg-emerald-600 text-white hover:bg-emerald-700"
                     : "bg-gray-200 text-gray-500 cursor-not-allowed"
                 }`}>
-                {wallet && wallet.balance >= 10
+                {wallet && getDisplayBalance() >= 10
                   ? "Request Withdrawal"
-                  : "Minimum £10 Required"}
+                  : `Minimum ${formatCurrency(
+                      10,
+                      wallet?.currency || "gbp"
+                    )} Required`}
               </button>
               <p className='text-xs text-gray-500 text-center mt-2'>
                 Processing time: 3-5 business days
@@ -542,10 +628,10 @@ export default function Earnings() {
                   {/* Date & Time */}
                   <div className='text-sm'>
                     <div className='font-semibold'>
-                      {payout.createdAt ? formatDate(payout.createdAt) : "N/A"}
+                      {formatDate(payout.createdAt)}
                     </div>
                     <div className='text-gray-500 text-xs'>
-                      {payout.createdAt ? formatTime(payout.createdAt) : "N/A"}
+                      {formatTime(payout.createdAt)}
                     </div>
                   </div>
 
@@ -662,14 +748,15 @@ export default function Earnings() {
                     Available Balance:
                   </span>
                   <span className='text-lg font-bold text-blue-700'>
-                    {wallet
-                      ? formatCurrency(wallet.balance, wallet.currency)
-                      : "£0.00"}
+                    {formatCurrency(
+                      wallet?.balance || 0,
+                      wallet?.currency || "gbp"
+                    )}
                   </span>
                 </div>
                 <p className='text-xs text-gray-500 mt-2'>
                   Minimum withdrawal:{" "}
-                  {wallet ? formatCurrency(10, wallet.currency) : "£10.00"}
+                  {formatCurrency(10, wallet?.currency || "gbp")}
                 </p>
               </div>
 
@@ -680,16 +767,24 @@ export default function Earnings() {
                 </label>
                 <div className='relative'>
                   <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
-                    <span className='text-gray-500 sm:text-sm'>£</span>
+                    <span className='text-gray-500 sm:text-sm'>
+                      {wallet?.currency === "gbp" ? "£" : "$"}
+                    </span>
                   </div>
                   <input
                     type='number'
                     value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // Allow empty string or valid numbers
+                      if (value === "" || /^\d*\.?\d{0,2}$/.test(value)) {
+                        setWithdrawAmount(value);
+                      }
+                    }}
                     placeholder='0.00'
                     className='pl-8 block w-full rounded-lg border border-gray-300 px-3 py-3 text-gray-900 placeholder-gray-400 focus:border-green-500 focus:ring-green-500 sm:text-sm'
                     min='10'
-                    max={wallet?.balance || 0}
+                    max={getDisplayBalance()}
                     step='0.01'
                   />
                 </div>
@@ -712,13 +807,17 @@ export default function Earnings() {
                     </button>
                   ))}
                 </div>
-                {wallet && wallet.balance > 0 && (
+                {wallet && getDisplayBalance() > 0 && (
                   <button
                     type='button'
-                    onClick={() => setWithdrawAmount(wallet.balance.toString())}
+                    onClick={() => {
+                      // Use the display balance for withdrawal
+                      const fullAmount = getDisplayBalance();
+                      setWithdrawAmount(fullAmount.toFixed(2));
+                    }}
                     className='mt-2 w-full px-3 py-2 text-sm bg-emerald-50 text-emerald-700 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors'>
                     Withdraw All (
-                    {formatCurrency(wallet.balance, wallet.currency)})
+                    {formatCurrency(getDisplayBalance(), wallet.currency)})
                   </button>
                 )}
               </div>
@@ -785,12 +884,14 @@ export default function Earnings() {
                 disabled={
                   isProcessing ||
                   !withdrawAmount ||
-                  parseFloat(withdrawAmount) < 10
+                  parseFloat(withdrawAmount) < 10 ||
+                  parseFloat(withdrawAmount) > getDisplayBalance()
                 }
                 className={`px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${
                   isProcessing ||
                   !withdrawAmount ||
-                  parseFloat(withdrawAmount) < 10
+                  parseFloat(withdrawAmount) < 10 ||
+                  parseFloat(withdrawAmount) > getDisplayBalance()
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-emerald-600 hover:bg-emerald-700"
                 }`}>
@@ -860,9 +961,10 @@ export default function Earnings() {
                     Current Wallet Balance
                   </span>
                   <span className='text-lg font-bold text-purple-600'>
-                    {wallet
-                      ? formatCurrency(wallet.balance, wallet.currency)
-                      : "£0.00"}
+                    {formatCurrency(
+                      wallet?.balance || 0,
+                      wallet?.currency || "gbp"
+                    )}
                   </span>
                 </div>
               </div>
@@ -891,7 +993,9 @@ export default function Earnings() {
                 </p>
                 <p className='text-gray-600 mb-1'>
                   Minimum Withdrawal:{" "}
-                  <span className='font-semibold text-gray-900'>£10.00</span>
+                  <span className='font-semibold text-gray-900'>
+                    {formatCurrency(10, wallet?.currency || "gbp")}
+                  </span>
                 </p>
                 <p className='text-gray-600 mb-1'>
                   Total Payouts:{" "}
@@ -911,7 +1015,12 @@ export default function Earnings() {
                 </p>
                 <button
                   onClick={() => setShowWithdrawModal(true)}
-                  className='mt-3 w-full px-4 py-2 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded hover:bg-emerald-100 transition-colors'>
+                  disabled={!wallet || getDisplayBalance() < 10}
+                  className={`mt-3 w-full px-4 py-2 text-sm font-medium rounded transition-colors ${
+                    wallet && getDisplayBalance() >= 10
+                      ? "text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100"
+                      : "text-gray-500 bg-gray-100 border border-gray-200 cursor-not-allowed"
+                  }`}>
                   Request Withdrawal
                 </button>
               </div>
