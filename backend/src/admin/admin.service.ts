@@ -186,6 +186,7 @@ export class AdminService {
    *
    * @returns list of payouts
    */
+  // TODO: payout amount search not working properly and need to fix the
   async getPayouts(query: searchPaginationQueryDto) {
     const page = Number(query.page) || 1;
     const limit = Number(query.limit) || 10;
@@ -205,9 +206,9 @@ export class AdminService {
         { status: { $regex: regex } },
       ];
 
-      // Numeric amount search
-      if (!isNaN(Number(search))) {
-        orConditions.push({ amount: Number(search) });
+      const searchNum = Number(query.search);
+      if (!Number.isNaN(searchNum)) {
+        orConditions.push({ amount: searchNum });
       }
 
       payoutMatch.$or = orConditions;
