@@ -4,14 +4,17 @@ import {
   Controller,
   Get,
   Headers,
+  InternalServerErrorException,
   Logger,
   Post,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import mongoose, { Model, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { MailService } from 'src/mail/mail.service';
 import { ChatGroup } from 'src/models/ChatGroup.model';
 import { Payment } from 'src/models/Payment.model';
+import { TimeSlot } from 'src/models/TimeSlot.model'; // You'll need to import this
+import { User } from 'src/models/User.model'; // You'll need to import this
 import { Wallet } from 'src/models/Wallet.model';
 import { Booking } from '../models/Booking.model';
 import { PaymentsService } from './payments.service';
@@ -27,6 +30,8 @@ export class PaymentsController {
     @InjectModel(Payment.name) private paymentModel: Model<Payment>,
     @InjectModel(Wallet.name) private walletModel: Model<Wallet>,
     @InjectModel(ChatGroup.name) private chatGroupModel: Model<ChatGroup>,
+    @InjectModel(TimeSlot.name) private timeSlotModel: Model<TimeSlot>, // Add this
+    @InjectModel(User.name) private userModel: Model<User>, // Add this
   ) {}
 
   /**
@@ -39,6 +44,41 @@ export class PaymentsController {
     return {
       publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
     };
+  }
+
+  /**
+   * Get booking details including related data
+   * @param {string} bookingId - Booking ID
+   * @returns {Promise<Object>} Booking with populated data
+   */
+  private async getBookingWithDetails(bookingId: string): Promise<any> {
+    try {
+      const booking = await this.bookingModel
+        .findById(bookingId)
+        .populate({
+          path: 'timeSlot',
+          model: 'TimeSlot',
+          populate: [
+            { path: 'tutor', model: 'User' },
+            { path: 'student', model: 'User' },
+            { path: 'parentIds', model: 'User' },
+          ],
+        })
+        .exec();
+
+      if (!booking) {
+        this.logger.error(`Booking ${bookingId} not found`);
+        return null;
+      }
+
+      this.logger.debug(`Found booking with populated data: ${bookingId}`);
+      return booking;
+    } catch (error) {
+      this.logger.error(
+        `Error fetching booking details for ${bookingId}: ${error.message}`,
+      );
+      return null;
+    }
   }
 
   /**
@@ -65,7 +105,38 @@ export class PaymentsController {
       throw new BadRequestException('Invalid amount');
     }
 
-    const metadata = bookingId ? { bookingId: String(bookingId) } : undefined;
+    let metadata: Record<string, any> = { bookingId };
+
+    if (bookingId) {
+      try {
+        const booking = await this.getBookingWithDetails(bookingId);
+        if (booking && booking.timeSlot) {
+          const timeSlot = booking.timeSlot as any;
+
+          // Prepare metadata with all necessary information
+          metadata = {
+            bookingId,
+            tutorId: timeSlot.tutor?._id?.toString(),
+            studentId: timeSlot.student?._id?.toString(),
+            subject: booking.subject,
+            type: booking.type,
+            // Add any other necessary metadata
+          };
+
+          this.logger.debug(
+            `Found booking ${bookingId} with populated data for PaymentIntent`,
+          );
+        } else {
+          this.logger.warn(
+            `Booking ${bookingId} not found or missing timeSlot, but proceeding with PaymentIntent`,
+          );
+        }
+      } catch (error) {
+        this.logger.error(
+          `Error fetching booking ${bookingId}: ${error.message}`,
+        );
+      }
+    }
 
     const paymentIntent = await this.paymentsService.createPaymentIntent(
       amount,
@@ -82,6 +153,163 @@ export class PaymentsController {
   }
 
   /**
+   * Check if a successful payment exists for a booking
+   * @param {string} bookingId - Booking ID
+   * @returns {Promise<boolean>} True if successful payment exists
+   */
+  private async hasSuccessfulPayment(bookingId: string): Promise<boolean> {
+    try {
+      const successfulPayment = await this.paymentModel.findOne({
+        booking: new Types.ObjectId(bookingId),
+        status: 'COMPLETED',
+      });
+
+      return !!successfulPayment;
+    } catch (error) {
+      this.logger.error(
+        `Error checking payments for booking ${bookingId}: ${error.message}`,
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Credit tutor wallet with earnings.
+   * @param {string} tutorId - Tutor ID
+   * @param {number} amount - Amount to credit
+   * @returns {Promise<void>}
+   */
+  private async creditTutorWallet(
+    tutorId: string,
+    amount: number,
+  ): Promise<void> {
+    try {
+      this.logger.debug(
+        `Attempting to credit tutor ${tutorId} wallet with ${amount}`,
+      );
+
+      const wallet = await this.walletModel.findOneAndUpdate(
+        { tutorId: new Types.ObjectId(tutorId) },
+        {
+          $inc: { balance: amount },
+          $setOnInsert: {
+            currency: 'gbp',
+            createdAt: new Date(),
+          },
+          $set: { updatedAt: new Date() },
+          $push: {
+            transactions: {
+              amount,
+              type: 'CREDIT',
+              description: 'Payment from booking',
+              reference: 'stripe_payment',
+              createdAt: new Date(),
+            },
+          },
+        },
+        { upsert: true, new: true, runValidators: true },
+      );
+
+      this.logger.log(
+        `Credited tutor ${tutorId} wallet by ${amount} (new balance: ${wallet.balance})`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to credit tutor ${tutorId} wallet: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Create chat group for booking if it doesn't exist.
+   * @param {string} bookingId - Booking ID
+   * @param {string} tutorId - Tutor ID
+   * @param {string} studentId - Student ID
+   * @param {string[]} parentIds - Array of parent IDs
+   * @param {string} subject - Subject
+   * @param {Date} slotEndTime - Slot end time
+   * @returns {Promise<void>}
+   */
+  private async createChatGroup(
+    bookingId: string,
+    tutorId: string,
+    studentId: string,
+    parentIds: string[],
+    subject: string,
+    slotEndTime: Date,
+  ): Promise<void> {
+    try {
+      this.logger.debug(`Creating chat group for booking ${bookingId}`);
+
+      // Check if chat group already exists
+      const existingChatGroup = await this.chatGroupModel.findOne({
+        booking: new Types.ObjectId(bookingId),
+      });
+
+      if (existingChatGroup) {
+        this.logger.log(`Chat group already exists for booking: ${bookingId}`);
+        return;
+      }
+
+      // Create new chat group
+      const chatGroup = await this.chatGroupModel.create({
+        booking: new Types.ObjectId(bookingId),
+        tutorId: new Types.ObjectId(tutorId),
+        studentId: new Types.ObjectId(studentId),
+        parentIds: parentIds.map((id) => new Types.ObjectId(id)),
+        subject,
+        startsAt: slotEndTime,
+      });
+
+      this.logger.log(
+        `Chat group created: ${chatGroup._id} for booking ${bookingId}`,
+      );
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to create chat group for booking ${bookingId}: ${error.message}`,
+        error.stack,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Send payment confirmation email.
+   * @param {string} parentEmail - Parent email address
+   * @param {number} amount - Payment amount
+   * @param {string} currency - Currency code
+   * @param {string} shortBookingId - Short booking ID for reference
+   * @returns {Promise<void>}
+   */
+  private async sendPaymentConfirmationEmail(
+    parentEmail: string,
+    amount: number,
+    currency: string,
+    shortBookingId: string,
+  ): Promise<void> {
+    try {
+      this.logger.debug(`Sending payment confirmation email to ${parentEmail}`);
+
+      await this.mailService.sendPaymentConfirmationEmail(
+        parentEmail,
+        amount,
+        currency,
+        shortBookingId,
+      );
+
+      this.logger.log(`Payment confirmation email sent to ${parentEmail}`);
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to send payment confirmation email to ${parentEmail}: ${error.message}`,
+        error.stack,
+      );
+      // Don't throw error here - email failure shouldn't fail the whole payment process
+    }
+  }
+
+  /**
    * Handle successful payment event.
    * @param {any} eventData - Stripe event data object
    * @param {string} transactionId - Stripe transaction ID
@@ -92,34 +320,109 @@ export class PaymentsController {
     transactionId: string,
   ): Promise<void> {
     const metadata = eventData.metadata || {};
-    const {
-      bookingId,
-      studentId,
-      tutorId,
-      parentIds,
-      slotEndTime,
-      subject,
-      parentEmail,
-      shortBookingId,
-    } = metadata;
-
-    const amount = eventData.amount_received || eventData.amount_total || 0;
-    const currency = eventData.currency || 'eur';
-    const amt = Number(amount) || 0;
+    const bookingId = metadata.bookingId;
 
     if (!bookingId) {
       this.logger.warn('No bookingId found in successful payment metadata');
+      this.logger.debug('Metadata received:', metadata);
       return;
     }
 
     this.logger.log(`Processing successful payment for booking ${bookingId}`);
+    this.logger.debug(
+      'Event data received:',
+      JSON.stringify(eventData, null, 2),
+    );
 
     try {
+      // First, check if payment already exists with this transaction ID
+      const existingPayment = await this.paymentModel.findOne({
+        transactionId,
+        status: 'COMPLETED',
+      });
+
+      if (existingPayment) {
+        this.logger.warn(
+          `Payment with transaction ID ${transactionId} already processed`,
+        );
+        return;
+      }
+
+      // Get booking with populated data
+      const booking = await this.getBookingWithDetails(bookingId);
+      if (!booking) {
+        this.logger.error(`Booking ${bookingId} not found in database`);
+        throw new InternalServerErrorException(
+          `Booking ${bookingId} not found`,
+        );
+      }
+
+      // Check if booking is already scheduled
+      if (booking.status === 'SCHEDULED') {
+        this.logger.warn(`Booking ${bookingId} is already in SCHEDULED status`);
+
+        // Still create payment record if it doesn't exist
+        const paymentExists = await this.hasSuccessfulPayment(bookingId);
+        if (!paymentExists) {
+          const amount =
+            eventData.amount_received ||
+            eventData.amount ||
+            eventData.amount_total ||
+            0;
+          const currency = eventData.currency || 'eur';
+          const amt = Number(amount) || 0;
+          const commission = Math.round(amt * 0.2);
+          const tutorEarning = Math.max(0, amt - commission);
+
+          await this.paymentModel.create({
+            booking: new Types.ObjectId(bookingId),
+            amount: amt,
+            currency,
+            method: 'stripe',
+            status: 'COMPLETED',
+            transactionId,
+            commission,
+            tutorEarning,
+          });
+
+          this.logger.log(
+            `Payment record added for already scheduled booking ${bookingId}`,
+          );
+        }
+        return;
+      }
+
+      // Extract payment details
+      const amount =
+        eventData.amount_received ||
+        eventData.amount ||
+        eventData.amount_total ||
+        0;
+      const currency = eventData.currency || 'eur';
+      const amt = Number(amount) || 0;
+
+      this.logger.debug(`Payment details: amount=${amt}, currency=${currency}`);
+
       // Calculate commission and tutor earnings (20% commission)
       const commission = Math.round(amt * 0.2);
       const tutorEarning = Math.max(0, amt - commission);
 
-      // Create payment record
+      this.logger.debug(
+        `Calculated commission: ${commission}, tutor earning: ${tutorEarning}`,
+      );
+
+      // Get data from populated booking
+      const timeSlot = booking.timeSlot as any;
+      const tutorId = timeSlot?.tutor?._id?.toString();
+      const studentId = timeSlot?.student?._id?.toString();
+      const parentIds =
+        timeSlot?.parentIds?.map((parent: any) => parent._id.toString()) || [];
+      const parentEmail = timeSlot?.student?.email || metadata.parentEmail; // Get email from student or metadata
+      const subject = booking.subject;
+      const slotEndTime = timeSlot?.endTime || new Date();
+      const shortBookingId = booking.bookingId || `BK-${bookingId.slice(-6)}`;
+
+      // Create payment record with all required fields
       const payment = await this.paymentModel.create({
         booking: new Types.ObjectId(bookingId),
         student: studentId ? new Types.ObjectId(studentId) : undefined,
@@ -137,21 +440,32 @@ export class PaymentsController {
         `Payment record created: ${payment._id}, amount: ${amt}, commission: ${commission}, tutor earning: ${tutorEarning}`,
       );
 
-      // Credit tutor wallet
-      if (tutorId) {
-        await this.creditTutorWallet(tutorId, tutorEarning);
+      // Check if there's already a successful payment for this booking
+      const hasExistingPayment = await this.hasSuccessfulPayment(bookingId);
+
+      // Update booking status to SCHEDULED only if not already scheduled
+      if (booking.status !== 'SCHEDULED' && !hasExistingPayment) {
+        const updatedBooking = await this.bookingModel.findByIdAndUpdate(
+          bookingId,
+          { status: 'SCHEDULED' },
+          { new: true },
+        );
+
+        this.logger.log(`Booking ${bookingId} status updated to SCHEDULED`);
+      } else {
+        this.logger.log(
+          `Booking ${bookingId} already has a successful payment or is already scheduled`,
+        );
       }
 
-      // Update booking status
-      const booking = await this.bookingModel.findByIdAndUpdate(
-        new Types.ObjectId(bookingId),
-        { status: 'SCHEDULED' },
-        { new: true },
-      );
+      // Credit tutor wallet if tutor exists
+      if (tutorId) {
+        await this.creditTutorWallet(tutorId, tutorEarning);
+      } else {
+        this.logger.warn(`No tutor found for booking ${bookingId}`);
+      }
 
-      this.logger.log(`Booking ${bookingId} status updated to SCHEDULED`);
-
-      // Create chat group if needed
+      // Create chat group if all required data exists
       if (tutorId && studentId && subject) {
         await this.createChatGroup(
           bookingId,
@@ -161,9 +475,13 @@ export class PaymentsController {
           subject,
           slotEndTime,
         );
+      } else {
+        this.logger.debug(
+          'Skipping chat group creation - missing required fields',
+        );
       }
 
-      // Send payment confirmation email
+      // Send payment confirmation email if parent email exists
       if (parentEmail) {
         await this.sendPaymentConfirmationEmail(
           parentEmail,
@@ -171,6 +489,8 @@ export class PaymentsController {
           currency,
           shortBookingId,
         );
+      } else {
+        this.logger.debug('No parent email found for sending confirmation');
       }
 
       this.logger.log(
@@ -196,19 +516,59 @@ export class PaymentsController {
     transactionId: string,
   ): Promise<void> {
     const metadata = eventData.metadata || {};
-    const { bookingId, studentId, tutorId } = metadata;
-    const amount = eventData.amount || 0;
-    const currency = eventData.currency || 'eur';
-    const amt = Number(amount) || 0;
+    const bookingId = metadata.bookingId;
 
     if (!bookingId) {
       this.logger.warn('No bookingId found in failed payment metadata');
+      this.logger.debug('Metadata received:', metadata);
       return;
     }
 
     this.logger.log(`Processing failed payment for booking ${bookingId}`);
 
     try {
+      // Get booking with populated data
+      const booking = await this.getBookingWithDetails(bookingId);
+      if (!booking) {
+        this.logger.error(`Booking ${bookingId} not found for failed payment`);
+        return;
+      }
+
+      // Don't update status if booking is already scheduled (has successful payment)
+      const hasSuccessfulPayment = await this.hasSuccessfulPayment(bookingId);
+      if (hasSuccessfulPayment || booking.status === 'SCHEDULED') {
+        this.logger.warn(
+          `Booking ${bookingId} already has successful payment, not updating to CANCELLED`,
+        );
+
+        // Still create failed payment record for tracking
+        const amount = eventData.amount || 0;
+        const currency = eventData.currency || 'eur';
+        const amt = Number(amount) || 0;
+
+        await this.paymentModel.create({
+          booking: new Types.ObjectId(bookingId),
+          amount: amt,
+          currency,
+          method: 'stripe',
+          status: 'FAILED',
+          transactionId,
+          commission: 0,
+          tutorEarning: 0,
+        });
+
+        return;
+      }
+
+      const amount = eventData.amount || 0;
+      const currency = eventData.currency || 'eur';
+      const amt = Number(amount) || 0;
+
+      // Get data from populated booking for payment record
+      const timeSlot = booking.timeSlot as any;
+      const tutorId = timeSlot?.tutor?._id?.toString();
+      const studentId = timeSlot?.student?._id?.toString();
+
       // Create failed payment record
       const payment = await this.paymentModel.create({
         booking: new Types.ObjectId(bookingId),
@@ -225,140 +585,23 @@ export class PaymentsController {
 
       this.logger.log(`Failed payment record created: ${payment._id}`);
 
-      // Update booking status to CANCELLED
-      await this.bookingModel.findByIdAndUpdate(
-        new Types.ObjectId(bookingId),
-        { status: 'CANCELLED' },
-        { new: true },
-      );
+      // Only update booking status to CANCELLED if it's not already scheduled
+      if (booking.status !== 'SCHEDULED') {
+        await this.bookingModel.findByIdAndUpdate(
+          bookingId,
+          { status: 'CANCELLED' },
+          { new: true },
+        );
 
-      this.logger.log(`Booking ${bookingId} status updated to CANCELLED`);
+        this.logger.log(`Booking ${bookingId} status updated to CANCELLED`);
+      } else {
+        this.logger.log(
+          `Booking ${bookingId} is already SCHEDULED, not changing to CANCELLED`,
+        );
+      }
     } catch (error: any) {
       this.logger.error(
         `Failed to process failed payment for booking ${bookingId}: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Credit tutor wallet with earnings.
-   * @param {string} tutorId - Tutor ID
-   * @param {number} amount - Amount to credit
-   * @returns {Promise<void>}
-   */
-  private async creditTutorWallet(
-    tutorId: string,
-    amount: number,
-  ): Promise<void> {
-    try {
-      const wallet = await this.walletModel.findOneAndUpdate(
-        { tutorId: new Types.ObjectId(tutorId) },
-        {
-          $inc: { balance: amount },
-          $set: { updatedAt: new Date() },
-        },
-        { upsert: true, new: true },
-      );
-
-      this.logger.log(
-        `Credited tutor ${tutorId} wallet by ${amount} (new balance: ${wallet.balance})`,
-      );
-    } catch (error: any) {
-      this.logger.error(
-        `Failed to credit tutor ${tutorId} wallet: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Create chat group for booking if it doesn't exist.
-   * @param {string} bookingId - Booking ID
-   * @param {string} tutorId - Tutor ID
-   * @param {string} studentId - Student ID
-   * @param {string} parentIds - Comma-separated parent IDs
-   * @param {string} subject - Subject
-   * @param {string} slotEndTime - Slot end time
-   * @returns {Promise<void>}
-   */
-  private async createChatGroup(
-    bookingId: string,
-    tutorId: string,
-    studentId: string,
-    parentIds: string,
-    subject: string,
-    slotEndTime: string,
-  ): Promise<void> {
-    try {
-      const parentIdsArray = parentIds
-        ? parentIds
-            .split(',')
-            .map((id: string) => new mongoose.Types.ObjectId(id))
-        : [];
-
-      // Check if chat group already exists
-      const existingChatGroup = await this.chatGroupModel.findOne({
-        tutorId: new mongoose.Types.ObjectId(tutorId),
-        studentId: new mongoose.Types.ObjectId(studentId),
-        parentIds: { $in: parentIdsArray },
-        subject,
-      });
-
-      if (existingChatGroup) {
-        this.logger.log(
-          `Chat group already exists for subject: ${subject}, tutor: ${tutorId}, student: ${studentId}`,
-        );
-        return;
-      }
-
-      // Create new chat group
-      const chatGroup = await this.chatGroupModel.create({
-        booking: new mongoose.Types.ObjectId(bookingId),
-        tutorId: new mongoose.Types.ObjectId(tutorId),
-        studentId: new mongoose.Types.ObjectId(studentId),
-        parentIds: parentIdsArray,
-        subject,
-        startsAt: new Date(slotEndTime),
-      });
-
-      this.logger.log(`Chat group created: ${chatGroup._id}`);
-    } catch (error: any) {
-      this.logger.error(
-        `Failed to create chat group for booking ${bookingId}: ${error.message}`,
-        error.stack,
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Send payment confirmation email.
-   * @param {string} parentEmail - Parent email address
-   * @param {number} amount - Payment amount
-   * @param {string} currency - Currency code
-   * @param {string} shortBookingId - Short booking ID for reference
-   * @returns {Promise<void>}
-   */
-  private async sendPaymentConfirmationEmail(
-    parentEmail: string,
-    amount: number,
-    currency: string,
-    shortBookingId: string,
-  ): Promise<void> {
-    try {
-      await this.mailService.sendPaymentConfirmationEmail(
-        parentEmail,
-        amount,
-        currency,
-        shortBookingId,
-      );
-      this.logger.log(`Payment confirmation email sent to ${parentEmail}`);
-    } catch (error: any) {
-      this.logger.error(
-        `Failed to send payment confirmation email to ${parentEmail}: ${error.message}`,
         error.stack,
       );
       throw error;
@@ -403,30 +646,24 @@ export class PaymentsController {
     try {
       switch (event.type) {
         case 'payment_intent.succeeded': {
-          this.logger.log(`PaymentIntent succeeded: ${event.data.object.id}`);
-          await this.handleSuccessfulPayment(
-            event.data.object,
-            event.data.object.id,
-          );
+          const paymentIntent = event.data.object;
+          this.logger.log(`PaymentIntent succeeded: ${paymentIntent.id}`);
+          await this.handleSuccessfulPayment(paymentIntent, paymentIntent.id);
           break;
         }
 
         case 'payment_intent.payment_failed': {
-          this.logger.log(`PaymentIntent failed: ${event.data.object.id}`);
-          await this.handleFailedPayment(
-            event.data.object,
-            event.data.object.id,
-          );
+          const paymentIntent = event.data.object;
+          this.logger.log(`PaymentIntent failed: ${paymentIntent.id}`);
+          await this.handleFailedPayment(paymentIntent, paymentIntent.id);
           break;
         }
 
         case 'checkout.session.completed': {
-          this.logger.log(
-            `Checkout session completed: ${event.data.object.id}`,
-          );
-          const transactionId =
-            event.data.object.payment_intent || event.data.object.id;
-          await this.handleSuccessfulPayment(event.data.object, transactionId);
+          const session = event.data.object;
+          this.logger.log(`Checkout session completed: ${session.id}`);
+          const transactionId = session.payment_intent || session.id;
+          await this.handleSuccessfulPayment(session, transactionId);
           break;
         }
 

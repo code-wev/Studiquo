@@ -357,6 +357,7 @@ export class BookingsService {
             },
           },
 
+          // TODO: booking er against e ze student ache tar payment ache kina seta dekhe meet link show korte hbe
           slot: {
             id: '$timeSlot._id',
             subject: '$timeSlot.subject',
