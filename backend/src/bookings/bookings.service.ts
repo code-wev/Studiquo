@@ -555,6 +555,7 @@ export class BookingsService {
         tutorId: String(tutorUser._id),
         tutorName: `${tutorUser.firstName} ${tutorUser.lastName}`,
         subject: booking.subject,
+        slotStartTime: new Date(slot.startTime).toISOString(),
         slotEndTime: new Date(slot.endTime).toISOString(),
         parentEmail: parent.email,
         shortBookingId: booking.bookingId || '',

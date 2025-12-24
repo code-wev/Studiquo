@@ -127,6 +127,7 @@ export class PaymentsController {
         const tutorId = event.data.object.metadata?.tutorId;
         const parentIds = event.data.object.metadata?.parentIds;
         const slotEndTime = event.data.object.metadata?.slotEndTime;
+        const slotStartTime = event.data.object.metadata?.slotStartTime;
         const subject = event.data.object.metadata?.subject;
         const parentEmail = event.data.object.metadata?.parentEmail;
         const shortBookingId = event.data.object.metadata?.shortBookingId;
@@ -211,7 +212,7 @@ export class PaymentsController {
                 .map((id: string) => new mongoose.Types.ObjectId(id))
             : [],
           subject: event.data.object.metadata?.subject,
-          startsAt: new Date(slotEndTime),
+          startsAt: new Date(slotStartTime),
         });
 
         await this.logger.log(`Booking ${bookingId} updated to SCHEDULED`);
