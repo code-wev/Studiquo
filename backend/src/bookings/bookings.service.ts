@@ -424,6 +424,12 @@ export class BookingsService {
       );
     }
 
+    const child = await this.userModel.findById(new Types.ObjectId(studentId));
+
+    if (!child) {
+      throw new BadRequestException('Child (student) not connected to parent');
+    }
+
     // 3. Ensure booking belongs to this child
     const isChildBooking = await this.bookingStudentsModel.findOne({
       booking: new Types.ObjectId(bookingId),
@@ -514,6 +520,9 @@ export class BookingsService {
         slotEndTime: new Date(slot.endTime).toISOString(),
         parentEmail: parent.email,
         shortBookingId: booking.bookingId || '',
+        parentIds: child.parents
+          ? child.parents.map((pid) => String(pid)).join(',')
+          : '',
       },
     });
 
