@@ -13,8 +13,6 @@ import { Model, Types } from 'mongoose';
 import { MailService } from 'src/mail/mail.service';
 import { ChatGroup } from 'src/models/ChatGroup.model';
 import { Payment } from 'src/models/Payment.model';
-import { TimeSlot } from 'src/models/TimeSlot.model'; // You'll need to import this
-import { User } from 'src/models/User.model'; // You'll need to import this
 import { Wallet } from 'src/models/Wallet.model';
 import { Booking } from '../models/Booking.model';
 import { PaymentsService } from './payments.service';
@@ -30,8 +28,6 @@ export class PaymentsController {
     @InjectModel(Payment.name) private paymentModel: Model<Payment>,
     @InjectModel(Wallet.name) private walletModel: Model<Wallet>,
     @InjectModel(ChatGroup.name) private chatGroupModel: Model<ChatGroup>,
-    @InjectModel(TimeSlot.name) private timeSlotModel: Model<TimeSlot>, // Add this
-    @InjectModel(User.name) private userModel: Model<User>, // Add this
   ) {}
 
   /**
