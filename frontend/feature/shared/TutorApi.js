@@ -103,6 +103,21 @@ export const TutorApi = createApi({
         };
       },
     }),
+    suspendUser: builder.mutation({
+      query: (id) => ({
+        url:`/admin/tutors/${id}/reject`,
+        method:'PUT'
+      }),
+      invalidatesTags:['Tutor']
+    }),
+    activeUser: builder.mutation({
+      query: (id) => ({
+        url:`/admin/tutors/${id}/verify`,
+        method:'PUT'
+      }),
+      invalidatesTags:['Tutor']
+    }),
+    
   }),
 });
 
@@ -114,4 +129,6 @@ export const {
   useGetWalletDetailsQuery,
   useGetPaymentHistoryQuery,
   usePayoutRequestMutation,
+ useSuspendUserMutation,
+ useActiveUserMutation
 } = TutorApi;
