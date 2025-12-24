@@ -1,4 +1,6 @@
 import { Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
+import { PaginationDto } from 'common/dto/pagination.dto';
+import { SearchDto } from 'common/dto/search.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -31,6 +33,19 @@ export class AdminController {
   @Get('payouts')
   async getPayouts() {
     return this.adminService.getPayouts();
+  }
+
+  /**
+   * Get all registered tutors.
+   *
+   * @returns list of tutors with their profiles
+   */
+  @Get('students')
+  async getStudents(
+    @Query() { search }: SearchDto,
+    @Query() query: PaginationDto,
+  ) {
+    return this.adminService.getStudents(search, query);
   }
 
   @Put('payouts/:payoutId/approve')

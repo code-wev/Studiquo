@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { PaginationDto } from 'common/dto/pagination.dto';
+import { SearchDto } from 'common/dto/search.dto';
 import { Model, Types } from 'mongoose';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { Booking } from '../models/Booking.model';
@@ -140,6 +142,61 @@ export class AdminService {
 
   async getPayouts() {
     return this.payoutModel.find();
+  }
+
+  /**
+   * Get all registered tutors.
+   *
+   * @returns list of tutors with their profiles
+   */
+  async getStudents(search: SearchDto['search'], query: PaginationDto) {
+    const regex = new RegExp(search ?? '', 'i');
+
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const results = await this.userModel.aggregate([
+      // 1. Match students only
+      {
+        $match: {
+          role: UserRole.Student,
+        },
+      },
+
+      // 2. Pagination
+      { $skip: skip },
+      { $limit: limit },
+
+      // 3. Search by studentId / name / email
+      {
+        $match: {
+          $or: [
+            { studentId: { $regex: regex } },
+            { firstName: { $regex: regex } },
+            { lastName: { $regex: regex } },
+            { email: { $regex: regex } },
+          ],
+        },
+      },
+
+      // 4. Shape response
+      {
+        $project: {
+          _id: 1,
+          firstName: 1,
+          lastName: 1,
+          studentId: 1,
+          email: 1,
+          avatar: 1,
+        },
+      },
+    ]);
+
+    return {
+      message: 'Search completed',
+      results,
+    };
   }
 
   async updatePayoutStatus(payoutId: MongoIdDto['id'], status: string) {
