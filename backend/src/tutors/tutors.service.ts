@@ -455,9 +455,17 @@ export class TutorsService {
       .limit(limit)
       .lean();
 
+    const payouts = await this.payoutModel
+      .find({ tutorId: new Types.ObjectId(userId) })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
     return {
       message: 'Payment history fetched successfully',
       payments,
+      payouts,
       meta: {
         page,
         limit,
