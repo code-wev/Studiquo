@@ -12,10 +12,6 @@ export class TutorProfile extends Document {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   user: Types.ObjectId;
 
-  // Approved by admin or not
-  @Prop({ default: false })
-  isApproved: boolean;
-
   @Prop({
     type: [String],
     enum: TutorSubject,

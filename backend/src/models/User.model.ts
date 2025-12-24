@@ -80,6 +80,10 @@ export class User extends Document {
   @Prop({ default: '' })
   dbsLink: string;
 
+  // Approved by admin or not for tutor
+  @Prop({})
+  isApproved: boolean;
+
   /**
    * Referral source (string, optional)
    * e.g. "Facebook", "Google", "Friend"
@@ -98,9 +102,18 @@ export const UserSchema = SchemaFactory.createForClass(User);
 UserSchema.index({ role: 1, pendingParents: 1 });
 
 /**
- * Generate unique Student ID after user creation
+ * Generate unique Student ID and set the tutor approval status after user creation
  */
 UserSchema.post('save', async function (doc: User) {
+  if (doc.role === UserRole.Tutor) {
+    const UserModel = this.constructor as Model<User>;
+    await UserModel.updateOne(
+      { _id: doc._id },
+      { $set: { isApproved: false } },
+    );
+    return;
+  }
+
   if (doc.role !== UserRole.Student) return;
   if (doc.studentId) return;
 

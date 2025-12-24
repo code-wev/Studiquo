@@ -100,6 +100,13 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         }
       }
 
+      if (user.role === UserRole.Tutor && !user.isApproved) {
+        return done(
+          new UnauthorizedException('Tutor profile not approved yet'),
+          false,
+        );
+      }
+
       const payload = {
         sub: user._id,
         email: user.email,

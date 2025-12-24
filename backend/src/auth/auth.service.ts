@@ -4,7 +4,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { Model, Types } from 'mongoose';
 import { MailService } from '../mail/mail.service';
-import { User } from '../models/User.model';
+import { User, UserRole } from '../models/User.model';
 import {
   ChangePasswordDto,
   ForgotPasswordDto,
@@ -40,7 +40,12 @@ export class AuthService {
       throw new UnauthorizedException('Email already in use');
     }
     const hashedPassword = await bcrypt.hash(data.password, 10);
-    const user = new this.userModel({ ...data, password: hashedPassword });
+
+    const user = new this.userModel({
+      ...data,
+      password: hashedPassword,
+    });
+
     await user.save();
     await this.mailService.sendWelcomeEmail(
       user.email,
@@ -67,6 +72,9 @@ export class AuthService {
     const user = await this.userModel.findOne({ email: data.email });
     if (!user || !(await bcrypt.compare(data.password, user.password))) {
       throw new UnauthorizedException('Invalid credentials');
+    }
+    if (user.role === UserRole.Tutor && !user.isApproved) {
+      throw new UnauthorizedException('Tutor profile not approved yet');
     }
     const token = this.jwtService.sign({
       sub: user._id,
