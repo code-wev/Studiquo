@@ -63,59 +63,64 @@ export class TutorsService {
     } = query;
 
     const skip = (page - 1) * limit;
+    const isAdmin = user?.role === UserRole.Admin;
 
     /** --------------------
-     * Tutor base filter
+     * Tutor profile filter
      * -------------------*/
     const tutorMatch: any = {};
-
-    // Only show approved tutors to non-admin users
-    if (!user || user.role !== UserRole.Admin) {
-      tutorMatch.isApproved = true;
-    }
 
     if (subject) {
       tutorMatch.subjects = subject;
     }
 
+    const rateConditions: any[] = [];
+
     if (maxHourlyRate !== undefined) {
-      tutorMatch.$or = [
-        { groupHourlyRate: { $lte: maxHourlyRate } },
-        { oneOnOneHourlyRate: { $lte: maxHourlyRate } },
-      ];
+      rateConditions.push({
+        $or: [
+          { groupHourlyRate: { $lte: maxHourlyRate } },
+          { oneOnOneHourlyRate: { $lte: maxHourlyRate } },
+        ],
+      });
     }
 
     if (minHourlyRate !== undefined) {
-      tutorMatch.$or = [
-        { groupHourlyRate: { $gte: minHourlyRate } },
-        { oneOnOneHourlyRate: { $gte: minHourlyRate } },
-      ];
+      rateConditions.push({
+        $or: [
+          { groupHourlyRate: { $gte: minHourlyRate } },
+          { oneOnOneHourlyRate: { $gte: minHourlyRate } },
+        ],
+      });
+    }
+
+    if (rateConditions.length) {
+      tutorMatch.$and = rateConditions;
     }
 
     /** --------------------
      * User search filter
      * -------------------*/
-    let userMatchStage: any = {};
-
-    if (search) {
-      const regex = new RegExp(search, 'i');
-      userMatchStage = {
-        $or: [
-          { 'user.firstName': regex },
-          { 'user.lastName': regex },
-          { 'user.bio': regex },
-        ],
-      };
-    }
+    const userSearchMatch = search
+      ? [
+          {
+            $match: {
+              $or: [
+                { 'user.firstName': new RegExp(search, 'i') },
+                { 'user.lastName': new RegExp(search, 'i') },
+                { 'user.bio': new RegExp(search, 'i') },
+              ],
+            },
+          },
+        ]
+      : [];
 
     /** --------------------
      * Aggregation Pipeline
      * -------------------*/
     const pipeline: any[] = [
-      // Apply tutor match filter - this includes isApproved conditionally
       { $match: tutorMatch },
 
-      // Join user
       {
         $lookup: {
           from: 'users',
@@ -126,10 +131,11 @@ export class TutorsService {
       },
       { $unwind: '$user' },
 
-      // Apply search on user fields
-      ...(search ? [{ $match: userMatchStage }] : []),
+      // Approval filter happens HERE
+      ...(!isAdmin ? [{ $match: { 'user.isApproved': true } }] : []),
 
-      // Join reviews
+      ...userSearchMatch,
+
       {
         $lookup: {
           from: 'reviews',
@@ -139,7 +145,6 @@ export class TutorsService {
         },
       },
 
-      // Calculate average rating
       {
         $addFields: {
           averageRating: {
@@ -153,22 +158,20 @@ export class TutorsService {
         },
       },
 
-      // Filter by minRating (after calculation)
       ...(minRating !== undefined
         ? [{ $match: { averageRating: { $gte: minRating } } }]
         : []),
 
-      // Clean output - show all fields to admin, restricted fields to others
       {
         $project: {
-          ...(user?.role === UserRole.Admin
-            ? {} // Admin sees everything
+          ...(isAdmin
+            ? {}
             : {
                 reviews: 0,
-                'user.dbsLink': 0,
-                'user.referralSource': 0,
                 'user.password': 0,
                 'user.email': 0,
+                'user.dbsLink': 0,
+                'user.referralSource': 0,
               }),
         },
       },
