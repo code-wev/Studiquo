@@ -149,22 +149,35 @@ export class AdminService {
     const limit = query.limit || 10;
     const skip = (page - 1) * limit;
 
+    const orConditions: any[] = [
+      { transactionId: { $regex: regex } },
+      { currency: { $regex: regex } },
+      { status: { $regex: regex } },
+    ];
+
+    const searchNum = Number(query.search);
+    if (!Number.isNaN(searchNum)) {
+      orConditions.push({ amount: searchNum });
+    }
+
     const payments = await this.paymentModel
-      .find({
-        $or: [
-          { transactionId: { $regex: regex } },
-          { currency: { $regex: regex } },
-          { status: { $regex: regex } },
-        ],
-      })
+      .find({ $or: orConditions })
       .select('-metadata -__v')
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
 
+    const total = await this.paymentModel.countDocuments({ $or: orConditions });
+
     return {
       message: 'Payments retrieved successfully',
       payments,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -174,67 +187,86 @@ export class AdminService {
    * @returns list of payouts
    */
   async getPayouts(query: searchPaginationQueryDto) {
-    const regex = new RegExp(query.search ?? '', 'i');
-
-    const page = query.page || 1;
-    const limit = query.limit || 10;
+    const page = Number(query.page) || 1;
+    const limit = Number(query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Create the base query with search
-    let baseQuery: any = {};
+    const search = query.search?.trim();
+    const regex = search ? new RegExp(search, 'i') : null;
 
-    if (query.search) {
-      baseQuery = {
-        $or: [
-          { transactionId: { $regex: regex } },
-          { currency: { $regex: regex } },
-          { status: { $regex: regex } },
-        ],
-      };
+    /** --------------------
+     * Payout search filters
+     * -------------------*/
+    const payoutMatch: any = {};
+
+    if (search) {
+      const orConditions: any[] = [
+        { transactionId: { $regex: regex } },
+        { status: { $regex: regex } },
+      ];
+
+      // Numeric amount search
+      if (!isNaN(Number(search))) {
+        orConditions.push({ amount: Number(search) });
+      }
+
+      payoutMatch.$or = orConditions;
     }
 
-    // Get total count for pagination
-    const total = await this.payoutModel.countDocuments(baseQuery);
+    /** --------------------
+     * Tutor search filters
+     * -------------------*/
+    const tutorMatch = search
+      ? {
+          $or: [
+            { 'tutor.firstName': { $regex: regex } },
+            { 'tutor.lastName': { $regex: regex } },
+            { 'tutor.email': { $regex: regex } },
+          ],
+        }
+      : {};
 
-    // Execute query with pagination and sorting
-    const results = await this.payoutModel
-      .find(baseQuery)
-      .populate({
-        path: 'tutorId',
-        select: 'firstName lastName email avatar',
-        // Apply search on tutor fields if search exists
-        ...(query.search
-          ? {
-              match: {
-                $or: [
-                  { firstName: { $regex: regex } },
-                  { lastName: { $regex: regex } },
-                  { email: { $regex: regex } },
-                ],
-              },
-            }
-          : {}),
-      })
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
+    /** --------------------
+     * Aggregation Pipeline
+     * -------------------*/
+    const pipeline: any[] = [
+      ...(Object.keys(payoutMatch).length ? [{ $match: payoutMatch }] : []),
 
-    // Filter out results where tutor doesn't match search criteria
-    // (when searching by tutor name/email, populate match may return null for tutorId)
-    const filteredResults = query.search
-      ? results.filter((payout) => payout.tutorId !== null)
-      : results;
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'tutorId',
+          foreignField: '_id',
+          as: 'tutor',
+        },
+      },
+      { $unwind: '$tutor' },
+
+      ...(search ? [{ $match: tutorMatch }] : []),
+
+      { $sort: { createdAt: -1 } },
+
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: limit }],
+          total: [{ $count: 'count' }],
+        },
+      },
+    ];
+
+    const result = await this.payoutModel.aggregate(pipeline);
+
+    const data = result[0]?.data || [];
+    const total = result[0]?.total[0]?.count || 0;
 
     return {
       message: 'Payouts retrieved successfully',
-      results: filteredResults,
+      results: data,
       meta: {
-        total: query.search ? filteredResults.length : total,
+        total,
         page,
         limit,
-        totalPages: Math.ceil(
-          (query.search ? filteredResults.length : total) / limit,
-        ),
+        totalPages: Math.ceil(total / limit),
       },
     };
   }
