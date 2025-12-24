@@ -16,37 +16,11 @@ export default function Bookings() {
   // Process API data when loaded
   useEffect(() => {
     if (apiData?.data) {
-      const data = apiData.data;
+      setBookingData(apiData.data);
 
-      // Filter bookings to show only current month data
-      const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
-      const currentMonth = currentDate.getMonth();
-
-      // Create date strings for current month
-      const currentMonthStart = new Date(currentYear, currentMonth, 1);
-      const currentMonthEnd = new Date(currentYear, currentMonth + 1, 0);
-
-      // Filter bookings for current month only
-      const filteredBookings = data.bookings.filter((booking) => {
-        if (!booking.date) return false;
-        const bookingDate = new Date(booking.date);
-        return (
-          bookingDate >= currentMonthStart && bookingDate <= currentMonthEnd
-        );
-      });
-
-      // Create new data object with filtered bookings
-      const filteredData = {
-        ...data,
-        bookings: filteredBookings,
-      };
-
-      setBookingData(filteredData);
-
-      // Set selected date to first available booking date in current month
-      if (filteredBookings.length > 0) {
-        const firstBooking = filteredBookings[0];
+      // Set selected date to first booking date
+      if (apiData.data.bookings.length > 0) {
+        const firstBooking = apiData.data.bookings[0];
         setSelectedDate(firstBooking);
 
         // Set first time slot as default
@@ -254,10 +228,9 @@ export default function Bookings() {
       <div className='w-full mx-auto bg-[#F7F7F7] shadow-sm grid grid-cols-1 lg:grid-cols-4 gap-8 p-8'>
         {/* ---------------- LEFT SECTION ---------------- */}
         <div className='lg:col-span-2'>
-          {/* Toggle Buttons */}
+          {/* Calendar Header */}
           <div className='flex items-center justify-between mb-6'>
             <p className='text-xl font-semibold text-gray-900'>Calendar</p>
-            {/* Removed month navigation buttons */}
           </div>
 
           {/* Calendar Box */}
@@ -576,7 +549,7 @@ export default function Bookings() {
       {/* Students List Modal */}
       {showStudentsModal && (
         <div className='fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4'>
-          <div className='bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] overflow-hidden'>
+          <div className='bg-white rounded-lg shadow-xl w-full max-h-[80vh] overflow-hidden'>
             <div className='px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center'>
               <h3 className='text-lg font-semibold text-gray-900'>
                 Students List
