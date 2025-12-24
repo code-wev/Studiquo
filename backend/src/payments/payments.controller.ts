@@ -139,13 +139,6 @@ export class PaymentsController {
         const commission = Math.round(amt * 0.2); // 20% commission
         const tutorEarning = Math.max(0, amt - commission);
 
-        if (existingPayment) {
-          this.logger.log(
-            `Payment already recorded for booking ${bookingId}, skipping.`,
-          );
-          return { received: true };
-        }
-
         // Create payment record including commission and tutor earning
         await this.paymentModel.create({
           booking: new mongoose.Types.ObjectId(bookingId),
