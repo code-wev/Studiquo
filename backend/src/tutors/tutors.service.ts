@@ -479,7 +479,7 @@ export class TutorsService {
       throw new NotFoundException('Tutor profile not found or not approved');
     }
 
-    const { amount, method } = dto;
+    const { amount } = dto;
 
     if (!amount || amount <= 0) {
       throw new BadRequestException('Invalid payout amount');
@@ -508,7 +508,6 @@ export class TutorsService {
           {
             tutorId: userId,
             amount,
-            method: method || 'bank',
             status: 'PENDING',
             transactionId: '',
           },

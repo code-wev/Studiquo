@@ -9,10 +9,11 @@ export class Payout extends Document {
   @Prop({ required: true })
   amount: number;
 
-  @Prop({ required: true })
-  method: string;
-
-  @Prop({ required: true })
+  @Prop({
+    required: true,
+    enum: ['PENDING', 'COMPLETED', 'FAILED'],
+    default: 'PENDING',
+  })
   status: string;
 
   @Prop({ required: true })

@@ -49,8 +49,4 @@ export class TutorSearchPaginationDto {
 export class PaymentRequestDto {
   @IsNumber({}, { message: 'Amount must be a number' })
   amount: number;
-
-  @IsOptional()
-  @IsString({ message: 'Method must be a string' })
-  method?: string;
 }
