@@ -101,7 +101,7 @@ export class PaymentsController {
             const tutorEarning = Math.max(0, amt - commission);
 
             // Create payment record including commission and tutor earning
-            await this.paymentModel.create({
+            const payment = await this.paymentModel.create({
               booking: new Types.ObjectId(bookingId),
               student: new Types.ObjectId(studentId),
               tutor: new Types.ObjectId(tutorId),
@@ -115,6 +115,10 @@ export class PaymentsController {
             });
 
             console.log(event, 'event data after payment record');
+            console.log(payment, 'payment data after payment');
+            this.logger.log(
+              `Payment record created for booking ${bookingId} with amount ${amt}, commission ${commission}, tutor earning ${tutorEarning}`,
+            );
 
             // Credit tutor wallet (create if missing)
             try {
@@ -128,6 +132,7 @@ export class PaymentsController {
                   },
                   { upsert: true, new: true },
                 );
+                console.log(wallet, 'wallet data after the payment');
                 this.logger.log(
                   `Credited tutor ${tutorObjectId} wallet by ${tutorEarning} (new balance ${wallet.balance})`,
                 );
@@ -136,11 +141,14 @@ export class PaymentsController {
               this.logger.error('Failed to credit tutor wallet', err.message);
             }
 
-            await this.bookingModel.findByIdAndUpdate(
+            const booking = await this.bookingModel.findByIdAndUpdate(
               new Types.ObjectId(bookingId),
               { status: 'SCHEDULED' },
               { new: true },
             );
+
+            console.log(booking, 'booking data after successful payment');
+            this.logger.log(`Booking ${bookingId} updated to SCHEDULED`);
 
             // check the chat group exist or not with the same tutor, student and booking
             const existingChatGroup = await this.chatGroupModel.findOne({
@@ -164,8 +172,13 @@ export class PaymentsController {
               return { received: true };
             }
 
+            console.log(
+              existingChatGroup,
+              'existing chat group data after check',
+            );
+
             // Create chat group for the booking
-            await this.chatGroupModel.create({
+            const chatGroup = await this.chatGroupModel.create({
               booking: new mongoose.Types.ObjectId(bookingId),
               tutorId: new mongoose.Types.ObjectId(tutorId),
               studentId: new mongoose.Types.ObjectId(studentId),
@@ -178,6 +191,10 @@ export class PaymentsController {
               startsAt: new Date(slotEndTime),
             });
 
+            console.log(chatGroup, 'chat group data after creation');
+            this.logger.log(
+              `Chat group created for subject: ${subject}, tutor ${tutorId}, student ${studentId}`,
+            );
             await this.logger.log(`Booking ${bookingId} updated to SCHEDULED`);
 
             await this.mailService.sendPaymentConfirmationEmail(
@@ -205,7 +222,7 @@ export class PaymentsController {
           try {
             const amt = Number(amount) || 0;
             // For failed payments, commission and tutor earnings are zero
-            await this.paymentModel.create({
+            const payment = await this.paymentModel.create({
               booking: new Types.ObjectId(bookingId),
               student: new Types.ObjectId(studentId),
               tutor: new Types.ObjectId(tutorId),
@@ -218,11 +235,14 @@ export class PaymentsController {
               tutorEarning: 0,
             });
 
-            await this.bookingModel.findByIdAndUpdate(
+            const booking = await this.bookingModel.findByIdAndUpdate(
               new Types.ObjectId(bookingId),
               { status: 'CANCELLED' },
               { new: true },
             );
+
+            console.log(payment, 'payment data after failed payment');
+            console.log(booking, 'booking data after failed payment');
 
             this.logger.log(`Booking ${bookingId} updated to CANCELLED`);
           } catch (e: any) {
@@ -239,7 +259,7 @@ export class PaymentsController {
         const bookingId = event.data.object.metadata?.bookingId;
         if (bookingId) {
           try {
-            await this.bookingModel.findByIdAndUpdate(
+            const booking = await this.bookingModel.findByIdAndUpdate(
               new Types.ObjectId(bookingId),
               { status: 'SCHEDULED' },
               { new: true },
@@ -247,6 +267,8 @@ export class PaymentsController {
             this.logger.log(
               `Booking ${bookingId} updated to SCHEDULED via Checkout`,
             );
+
+            console.log(booking, 'booking data after checkout completed');
           } catch (e: any) {
             this.logger.error(
               'Failed to update booking status from checkout',
