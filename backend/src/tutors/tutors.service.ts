@@ -400,6 +400,9 @@ export class TutorsService {
 
   /**
    * Return wallet for authenticated tutor.
+   *
+   * @param user - authenticated tutor user
+   * @returns tutor wallet details
    */
   async getMyWallet(user: any) {
     const userId = user.userId;
@@ -426,6 +429,8 @@ export class TutorsService {
   /**
    * Get payment history for the authenticated tutor
    *
+   * @param user - authenticated tutor user
+   * @param dto - pagination details
    * @return list of payments made to the tutor
    */
   async getPaymentHistory(user: any, dto: PaginationDto) {

@@ -1,6 +1,7 @@
 import { base_url } from "@/utils/utils";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import Cookies from "js-cookie";
+import { get } from "lodash";
 
 export const TutorApi = createApi({
   reducerPath: "TutorApi",
@@ -60,14 +61,37 @@ export const TutorApi = createApi({
       providesTags: ["Tutor"],
     }),
 
-
     getTutorOverview: builder.query({
       query: () => "/tutors/overview",
       providesTags: ["Tutor"],
     }),
 
+    getWalletDetails: builder.query({
+      query: () => "/tutors/wallet",
+      providesTags: ["Tutor"],
+    }),
+
+    getPaymentHistory: builder.query({
+      query: (params) => {
+        const queryParams = new URLSearchParams();
+        // Add pagination
+        queryParams.append("page", get(params, "page", "1"));
+        queryParams.append("limit", get(params, "limit", "10"));
+        return {
+          url: `/tutors/payments/history?${queryParams.toString()}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["Tutor"],
+    }),
   }),
 });
 
-export const { useGetTutorQuery, useTutorProfileQuery, useGetSubjectsQuery, useGetTutorOverviewQuery } =
-  TutorApi;
+export const {
+  useGetTutorQuery,
+  useTutorProfileQuery,
+  useGetSubjectsQuery,
+  useGetTutorOverviewQuery,
+  useGetWalletDetailsQuery,
+  useGetPaymentHistoryQuery,
+} = TutorApi;
