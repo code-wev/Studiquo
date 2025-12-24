@@ -71,7 +71,7 @@ export class PaymentsController {
     let event: any;
 
     try {
-      event = this.paymentsService.constructEvent(rawBody, sig, endpointSecret);
+      event = await this.paymentsService.constructEvent(rawBody, sig, endpointSecret);
       console.log(event);
     } catch (err: any) {
       this.logger.error('Webhook signature verification failed.', err.message);
