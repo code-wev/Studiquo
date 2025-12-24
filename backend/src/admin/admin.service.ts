@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { Booking } from '../models/Booking.model';
 import { Payment } from '../models/Payment.model';
@@ -157,8 +157,8 @@ export class AdminService {
    * @returns success message and updated tutor profile
    */
   async verifyTutor(tutorId: MongoIdDto['id']) {
-    const updatedTutor = await this.tutorProfileModel.findByIdAndUpdate(
-      tutorId,
+    const updatedTutor = await this.userModel.findByIdAndUpdate(
+      new Types.ObjectId(tutorId),
       { isApproved: true },
       { new: true },
     );
@@ -180,8 +180,8 @@ export class AdminService {
    * @returns success message and updated tutor profile
    */
   async rejectTutor(tutorId: MongoIdDto['id']) {
-    const updatedTutor = await this.tutorProfileModel.findByIdAndUpdate(
-      tutorId,
+    const updatedTutor = await this.userModel.findByIdAndUpdate(
+      new Types.ObjectId(tutorId),
       { isApproved: false },
       { new: true },
     );

@@ -36,12 +36,16 @@ export class TutorsController {
    * Supports filtering by subject, hourly rate and user fields like
    * `firstName`, `lastName`, and `bio`.
    *
+   * @param user - authenticated user (optional)
    * @param query - validated search query DTO
    * @returns list of tutor profiles matching the search criteria
    */
   @Get()
-  async searchTutors(@Query() query: TutorSearchPaginationDto) {
-    return this.tutorsService.searchTutors(query);
+  async searchTutors(
+    @GetUser() user: any,
+    @Query() query: TutorSearchPaginationDto,
+  ) {
+    return this.tutorsService.searchTutors(user, query);
   }
 
   /**

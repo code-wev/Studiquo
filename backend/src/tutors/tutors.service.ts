@@ -6,6 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { PaginationDto } from 'common/dto/pagination.dto';
 import { Model, Types } from 'mongoose';
+import { UserRole } from 'src/models/User.model';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { Booking } from '../models/Booking.model';
 import { Payment } from '../models/Payment.model';
@@ -45,11 +46,12 @@ export class TutorsService {
    * Supports filtering by subject, hourly rate and user fields like
    * `firstName`, `lastName`, and `bio`.
    *
+   * @param user - authenticated user (optional)
    * @param query - validated search query DTO
    * @param pagination - pagination options
    * @returns paginated list of tutor profiles
    */
-  async searchTutors(query: TutorSearchPaginationDto) {
+  async searchTutors(user: any, query: TutorSearchPaginationDto) {
     const {
       subject,
       maxHourlyRate,
@@ -66,6 +68,10 @@ export class TutorsService {
      * Tutor base filter
      * -------------------*/
     const tutorMatch: any = {};
+
+    if (user.role !== UserRole.Admin) {
+      tutorMatch.isApproved = true;
+    }
 
     if (subject) {
       tutorMatch.subjects = subject;
