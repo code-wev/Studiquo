@@ -69,6 +69,7 @@ export class TutorsService {
      * -------------------*/
     const tutorMatch: any = {};
 
+    // Only show approved tutors to non-admin users
     if (!user || user.role !== UserRole.Admin) {
       tutorMatch.isApproved = true;
     }
@@ -111,7 +112,7 @@ export class TutorsService {
      * Aggregation Pipeline
      * -------------------*/
     const pipeline: any[] = [
-      { $match: { isApproved: true } },
+      // Apply tutor match filter - this includes isApproved conditionally
       { $match: tutorMatch },
 
       // Join user
@@ -157,14 +158,18 @@ export class TutorsService {
         ? [{ $match: { averageRating: { $gte: minRating } } }]
         : []),
 
-      // Clean output
+      // Clean output - show all fields to admin, restricted fields to others
       {
         $project: {
-          reviews: 0,
-          'user.dbsLink': 0,
-          'user.referralSource': 0,
-          'user.password': 0,
-          'user.email': 0,
+          ...(user?.role === UserRole.Admin
+            ? {} // Admin sees everything
+            : {
+                reviews: 0,
+                'user.dbsLink': 0,
+                'user.referralSource': 0,
+                'user.password': 0,
+                'user.email': 0,
+              }),
         },
       },
     ];
