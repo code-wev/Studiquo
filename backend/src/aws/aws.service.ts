@@ -34,7 +34,7 @@ export class AwsService {
    * - S3_BUCKET or AWS_S3_BUCKET
    */
   constructor() {
-    this.region = process.env.AWS_REGION || 'eu-west-2';
+    this.region = process.env.AWS_REGION || 'eu-north-1';
     this.bucket = process.env.S3_BUCKET || process.env.AWS_S3_BUCKET || '';
 
     this.s3Client = new S3Client({

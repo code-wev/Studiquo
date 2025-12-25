@@ -25,12 +25,6 @@ export class UpdateProfileDto {
   @IsString({ message: 'Bio must be a string' })
   bio?: string;
 
-  /**
-   * Avatar image (validated in controller)
-   */
-  @IsOptional()
-  avatar?: Express.Multer.File;
-
   @IsOptional()
   @IsString({ message: 'DBS must be a string' })
   dbsLink?: string;

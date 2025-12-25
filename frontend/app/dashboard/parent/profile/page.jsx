@@ -1,40 +1,48 @@
 "use client";
 
-import React, { useState } from 'react';
-import { useMyProfileQuery, useUpdateProfileMutation, useChangePasswordMutation } from '@/feature/shared/AuthApi';
-import toast from 'react-hot-toast';
-import Image from 'next/image';
-import { BiUpload, BiX } from 'react-icons/bi';
+import {
+  useChangePasswordMutation,
+  useMyProfileQuery,
+  useUpdateProfileMutation,
+  useUploadAvatarMutation,
+} from "@/feature/shared/AuthApi";
+import Image from "next/image";
+import React, { useState } from "react";
+import toast from "react-hot-toast";
+import { BiUpload, BiX } from "react-icons/bi";
 
 const Page = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
-  const [changePassword, { isLoading: passwordLoading }] = useChangePasswordMutation();
+  const [uploadAvatar, { isLoading: avatarLoading }] =
+    useUploadAvatarMutation();
+  const [changePassword, { isLoading: passwordLoading }] =
+    useChangePasswordMutation();
   const { data: myProfile, refetch } = useMyProfileQuery();
   const [uploading, setUploading] = useState(false);
 
   const [profileData, setProfileData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    avatar: '',
+    firstName: "",
+    lastName: "",
+    email: "",
+    avatar: "",
   });
 
   const [passwordData, setPasswordData] = useState({
-    oldPassword: '',
-    newPassword: ''
+    oldPassword: "",
+    newPassword: "",
   });
 
   // Initialize profileData when myProfile data is available
   React.useEffect(() => {
     if (myProfile?.data?.user) {
       const userData = myProfile.data.user;
-      
+
       setProfileData({
-        firstName: userData.firstName || '',
-        lastName: userData.lastName || '',
-        email: userData.email || '',
-        avatar: userData.avatar || '',
+        firstName: userData.firstName || "",
+        lastName: userData.lastName || "",
+        email: userData.email || "",
+        avatar: userData.avatar || "",
       });
     }
   }, [myProfile]);
@@ -52,34 +60,34 @@ const Page = () => {
     if (!file) return;
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size should be less than 5MB');
+      toast.error("Image size should be less than 5MB");
       return;
     }
 
     // Upload to backend via PUT /users/me as multipart/form-data
     const formData = new FormData();
-    formData.append('avatar', file);
+    formData.append("avatar", file);
 
     try {
       setUploading(true);
-      const result = await updateProfile(formData);
+      const result = await uploadAvatar(formData);
 
       if (result.error) {
-        toast.error('Failed to save avatar');
+        toast.error("Failed to save avatar");
       } else {
-        toast.success('Avatar updated successfully');
+        toast.success("Avatar updated successfully");
         refetch(); // Refresh profile data
       }
     } catch (error) {
-      console.error('Avatar update error:', error);
-      toast.error('Failed to save avatar');
+      console.error("Avatar update error:", error);
+      toast.error("Failed to save avatar");
     } finally {
       setUploading(false);
     }
@@ -87,21 +95,24 @@ const Page = () => {
 
   const handleRemoveAvatar = async () => {
     try {
+      setUploading(true);
       const formData = new FormData();
-      // send empty string to indicate removal
-      formData.append('avatar', '');
-      const result = await updateProfile(formData);
+      // send empty string to indicate removal (backend handles removal)
+      formData.append("avatar", "");
+      const result = await uploadAvatar(formData);
 
       if (result.error) {
-        toast.error('Failed to remove avatar');
+        toast.error("Failed to remove avatar");
       } else {
-        setProfileData((prev) => ({ ...prev, avatar: '' }));
-        toast.success('Avatar removed successfully');
+        setProfileData((prev) => ({ ...prev, avatar: "" }));
+        toast.success("Avatar removed successfully");
         refetch(); // Refresh profile data
       }
     } catch (error) {
-      console.error('Avatar remove error:', error);
-      toast.error('Failed to remove avatar');
+      console.error("Avatar remove error:", error);
+      toast.error("Failed to remove avatar");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -117,51 +128,49 @@ const Page = () => {
       const result = await updateProfile(updateData);
 
       if (result.error) {
-        toast.error(result.error.data?.message || 'Update failed');
-        console.error('Update error:', result.error);
+        toast.error(result.error.data?.message || "Update failed");
+        console.error("Update error:", result.error);
       } else {
-        toast.success('Profile Updated Successfully');
+        toast.success("Profile Updated Successfully");
         refetch(); // Refresh profile data
       }
     } catch (error) {
-      console.error('Update error:', error);
-      toast.error('An error occurred while updating profile');
+      console.error("Update error:", error);
+      toast.error("An error occurred while updating profile");
     }
   };
 
   const handlePasswordHandler = async () => {
-    console.log('Old Password:', passwordData.oldPassword);
-    console.log('New Password:', passwordData.newPassword);
-    
+    console.log("Old Password:", passwordData.oldPassword);
+    console.log("New Password:", passwordData.newPassword);
+
     try {
       const payload = {
         oldPassword: passwordData.oldPassword,
-        newPassword: passwordData.newPassword
+        newPassword: passwordData.newPassword,
       };
 
-      console.log(payload, 'ki abosta ');
+      console.log(payload, "ki abosta ");
 
       const result = await changePassword(payload);
 
       if (result.error) {
-
-        console.log(result.error, 'error re error');
+        console.log(result.error, "error re error");
         toast.error(result?.error?.data?.message);
         return;
       }
-      
-      toast.success('Password changed successfully');
-      console.log(result, 'Password change successfully');
+
+      toast.success("Password changed successfully");
+      console.log(result, "Password change successfully");
 
       // Reset the form
       setPasswordData({
-        oldPassword: '',
-        newPassword: ''
+        oldPassword: "",
+        newPassword: "",
       });
     } catch (error) {
-
-      console.log(error, 'error sab');
-      toast.error('Something went wrong! Please try again later!');
+      console.log(error, "error sab");
+      toast.error("Something went wrong! Please try again later!");
     }
   };
 
@@ -169,19 +178,19 @@ const Page = () => {
     // Reset to original data
     if (myProfile?.data?.user) {
       const userData = myProfile.data.user;
-      
+
       setProfileData({
-        firstName: userData.firstName || '',
-        lastName: userData.lastName || '',
-        email: userData.email || '',
-        avatar: userData.avatar || '',
+        firstName: userData.firstName || "",
+        lastName: userData.lastName || "",
+        email: userData.email || "",
+        avatar: userData.avatar || "",
       });
     }
     setIsEditing(false);
   };
 
   // Default avatar if none is set
-  const defaultAvatar = 'https://i.pravatar.cc/150?img=45';
+  const defaultAvatar = "https://i.pravatar.cc/150?img=45";
   const displayAvatar = profileData.avatar || defaultAvatar;
 
   return (
@@ -207,7 +216,7 @@ const Page = () => {
                 onClick={handleSave}
                 disabled={isLoading}
                 className='px-6 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors disabled:bg-purple-300'>
-                {isLoading ? 'Saving...' : 'Save Changes'}
+                {isLoading ? "Saving..." : "Save Changes"}
               </button>
             </div>
           )}
@@ -215,8 +224,10 @@ const Page = () => {
 
         {/* Profile Information Section */}
         <div className='bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8'>
-          <h2 className='text-2xl font-semibold text-gray-800 mb-6'>Profile Information</h2>
-          
+          <h2 className='text-2xl font-semibold text-gray-800 mb-6'>
+            Profile Information
+          </h2>
+
           <div className='flex flex-col md:flex-row items-start gap-8'>
             {/* Avatar Section */}
             <div className='relative shrink-0'>
@@ -268,7 +279,7 @@ const Page = () => {
                 <label
                   htmlFor='avatar-upload'
                   className='text-sm text-purple-600 hover:text-purple-700 cursor-pointer font-medium'>
-                  {uploading ? 'Uploading...' : 'Change photo'}
+                  {uploading ? "Uploading..." : "Change photo"}
                 </label>
                 <p className='text-xs text-gray-500 mt-1'>JPG, PNG up to 5MB</p>
               </div>
@@ -284,7 +295,9 @@ const Page = () => {
                 <input
                   type='text'
                   value={profileData.firstName}
-                  onChange={(e) => handleInputChange('firstName', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("firstName", e.target.value)
+                  }
                   disabled={!isEditing}
                   className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600'
                 />
@@ -298,7 +311,9 @@ const Page = () => {
                 <input
                   type='text'
                   value={profileData.lastName}
-                  onChange={(e) => handleInputChange('lastName', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("lastName", e.target.value)
+                  }
                   disabled={!isEditing}
                   className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-50 disabled:text-gray-600'
                 />
@@ -325,8 +340,10 @@ const Page = () => {
 
         {/* Change Password Section */}
         <div className='bg-white rounded-xl shadow-sm border border-gray-200 p-6'>
-          <h2 className='text-2xl font-semibold text-gray-800 mb-6'>Change Password</h2>
-          
+          <h2 className='text-2xl font-semibold text-gray-800 mb-6'>
+            Change Password
+          </h2>
+
           <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
@@ -335,12 +352,14 @@ const Page = () => {
               <input
                 type='password'
                 value={passwordData.oldPassword}
-                onChange={(e) => handlePasswordChange('oldPassword', e.target.value)}
+                onChange={(e) =>
+                  handlePasswordChange("oldPassword", e.target.value)
+                }
                 className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500'
                 placeholder='Enter your old password'
               />
             </div>
-            
+
             <div>
               <label className='block text-sm font-medium text-gray-700 mb-2'>
                 New Password
@@ -348,26 +367,35 @@ const Page = () => {
               <input
                 type='password'
                 value={passwordData.newPassword}
-                onChange={(e) => handlePasswordChange('newPassword', e.target.value)}
+                onChange={(e) =>
+                  handlePasswordChange("newPassword", e.target.value)
+                }
                 className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500'
                 placeholder='Enter your new password'
               />
             </div>
           </div>
-          
+
           <div className='mt-6 flex justify-end'>
             <button
               onClick={handlePasswordHandler}
-              disabled={passwordLoading || (!passwordData.oldPassword || !passwordData.newPassword)}
-              className='px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow disabled:opacity-70 disabled:cursor-not-allowed'
-            >
-              {passwordLoading ? 'Changing...' : 'Change Password'}
+              disabled={
+                passwordLoading ||
+                !passwordData.oldPassword ||
+                !passwordData.newPassword
+              }
+              className='px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow disabled:opacity-70 disabled:cursor-not-allowed'>
+              {passwordLoading ? "Changing..." : "Change Password"}
             </button>
           </div>
-          
+
           <div className='mt-4 text-sm text-gray-500'>
-            <p className='mb-2'>• Password must be at least 8 characters long</p>
-            <p className='mb-2'>• Include both uppercase and lowercase letters</p>
+            <p className='mb-2'>
+              • Password must be at least 8 characters long
+            </p>
+            <p className='mb-2'>
+              • Include both uppercase and lowercase letters
+            </p>
             <p>• Include at least one number or special character</p>
           </div>
         </div>

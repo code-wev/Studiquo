@@ -10,7 +10,7 @@ export const AuthApi = createApi({
 
   baseQuery: fetchBaseQuery({
     baseUrl: base_url,
-    credentials:'include',
+    credentials: "include",
     prepareHeaders: (headers) => {
       const token = Cookies.get("token");
       if (token) {
@@ -67,14 +67,23 @@ export const AuthApi = createApi({
       invalidatesTags: ["User"],
     }),
 
-    changePassword: builder.mutation({
-      query:(data)=>({
-        url:'auth/change-password',
-        method:"PUT",
-        body:data
+    // ✅ Upload avatar (multipart/form-data)
+    uploadAvatar: builder.mutation({
+      query: (formData) => ({
+        url: "/users/me",
+        method: "PUT",
+        body: formData,
+      }),
+      invalidatesTags: ["User"],
+    }),
 
-      })
-    })
+    changePassword: builder.mutation({
+      query: (data) => ({
+        url: "auth/change-password",
+        method: "PUT",
+        body: data,
+      }),
+    }),
   }),
 });
 
@@ -85,5 +94,6 @@ export const {
   useMyProfileQuery,
   useResetPasswordMutation,
   useUpdateProfileMutation,
-  useChangePasswordMutation
+  useChangePasswordMutation,
+  useUploadAvatarMutation,
 } = AuthApi;

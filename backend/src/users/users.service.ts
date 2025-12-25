@@ -9,7 +9,10 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
+import { createReadStream } from 'fs';
 import { Model, Types } from 'mongoose';
+import { extname } from 'path';
+import { Readable } from 'stream';
 import { BaseService } from '../../common/base.service';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { SearchDto } from '../../common/dto/search.dto';
@@ -126,9 +129,66 @@ export class UsersService extends BaseService<User> {
           err as any,
         );
       }
-      // Upload new avatar using util
+      // Upload new avatar using AwsService (stream-based upload)
       try {
-        // TODO: complete the avatar upload process
+        const now = Date.now();
+
+        let keyExt = '.png';
+        let contentType: string | undefined = undefined;
+        let stream: any = null;
+
+        // If multer provides a stream (busboy), use it
+        const fileCandidate = avatarPayload as any;
+        if (fileCandidate && fileCandidate.stream) {
+          const file = fileCandidate as Express.Multer.File & {
+            stream: NodeJS.ReadableStream;
+          };
+          contentType = file.mimetype;
+          keyExt = extname(file.originalname || '') || '.png';
+          stream = file.stream;
+        } else if (fileCandidate && fileCandidate.path) {
+          // If multer stored the file on disk, stream from the file path
+          const file = fileCandidate as Express.Multer.File & { path: string };
+          contentType = file.mimetype;
+          keyExt = extname(file.originalname || '') || '.png';
+          stream = createReadStream(file.path);
+        } else if (fileCandidate && fileCandidate.buffer) {
+          // Last resort: memory buffer
+          const file = fileCandidate as Express.Multer.File;
+          contentType = file.mimetype;
+          keyExt = extname(file.originalname || '') || '.png';
+          stream = Readable.from(file.buffer);
+        } else if (typeof avatarPayload === 'string') {
+          // data URL (unavoidable in-memory)
+          const matches = (avatarPayload as string).match(
+            /^data:(.+);base64,(.+)$/,
+          );
+          if (!matches)
+            throw new BadRequestException('Invalid avatar data URL');
+          contentType = matches[1];
+          const buf = Buffer.from(matches[2], 'base64');
+          const guessExt = contentType.split('/').pop();
+          keyExt = guessExt ? `.${guessExt}` : '.png';
+          stream = Readable.from(buf);
+        } else {
+          throw new BadRequestException(
+            'Unsupported avatar payload; expected file stream, path, buffer or data URL',
+          );
+        }
+
+        if (!stream)
+          throw new BadRequestException('No avatar stream available');
+
+        const key = `avatars/${user.userId}/${now}${keyExt}`;
+        const uploadResp = await this.awsService.uploadStream(
+          key,
+          stream,
+          contentType,
+        );
+
+        await this.model.findByIdAndUpdate(user.userId, {
+          $set: { avatar: uploadResp.url, avatarKey: uploadResp.key },
+        });
       } catch (err) {
         this.logger.warn('Avatar upload failed', err as any);
       }
