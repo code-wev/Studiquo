@@ -13,10 +13,6 @@ import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { UserRole } from '../models/User.model';
-import {
-  CreateLessonReportDto,
-  UpdateLessonReportDto,
-} from './dto/lesson-report.dto';
 import { LessonReportService } from './lesson-report.service';
 
 @Controller('lesson-reports')
@@ -26,35 +22,33 @@ export class LessonReportController {
 
   @Post()
   @Roles(UserRole.Tutor, UserRole.Admin)
-  create(@Body() createDto: CreateLessonReportDto) {
-    // Optionally, you can use req.user for audit or ownership
-    return this.lessonReportService.create(createDto);
+  create(@Body() body) {
+    return console.log(`
+      body received in lesson-report controller: ${JSON.stringify(body)}
+    `);
   }
 
   @Get()
   @Roles(UserRole.Tutor, UserRole.Admin)
   findAll() {
-    return this.lessonReportService.findAll();
+    return console.log('');
   }
 
   @Get(':id')
   @Roles(UserRole.Tutor, UserRole.Admin)
   findOne(@Param('id') id: MongoIdDto['id']) {
-    return this.lessonReportService.findOne(id);
+    return console.log('');
   }
 
   @Patch(':id')
   @Roles(UserRole.Tutor, UserRole.Admin)
-  update(
-    @Param('id') id: MongoIdDto['id'],
-    @Body() updateDto: UpdateLessonReportDto,
-  ) {
-    return this.lessonReportService.update(id, updateDto);
+  update(@Param('id') id: MongoIdDto['id'], @Body() body) {
+    return console.log('');
   }
 
   @Delete(':id')
   @Roles(UserRole.Admin)
   remove(@Param('id') id: MongoIdDto['id']) {
-    return this.lessonReportService.remove(id);
+    return console.log('');
   }
 }
