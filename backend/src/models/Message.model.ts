@@ -3,11 +3,17 @@ import { Document, Types } from 'mongoose';
 
 export enum MessageType {
   TEXT = 'TEXT',
+  TEXT_AND_IMAGE = 'TEXT_AND_IMAGE',
   IMAGE = 'IMAGE',
+  TEXT_AND_VIDEO = 'TEXT_AND_VIDEO',
   VIDEO = 'VIDEO',
+  TEXT_AND_AUDIO = 'TEXT_AND_AUDIO',
   AUDIO = 'AUDIO',
+  TEXT_AND_FILE = 'TEXT_AND_FILE',
   FILE = 'FILE',
+  TEXT_AND_DOCUMENT = 'TEXT_AND_DOCUMENT',
   DOCUMENT = 'DOCUMENT',
+  TEXT_AND_PDF = 'TEXT_AND_PDF',
   PDF = 'PDF',
 }
 
