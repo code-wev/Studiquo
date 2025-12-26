@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import * as multer from 'multer';
+import * as os from 'os';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
@@ -59,7 +60,9 @@ export class UsersController {
    */
   @Put('me')
   @UseInterceptors(
-    FileInterceptor('avatar', { storage: multer.memoryStorage() }),
+    FileInterceptor('avatar', {
+      storage: multer.diskStorage({ destination: os.tmpdir() }),
+    }),
   )
   @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent, UserRole.Admin)
   async updateMe(

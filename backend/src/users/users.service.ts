@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcryptjs';
 import { createReadStream } from 'fs';
+import { unlink } from 'fs/promises';
 import { Model, Types } from 'mongoose';
 import { extname } from 'path';
 import { Readable } from 'stream';
@@ -136,6 +137,7 @@ export class UsersService extends BaseService<User> {
         let keyExt = '.png';
         let contentType: string | undefined = undefined;
         let stream: any = null;
+        let _tempFilePath: string | undefined = undefined;
 
         // If multer provides a stream (busboy), use it
         const fileCandidate = avatarPayload as any;
@@ -152,6 +154,8 @@ export class UsersService extends BaseService<User> {
           contentType = file.mimetype;
           keyExt = extname(file.originalname || '') || '.png';
           stream = createReadStream(file.path);
+          // ensure we remember path to remove after upload
+          _tempFilePath = file.path;
         } else if (fileCandidate && fileCandidate.buffer) {
           // Last resort: memory buffer
           const file = fileCandidate as Express.Multer.File;
@@ -189,6 +193,15 @@ export class UsersService extends BaseService<User> {
         await this.model.findByIdAndUpdate(user.userId, {
           $set: { avatar: uploadResp.url, avatarKey: uploadResp.key },
         });
+
+        // If we created a temp file on disk, remove it to avoid leaving artifacts
+        if (_tempFilePath) {
+          try {
+            await unlink(_tempFilePath);
+          } catch (err) {
+            this.logger.warn('Failed to remove temp avatar file', err as any);
+          }
+        }
       } catch (err) {
         this.logger.warn('Avatar upload failed', err as any);
       }
