@@ -9,7 +9,7 @@ export enum LessonReportFileType {
   VIDEO = 'VIDEO',
 }
 
-@Schema({ _id: false })
+@Schema({ _id: false, timestamps: true })
 export class LessonReportContent {
   @Prop({
     required: true,

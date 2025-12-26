@@ -8,7 +8,6 @@ import { AuthModule } from './auth/auth.module';
 import { AvailabilityModule } from './availability/availability.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { ChatModule } from './chat/chat.module';
-import { DocumentsModule } from './documents/documents.module';
 import { ExamBoardModule } from './exam-board/exam-board.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { PaymentsModule } from './payments/payments.module';
@@ -35,7 +34,6 @@ import { UsersModule } from './users/users.module';
     AvailabilityModule,
     BookingsModule,
     ChatModule,
-    DocumentsModule,
     ExamBoardModule,
     NotificationsModule,
     PaymentsModule,
