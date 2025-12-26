@@ -6,13 +6,12 @@ export class Review extends Document {
   @Prop({
     type: Types.ObjectId,
     ref: 'Booking',
-    required: false,
-    default: null,
+    required: true,
   })
-  booking: Types.ObjectId | null;
+  booking: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: false, default: null })
-  student: Types.ObjectId | null;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  student: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   tutor: Types.ObjectId;
@@ -25,3 +24,4 @@ export class Review extends Document {
 }
 
 export const ReviewSchema = SchemaFactory.createForClass(Review);
+ReviewSchema.index({ booking: 1 }, { unique: true });

@@ -13,11 +13,10 @@ import {
 import { PaginationDto } from './../../../common/dto/pagination.dto';
 
 export class CreateReviewDto {
-  @IsMongoId()
-  @IsOptional()
-  booking?: string;
+  @IsMongoId({ message: 'Booking ID must be a valid Mongo ID' })
+  booking: string;
 
-  @IsMongoId()
+  @IsMongoId({ message: 'Tutor ID must be a valid Mongo ID' })
   tutor: string;
 
   @Type(() => Number)

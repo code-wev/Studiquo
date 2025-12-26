@@ -11,6 +11,13 @@ import { ReviewsService } from './reviews.service';
 export class ReviewsController {
   constructor(private readonly reviewsService: ReviewsService) {}
 
+  /**
+   * Submit a review for a completed booking.
+   *
+   * @param user - The authenticated user submitting the review
+   * @param dto - The review data transfer object
+   * @returns The created review
+   */
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.Student)
