@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { Booking } from 'src/models/Booking.model';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { formatAmPm } from '../../common/utils/time.util';
 import { TimeSlotType } from '../models/TimeSlot.model';
@@ -23,6 +24,7 @@ export class AvailabilityService {
   constructor(
     @InjectModel(TutorAvailability.name)
     private availabilityModel: Model<TutorAvailability>,
+    @InjectModel(Booking.name) private bookingModel: Model<Booking>,
     @InjectModel(TimeSlot.name) private timeSlotModel: Model<TimeSlot>,
     @InjectModel(TutorProfile.name)
     private tutorProfileModel: Model<TutorProfile>,
@@ -105,35 +107,38 @@ export class AvailabilityService {
    * @throws NotFoundException if availability not found
    */
   async deleteAvailability(user: any, availabilityId: MongoIdDto['id']) {
-    // check the availability has slots and slots are not booked
-    const availability = await this.availabilityModel
-      .findOne({
-        _id: new Types.ObjectId(availabilityId),
-        user: new Types.ObjectId(user.userId),
-      })
-      .exec();
+    const availability = await this.availabilityModel.findOne({
+      _id: availabilityId,
+      user: user.userId,
+    });
 
     if (!availability) {
       throw new NotFoundException('Availability not found');
     }
 
-    // const TimeSlot = await this.timeSlotModel.find({
-    //   tutorAvailability: availability._id,
-    // });
-
-    // if (bookedSlots.length > 0) {
-    //   throw new BadRequestException(
-    //     'Cannot delete availability with booked time slots',
-    //   );
-    // }
-
-    // TODO: Can't delete availability with booked slots
-
-    await this.timeSlotModel.deleteMany({
-      tutorAvailability: availability._id,
+    // 1. Get booked slot existence in ONE lightweight query
+    const hasBookedSlots = await this.bookingModel.exists({
+      status: { $in: ['PENDING', 'SCHEDULED'] },
+      timeSlot: {
+        $in: await this.timeSlotModel.distinct('_id', {
+          tutorAvailability: availability._id,
+        }),
+      },
     });
 
-    await availability.deleteOne();
+    if (hasBookedSlots) {
+      throw new BadRequestException(
+        'Cannot delete availability with booked time slots',
+      );
+    }
+
+    // 2. Delete slots + availability
+    await Promise.all([
+      this.timeSlotModel.deleteMany({
+        tutorAvailability: availability._id,
+      }),
+      availability.deleteOne(),
+    ]);
 
     return {
       message: 'Availability and associated time slots deleted successfully',
@@ -279,42 +284,47 @@ export class AvailabilityService {
     slotId: MongoIdDto['id'],
     dto: UpdateTimeSlotDto,
   ): Promise<TimeSlot> {
-    // Check the tutor's subject exists
-    const subjectsExists = await this.tutorProfileModel.findOne({
-      user: new Types.ObjectId(user.userId),
-      subjects: {
-        $in: [dto.subject],
-      },
-    });
+    // 1. Validate subject (only if provided)
+    if (dto.subject) {
+      const subjectExists = await this.tutorProfileModel.exists({
+        user: user.userId,
+        subjects: dto.subject,
+      });
 
-    if (dto.subject && !subjectsExists) {
-      throw new BadRequestException(
-        'Tutor does not teach the specified subject',
-      );
+      if (!subjectExists) {
+        throw new BadRequestException(
+          'Tutor does not teach the specified subject',
+        );
+      }
     }
 
-    // TODO: Can't update a booked slot
-
-    const slot = await this.timeSlotModel
-      .findOne({
-        _id: new Types.ObjectId(slotId),
-        tutorAvailability: {
-          $in: await this.availabilityModel
-            .find({ user: new Types.ObjectId(user.userId) })
-            .distinct('_id')
-            .exec(),
-        },
-      })
-      .exec();
+    // 2. Fetch slot owned by tutor (single query)
+    const slot = await this.timeSlotModel.findOne({
+      _id: slotId,
+      tutorAvailability: {
+        $in: await this.availabilityModel
+          .find({ user: user.userId })
+          .distinct('_id'),
+      },
+    });
 
     if (!slot) {
       throw new NotFoundException('Time slot not found');
     }
 
-    // TODO: If the slot is already booked, prevent changing times
+    // 3. Check if slot is booked (FAST)
+    const isBooked = await this.bookingModel.exists({
+      timeSlot: slot._id,
+      status: { $in: ['PENDING', 'SCHEDULED'] },
+    });
 
-    // Validate new times if provided
-    if (dto.startTime || dto.endTime) {
+    // 4. If booked → block time changes
+    if (isBooked && (dto.startTime || dto.endTime)) {
+      throw new BadRequestException('Cannot change time for a booked slot');
+    }
+
+    // 5. Time validation + overlap check (only if allowed)
+    if (!isBooked && (dto.startTime || dto.endTime)) {
       const startTime = dto.startTime
         ? new Date(dto.startTime)
         : slot.startTime;
@@ -323,23 +333,20 @@ export class AvailabilityService {
       if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
         throw new BadRequestException('Invalid start or end time');
       }
+
       if (startTime >= endTime) {
         throw new BadRequestException('Start time must be before end time');
       }
 
-      // Check for overlaps excluding the current slot
-      const overlappingSlots = await this.timeSlotModel
-        .find({
-          tutorAvailability: slot.tutorAvailability,
-          _id: { $ne: slotId },
-          $or: [
-            { startTime: { $lt: endTime }, endTime: { $gt: startTime } },
-            { startTime: { $gte: startTime, $lte: endTime } },
-          ],
-        })
-        .exec();
+      // Overlap check (index-friendly)
+      const hasOverlap = await this.timeSlotModel.exists({
+        tutorAvailability: slot.tutorAvailability,
+        _id: { $ne: slot._id },
+        startTime: { $lt: endTime },
+        endTime: { $gt: startTime },
+      });
 
-      if (overlappingSlots.length > 0) {
+      if (hasOverlap) {
         throw new BadRequestException(
           'Updated time slot overlaps with existing slot',
         );
@@ -349,16 +356,10 @@ export class AvailabilityService {
       slot.endTime = endTime;
     }
 
-    if (dto.meetLink !== undefined) {
-      slot.meetLink = dto.meetLink;
-    }
-
-    if (dto.type) {
-      slot.type = dto.type as TimeSlotType;
-    }
-    if (dto.subject) {
-      slot.subject = dto.subject as TutorSubject;
-    }
+    // 6. Metadata updates (allowed even if booked)
+    if (dto.meetLink !== undefined) slot.meetLink = dto.meetLink;
+    if (dto.type) slot.type = dto.type as TimeSlotType;
+    if (dto.subject) slot.subject = dto.subject as TutorSubject;
 
     return slot.save();
   }
@@ -371,13 +372,13 @@ export class AvailabilityService {
    * @throws NotFoundException if time slot not found
    */
   async deleteSlot(user: any, slotId: MongoIdDto['id']): Promise<TimeSlot> {
+    // 1. Find slot owned by tutor (single lookup)
     const slot = await this.timeSlotModel.findOne({
-      _id: new Types.ObjectId(slotId),
+      _id: slotId,
       tutorAvailability: {
         $in: await this.availabilityModel
-          .find({ user: new Types.ObjectId(user.userId) })
-          .distinct('_id')
-          .exec(),
+          .find({ user: user.userId })
+          .distinct('_id'),
       },
     });
 
@@ -385,25 +386,20 @@ export class AvailabilityService {
       throw new NotFoundException('Time slot not found');
     }
 
-    // TODO: Can't delete a booked slot
+    // 2. Check if slot is booked
+    const isBooked = await this.bookingModel.exists({
+      timeSlot: slot._id,
+      status: { $in: ['PENDING', 'SCHEDULED'] },
+    });
 
-    const deleted = await this.timeSlotModel
-      .findOneAndDelete({
-        _id: new Types.ObjectId(slotId),
-        tutorAvailability: {
-          $in: await this.availabilityModel
-            .find({ user: new Types.ObjectId(user.userId) })
-            .distinct('_id')
-            .exec(),
-        },
-      })
-      .exec();
-
-    if (!deleted) {
-      throw new NotFoundException('Time slot not found');
+    if (isBooked) {
+      throw new BadRequestException('Cannot delete a booked time slot');
     }
 
-    return deleted;
+    // 3. Delete slot
+    await slot.deleteOne();
+
+    return slot;
   }
 
   /**
