@@ -28,6 +28,11 @@ async function bootstrap() {
   app.use(bodyParser.json());
   app.use(bodyParser.urlencoded({ extended: true }));
 
+  // Health check endpoint
+  app.use('/health', (_, res) => {
+    res.status(200).send({ status: 'ok' });
+  });
+
   // Set a global API prefix so all routes are prefixed with `/api`.
   app.setGlobalPrefix('api');
 
@@ -69,12 +74,6 @@ async function bootstrap() {
 
   // Global response formatting (wraps responses into a consistent shape).
   app.useGlobalInterceptors(new ResponseInterceptor());
-
-  // (Stripe webhook raw body middleware registered earlier)
-
-  app.use('/health', (_, res) => {
-    res.status(200).send({ status: 'ok' });
-  });
 
   await app.listen(process.env.PORT ?? 8080);
 
