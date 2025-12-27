@@ -10,9 +10,8 @@ import { FiArrowLeft, FiArrowRight } from "react-icons/fi";
 export default function TutorsSection() {
   const sliderRef = useRef(null);
   const { data: tutor } = useGetTutorQuery();
-  console.log(tutor?.data?.data, "You are my personal tutor");
 
-  const tutors = tutor?.data?.data;
+  const tutors = tutor?.data?.tutors;
 
   const slideLeft = () => {
     sliderRef.current.scrollLeft -= 300;
@@ -21,8 +20,6 @@ export default function TutorsSection() {
   const slideRight = () => {
     sliderRef.current.scrollLeft += 300;
   };
-
-  console.log(tutors);
 
   return (
     <section className='py-20 bg-[#F2F8F3] w-full relative'>
@@ -69,8 +66,8 @@ export default function TutorsSection() {
                   {/* Image */}
                   <div className='w-full h-44 relative'>
                     <Image
-                      src={tutor?.user?.avatar || "/default-avatar.png"}
-                      alt={tutor?.user?.firstName}
+                      src={tutor?.avatar || "/default-avatar.png"}
+                      alt={tutor?.firstName}
                       fill
                       className='rounded-t-xl object-cover'
                     />
@@ -97,7 +94,7 @@ export default function TutorsSection() {
 
                     {/* Name and Subject */}
                     <h3 className='mt-3 font-bold text-gray-900'>
-                      {tutor?.user?.firstName + " " + tutor?.user?.lastName}
+                      {tutor?.firstName + " " + tutor?.lastName}
                     </h3>
                     <p className='text-gray-500 text-sm mb-2'>
                       {tutor?.subjects?.map((subject, index) => (

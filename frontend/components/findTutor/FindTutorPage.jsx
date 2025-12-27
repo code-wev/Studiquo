@@ -264,7 +264,7 @@ const FindTutorPage = () => {
                       </div>
 
                       <p className='text-[#666666] leading-loose mb-4 mt-2 line-clamp-4 flex-grow'>
-                        {tutor?.user?.bio || "No bio available"}
+                        {tutor?.bio || "No bio available"}
                       </p>
 
                       <div className='flex items-center justify-between mb-4'>
