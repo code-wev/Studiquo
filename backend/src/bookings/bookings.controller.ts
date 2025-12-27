@@ -113,22 +113,4 @@ export class BookingsController {
   ) {
     return this.bookingsService.cancelBooking(bookingId, user);
   }
-
-  // @Put(':bookingId/complete')
-  // @Roles(UserRole.Tutor, UserRole.Admin)
-  // async completeBooking(@Param('bookingId') bookingId: MongoIdDto['id']) {
-  //   return this.bookingsService.updateBookingStatus(bookingId, 'COMPLETED');
-  // }
-
-  // @Get('my-schedule')
-  // @Roles(UserRole.Tutor)
-  // async mySchedule(@GetUser() user: any) {
-  //   return this.bookingsService.getMySchedule(user);
-  // }
-
-  // @Get(':bookingId')
-  // @Roles(UserRole.Student, UserRole.Tutor, UserRole.Parent)
-  // async bookingDetails(@Param('bookingId') bookingId: MongoIdDto['id']) {
-  //   return this.bookingsService.getBookingDetails(bookingId);
-  // }
 }
