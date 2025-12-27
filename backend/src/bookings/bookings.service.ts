@@ -1374,7 +1374,7 @@ export class BookingsService {
    * @param user - authenticated user performing the cancellation
    * @return updated booking with status CANCELLED
    */
-  async cancelBooking(bookingId: MongoIdDto['id'], status: string, user: any) {
+  async cancelBooking(bookingId: MongoIdDto['id'], user: any) {
     // Enforce cancel booking window:
     //  - must book cancel at least 1 days before the lesson starts, if you cancel less than 1 day before, the class will be cancelled but refund will not be issued.
     const booking = await this.bookingModel.findById(bookingId);

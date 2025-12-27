@@ -111,7 +111,7 @@ export class BookingsController {
     @Param('bookingId') bookingId: MongoIdDto['id'],
     @GetUser() user: any,
   ) {
-    return this.bookingsService.cancelBooking(bookingId, 'CANCELLED', user);
+    return this.bookingsService.cancelBooking(bookingId, user);
   }
 
   // @Put(':bookingId/complete')
