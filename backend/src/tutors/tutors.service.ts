@@ -6,7 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { PaginationDto } from 'common/dto/pagination.dto';
 import { Model, Types } from 'mongoose';
-import { UserRole } from 'src/models/User.model';
+import { User, UserRole } from 'src/models/User.model';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { Booking } from '../models/Booking.model';
 import { Payment } from '../models/Payment.model';
@@ -23,6 +23,7 @@ export class TutorsService {
    * Tutors service provides search and public-data access for tutors.
    */
   constructor(
+    @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(TutorProfile.name)
     private tutorProfileModel: Model<TutorProfile>,
 
@@ -62,20 +63,18 @@ export class TutorsService {
       limit = 10,
     } = query;
 
-    // TODO: if the user is admin, show unapproved tutors too
-
     const skip = (page - 1) * limit;
-    const isAdmin = user?.role === UserRole.Admin;
+    const role = user?.role ?? null;
+    const isAdmin = role === UserRole.Admin;
 
-    /** --------------------
-     * Tutor profile filter
-     * -------------------*/
-    const tutorMatch: any = {};
+    const matchConditions: any = {};
 
+    // Filtering by subjects
     if (subject) {
-      tutorMatch.subjects = subject;
+      matchConditions.subjects = { $in: subject }; // Match tutors' subjects
     }
 
+    // Filtering by hourly rates
     const rateConditions: any[] = [];
 
     if (maxHourlyRate !== undefined) {
@@ -97,99 +96,100 @@ export class TutorsService {
     }
 
     if (rateConditions.length) {
-      tutorMatch.$and = rateConditions;
+      matchConditions.$and = rateConditions;
     }
 
-    /** --------------------
-     * User search filter
-     * -------------------*/
+    // User search filter (name, email, or bio)
     const userSearchMatch = search
       ? [
           {
             $match: {
               $or: [
-                { 'user.firstName': new RegExp(search, 'i') },
-                { 'user.lastName': new RegExp(search, 'i') },
-                { 'user.bio': new RegExp(search, 'i') },
+                { firstName: new RegExp(search, 'i') },
+                { lastName: new RegExp(search, 'i') },
+                { email: new RegExp(search, 'i') },
+                { bio: new RegExp(search, 'i') },
               ],
             },
           },
         ]
       : [];
 
-    /** --------------------
-     * Aggregation Pipeline
-     * -------------------*/
     const pipeline: any[] = [
-      { $match: tutorMatch },
+      // Match users based on filtering conditions
+      { $match: matchConditions },
 
+      // Match the role: Admin can see all, non-admins only approved tutors
+      ...(!isAdmin ? [{ $match: { isApproved: true } }] : []),
+
+      // Include user details
       {
-        $lookup: {
-          from: 'users',
-          localField: 'user',
-          foreignField: '_id',
-          as: 'user',
+        $project: {
+          firstName: 1,
+          lastName: 1,
+          email: 1,
+          role: 1,
+          avatar: 1,
+          avatarKey: 1,
+          googleId: 1,
+          isApproved: 1,
+          bio: 1,
+          subjects: 1,
+          groupHourlyRate: 1,
+          oneOnOneHourlyRate: 1,
+          averageRating: 1, // assuming this field exists or is calculated
+          ratingCount: 1, // assuming this field exists or is calculated
         },
       },
-      { $unwind: '$user' },
 
-      // Approval filter happens HERE
-      ...(!isAdmin ? [{ $match: { 'user.isApproved': true } }] : []),
-
+      // Apply search filter if applicable
       ...userSearchMatch,
 
+      // Lookup reviews to calculate ratings
       {
         $lookup: {
-          from: 'reviews',
-          localField: 'user._id',
-          foreignField: 'tutor',
-          as: 'reviews',
+          from: 'reviews', // Assuming reviews are stored in a 'reviews' collection
+          let: { tutorId: '$_id' }, // Use the tutor's user ID for the join
+          pipeline: [
+            { $match: { $expr: { $eq: ['$tutor', '$$tutorId'] } } }, // Match tutor reviews
+            {
+              $group: {
+                _id: null,
+                averageRating: { $avg: '$rating' },
+                ratingCount: { $sum: 1 },
+              },
+            },
+          ],
+          as: 'ratingStats', // Collect rating stats in 'ratingStats'
         },
       },
 
+      // Add calculated ratings to the result
       {
         $addFields: {
-          averageRating: {
-            $cond: [
-              { $gt: [{ $size: '$reviews' }, 0] },
-              { $avg: '$reviews.rating' },
-              null,
-            ],
-          },
-          ratingCount: { $size: '$reviews' },
+          averageRating: { $arrayElemAt: ['$ratingStats.averageRating', 0] },
+          ratingCount: { $arrayElemAt: ['$ratingStats.ratingCount', 0] },
         },
       },
+      { $project: { ratingStats: 0 } },
 
+      // Filter by minimum rating if required
       ...(minRating !== undefined
         ? [{ $match: { averageRating: { $gte: minRating } } }]
         : []),
 
-      {
-        $project: {
-          ...(isAdmin
-            ? {}
-            : {
-                reviews: 0,
-                'user.password': 0,
-                'user.email': 0,
-                'user.dbsLink': 0,
-                'user.referralSource': 0,
-              }),
-        },
-      },
+      // Pagination
+      { $skip: skip },
+      { $limit: limit },
     ];
 
-    /** --------------------
-     * Pagination + Count
-     * -------------------*/
+    // Perform the aggregation with pagination
     const [data, totalResult] = await Promise.all([
-      this.tutorProfileModel
-        .aggregate([...pipeline, { $skip: skip }, { $limit: limit }])
-        .exec(),
-
-      this.tutorProfileModel
-        .aggregate([...pipeline, { $count: 'total' }])
-        .exec(),
+      this.userModel.aggregate(pipeline),
+      this.userModel.aggregate([
+        { $match: matchConditions },
+        { $count: 'total' },
+      ]),
     ]);
 
     const total = totalResult[0]?.total || 0;

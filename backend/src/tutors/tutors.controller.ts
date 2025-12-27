@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { PaginationDto } from 'common/dto/pagination.dto';
+import { OptionalJwtAuthGuard } from 'common/guards/optional-jwt-auth.guard';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
@@ -41,6 +42,7 @@ export class TutorsController {
    * @returns list of tutor profiles matching the search criteria
    */
   @Get()
+  @UseGuards(OptionalJwtAuthGuard)
   async searchTutors(
     @GetUser() user: any,
     @Query() query: TutorSearchPaginationDto,
