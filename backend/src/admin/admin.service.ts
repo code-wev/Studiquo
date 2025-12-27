@@ -433,7 +433,7 @@ export class AdminService {
     }
 
     if (status === 'REJECTED') {
-      // Update payment status back to COMPLETED
+      // Update payment status back to REFUND REJECTED
       await this.paymentModel.findByIdAndUpdate(refund.payment, {
         status: 'REFUND REJECTED',
       });
