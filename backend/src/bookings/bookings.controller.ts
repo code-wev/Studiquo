@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { GetUser } from '../../common/decorators/get-user.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -88,11 +98,21 @@ export class BookingsController {
     return this.bookingsService.getTutorBookings(user);
   }
 
-  // @Put(':bookingId/cancel')
-  // @Roles(UserRole.Student, UserRole.Tutor, UserRole.Admin)
-  // async cancelBooking(@Param('bookingId') bookingId: MongoIdDto['id']) {
-  //   return this.bookingsService.updateBookingStatus(bookingId, 'CANCELLED');
-  // }
+  /**
+   * Cancel a booking by its ID.
+   *
+   * @param bookingId - ID of the booking to cancel
+   * @param user - authenticated user performing the cancellation
+   * @return updated booking with status CANCELLED
+   */
+  @Put(':bookingId/cancel')
+  @Roles(UserRole.Student)
+  async cancelBooking(
+    @Param('bookingId') bookingId: MongoIdDto['id'],
+    @GetUser() user: any,
+  ) {
+    return this.bookingsService.cancelBooking(bookingId, 'CANCELLED', user);
+  }
 
   // @Put(':bookingId/complete')
   // @Roles(UserRole.Tutor, UserRole.Admin)

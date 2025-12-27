@@ -74,4 +74,26 @@ export class PaymentsService {
   ) {
     return this.stripe.webhooks.constructEvent(payload, sig, endpointSecret);
   }
+
+  /**
+   * Refund a payment on Stripe.
+   * @param paymentIntentId - Stripe PaymentIntent or Charge id stored in `transactionId`
+   * @param amount - optional amount in main currency units (e.g., GBP). If provided, a partial
+   * refund will be issued for this amount. Otherwise full refund issued.
+   */
+  async refundPayment(paymentIntentId: string, amount?: number) {
+    const params: Stripe.RequestOptions = {} as any;
+
+    const refundData: any = {};
+
+    // If amount provided, convert to cents/pence
+    if (typeof amount === 'number' && amount > 0) {
+      refundData.amount = Math.round(amount * 100);
+    }
+
+    // Prefer refund by payment_intent id
+    refundData.payment_intent = paymentIntentId;
+
+    return await this.stripe.refunds.create(refundData, params);
+  }
 }

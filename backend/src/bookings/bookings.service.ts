@@ -1,15 +1,18 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { MongoIdDto } from 'common/dto/mongoId.dto';
 import { Model, Types } from 'mongoose';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { formatAmPm } from '../../common/utils/time.util';
 import { Booking } from '../models/Booking.model';
 import { BookingStudents } from '../models/BookingStudents.model';
 import { LessonReport } from '../models/LessonReport.model';
+import { Payment } from '../models/Payment.model';
 import { TimeSlot } from '../models/TimeSlot.model';
 import { TutorAvailability } from '../models/TutorAvailability.model';
 import { TutorProfile } from '../models/TutorProfile.model';
 import { User } from '../models/User.model';
+import { Wallet } from '../models/Wallet.model';
 import { PaymentsService } from '../payments/payments.service';
 import { CreateBookingDto, CreatePaymentLinkDto } from './dto/booking.dto';
 
@@ -36,6 +39,8 @@ export class BookingsService {
     private tutorProfileModel: Model<TutorProfile>,
     private paymentsService: PaymentsService,
     @InjectModel(User.name) private userModel: Model<User>,
+    @InjectModel(Payment.name) private paymentModel: Model<Payment>,
+    @InjectModel(Wallet.name) private walletModel: Model<Wallet>,
   ) {}
 
   /**
@@ -1358,6 +1363,192 @@ export class BookingsService {
         month: now.toLocaleString('default', { month: 'long' }),
         year: now.getFullYear(),
       },
+    };
+  }
+
+  /**
+   * Cancel a booking by its ID.
+   *
+   * @param bookingId - ID of the booking to cancel
+   * @param status - new status (should be 'CANCELLED')
+   * @param user - authenticated user performing the cancellation
+   * @return updated booking with status CANCELLED
+   */
+  async cancelBooking(bookingId: MongoIdDto['id'], status: string, user: any) {
+    // Enforce cancel booking window:
+    //  - must book cancel at least 1 days before the lesson starts, if you cancel less than 1 day before, the class will be cancelled but refund will not be issued.
+    const booking = await this.bookingModel.findById(bookingId);
+
+    if (!booking) {
+      throw new BadRequestException('Invalid booking ID');
+    }
+
+    const slot = await this.timeSlotModel.findById(booking.timeSlot);
+    if (!slot) {
+      throw new BadRequestException('Invalid time slot for booking');
+    }
+
+    const minCancelMs = 1 * 24 * 60 * 60 * 1000;
+    if (new Date(slot.startTime).getTime() - Date.now() < minCancelMs) {
+      throw new BadRequestException(
+        'Bookings can only be cancelled at least 1 day before the lesson',
+      );
+    }
+
+    // Only students enrolled in this booking may cancel
+    const callerId = String(user.userId);
+    const enrolled = await this.bookingStudentsModel.find({
+      booking: booking._id,
+    });
+    const enrolledIds = enrolled.map((e) => String(e.student));
+    if (!enrolledIds.includes(callerId)) {
+      throw new BadRequestException(
+        'Only students enrolled in this booking can cancel',
+      );
+    }
+
+    // Find completed payments for this booking
+    const completedPayments = await this.paymentModel.find({
+      booking: booking._id,
+      status: 'COMPLETED',
+    });
+
+    // No completed payments — simply cancel
+    if (!completedPayments || completedPayments.length === 0) {
+      booking.status = 'CANCELLED';
+      await booking.save();
+      return {
+        message: 'Booking cancelled successfully (no payments)',
+        booking,
+      };
+    }
+
+    // Helper to refund a single payment and adjust tutor wallet
+    const processRefund = async (payment: any) => {
+      try {
+        await this.paymentsService.refundPayment(
+          payment.transactionId,
+          payment.amount,
+        );
+      } catch (err: any) {
+        // Non-fatal: log and continue (controller/logger not injected here)
+        console.error(
+          `Failed to refund payment ${payment._id}: ${err.message}`,
+        );
+      }
+
+      try {
+        payment.status = 'REFUNDED';
+        await payment.save();
+      } catch (e) {}
+
+      // Reverse tutor wallet credit if any
+      try {
+        if (payment.tutor && payment.tutorEarning && this.walletModel) {
+          await this.walletModel.findOneAndUpdate(
+            { tutorId: payment.tutor },
+            {
+              $inc: { balance: -Math.round(payment.tutorEarning) },
+              $set: { updatedAt: new Date() },
+            },
+            { new: true },
+          );
+        }
+      } catch (e: any) {
+        console.error(
+          `Failed to adjust tutor wallet for payment ${payment._id}: ${e.message}`,
+        );
+      }
+    };
+
+    // If only one paid student -> refund and cancel booking
+    if (completedPayments.length === 1) {
+      await processRefund(completedPayments[0]);
+      booking.status = 'CANCELLED';
+      await booking.save();
+      return {
+        message: 'Booking cancelled and payment refunded (single student)',
+        booking,
+      };
+    }
+
+    // Multiple paid students: only refund payments belonging to the cancelling student
+    const paymentsForCaller = completedPayments.filter(
+      (p: any) =>
+        enrolledIds.includes(String(p.student)) &&
+        String(p.student) === callerId,
+    );
+
+    if (paymentsForCaller.length === 0) {
+      // The enrolled student hasn't paid yet (no payments to refund)
+      return {
+        message:
+          'Cancellation recorded. No payments found for your account to refund.',
+        booking,
+      };
+    }
+
+    for (const p of paymentsForCaller) {
+      await processRefund(p);
+    }
+
+    // Remove the cancelling student from booking students
+    try {
+      await this.bookingStudentsModel.deleteOne({
+        booking: booking._id,
+        student: new Types.ObjectId(callerId),
+      });
+    } catch (e: any) {
+      console.error(
+        `Failed to remove booking student ${callerId}: ${e.message}`,
+      );
+    }
+
+    // Recompute remaining enrolled students and payments
+    const enrolledCount = await this.bookingStudentsModel.countDocuments({
+      booking: booking._id,
+    });
+    const remainingPaidCount = await this.paymentModel.countDocuments({
+      booking: booking._id,
+      status: 'COMPLETED',
+    });
+
+    // If timeslot is ONE_TO_ONE -> cancel booking
+    if (slot.type === 'ONE_TO_ONE') {
+      booking.status = 'CANCELLED';
+      await booking.save();
+      return {
+        message: 'ONE_TO_ONE booking cancelled and refunds (if any) processed',
+        booking,
+      };
+    }
+
+    // For GROUP sessions, update booking status based on remaining students/payments
+    if (enrolledCount === 0) {
+      booking.status = 'CANCELLED';
+    } else if (remainingPaidCount > 0) {
+      booking.status = 'SCHEDULED';
+    } else {
+      booking.status = 'PENDING';
+    }
+
+    await booking.save();
+
+    // If after refunds there are no remaining completed payments, cancel booking
+    const remaining = await this.paymentModel.countDocuments({
+      booking: booking._id,
+      status: 'COMPLETED',
+    });
+
+    if (remaining === 0) {
+      booking.status = 'CANCELLED';
+      await booking.save();
+    }
+
+    return {
+      message:
+        'Booking cancellation processed; refunds issued where applicable',
+      booking,
     };
   }
 
