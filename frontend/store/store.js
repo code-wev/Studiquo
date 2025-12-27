@@ -1,3 +1,4 @@
+import { AdminApi } from "@/feature/admin/adminApi";
 import { ParentApi } from "@/feature/parent/ParentApi";
 import { AuthApi } from "@/feature/shared/AuthApi";
 import { AvailabilityApi } from "@/feature/shared/AvailabilityApi";
@@ -23,6 +24,7 @@ export const store = configureStore({
     [ChatApi.reducerPath]: ChatApi.reducer,
     [BookingApi.reducerPath]: BookingApi.reducer,
     [ParentApi.reducerPath]: ParentApi.reducer,
+    [AdminApi.reducerPath] : AdminApi.reducer
   },
 
   middleware: (getDefaultMiddleware) =>
@@ -34,6 +36,7 @@ export const store = configureStore({
       ChatApi.middleware,
       BookingApi.middleware,
       ParentApi.middleware,
+      AdminApi.middleware
     ]),
 });
 
