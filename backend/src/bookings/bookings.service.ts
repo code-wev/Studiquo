@@ -1429,7 +1429,7 @@ export class BookingsService {
     const processRefund = async (payment: any) => {
       let refundRecord: any = null;
       let stripeRefundId: string | undefined;
-      let refundStatus: 'COMPLETED' | 'FAILED' = 'FAILED';
+      let refundStatus: 'PENDING' | 'FAILED' = 'FAILED';
 
       try {
         const stripeRefund: any = await this.paymentsService.refundPayment(
@@ -1437,7 +1437,7 @@ export class BookingsService {
           payment.amount,
         );
         stripeRefundId = stripeRefund?.id;
-        refundStatus = 'COMPLETED';
+        refundStatus = 'PENDING';
       } catch (err: any) {
         console.error(
           `Failed to refund payment ${payment._id}: ${err.message}`,
@@ -1468,8 +1468,8 @@ export class BookingsService {
 
       // Update payment status if refund succeeded
       try {
-        if (refundStatus === 'COMPLETED') {
-          payment.status = 'REFUNDED';
+        if (refundStatus === 'PENDING') {
+          payment.status = 'PENDING';
           await payment.save();
         }
       } catch (e: any) {
@@ -1481,7 +1481,7 @@ export class BookingsService {
       // Reverse tutor wallet credit if any and refund completed
       try {
         if (
-          refundStatus === 'COMPLETED' &&
+          refundStatus === 'PENDING' &&
           payment.tutor &&
           payment.tutorEarning &&
           this.walletModel

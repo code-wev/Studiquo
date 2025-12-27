@@ -417,12 +417,35 @@ export class AdminService {
       throw new Error('Refund request not found');
     }
 
+    if (!refund.booking) {
+      throw new Error('Associated booking not found for this refund');
+    }
+
+    if (!refund.payment) {
+      throw new Error('Associated payment not found for this refund');
+    }
+
+    if (status === 'APPROVED') {
+      // Update payment status to REFUNDED
+      await this.paymentModel.findByIdAndUpdate(refund.payment, {
+        status: 'REFUNDED',
+      });
+    }
+
+    if (status === 'REJECTED') {
+      // Update payment status back to COMPLETED
+      await this.paymentModel.findByIdAndUpdate(refund.payment, {
+        status: 'REFUND REJECTED',
+      });
+    }
+
     return {
       message: 'Refund status updated successfully',
       refund,
     };
   }
 
+  // TODO: payout amount search not working properly and need to fix the
   async updatePayoutStatus(payoutId: MongoIdDto['id'], status: string) {
     return this.payoutModel.findByIdAndUpdate(
       payoutId,

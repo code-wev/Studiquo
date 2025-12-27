@@ -14,8 +14,8 @@ export class AdminOverViewQueryDto {
 }
 
 export class ChangeRefundStatusDto {
-  @IsEnum(['APPROVED', 'COMPLETED', 'FAILED'], {
-    message: 'status must be APPROVED, COMPLETED, or FAILED',
+  @IsEnum(['APPROVED', 'COMPLETED', 'REJECTED'], {
+    message: 'status must be APPROVED, COMPLETED, or REJECTED',
   })
-  status: 'APPROVED' | 'COMPLETED' | 'FAILED';
+  status: 'APPROVED' | 'COMPLETED' | 'REJECTED';
 }

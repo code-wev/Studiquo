@@ -28,7 +28,7 @@ export class Refund extends Document {
 
   @Prop({
     type: String,
-    enum: ['PENDING', 'APPROVED', 'COMPLETED', 'FAILED'],
+    enum: ['PENDING', 'APPROVED', 'COMPLETED', 'FAILED', 'REJECTED'],
     required: true,
     default: 'PENDING',
   })
