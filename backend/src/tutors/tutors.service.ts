@@ -68,11 +68,8 @@ export class TutorsService {
     const isAdmin = role === UserRole.Admin;
 
     const matchConditions: any = {};
-
-    // Filtering by subjects
-    if (subject) {
-      matchConditions.subjects = { $in: subject }; // Match tutors' subjects
-    }
+    // We'll filter by subjects after we join `tutorprofiles` (subjects live there)
+    const subjectFilter = subject || null;
 
     // Filtering by hourly rates
     const rateConditions: any[] = [];
@@ -116,11 +113,27 @@ export class TutorsService {
       : [];
 
     const pipeline: any[] = [
-          // Match users based on filtering conditions
-          { $match: { ...matchConditions, role: UserRole.Tutor } },
-    
-          // Match the role: Admin can see all, non-admins only approved tutors
-          ...(!isAdmin ? [{ $match: { isApproved: true } }] : []),
+      // Match users based on filtering conditions
+      { $match: { ...matchConditions, role: UserRole.Tutor } },
+
+      // Match the role: Admin can see all, non-admins only approved tutors
+      ...(!isAdmin ? [{ $match: { isApproved: true } }] : []),
+
+      // Join tutor profile to access hourly rates and subjects
+      {
+        $lookup: {
+          from: 'tutorprofiles',
+          localField: '_id',
+          foreignField: 'user',
+          as: 'tutorProfile',
+        },
+      },
+      { $unwind: { path: '$tutorProfile', preserveNullAndEmptyArrays: true } },
+
+      // If client filtered by subject, apply filter against tutorProfile.subjects
+      ...(subjectFilter
+        ? [{ $match: { 'tutorProfile.subjects': { $in: subjectFilter } } }]
+        : []),
 
       // Include user details
       {
@@ -134,9 +147,9 @@ export class TutorsService {
           googleId: 1,
           isApproved: 1,
           bio: 1,
-          subjects: 1,
-          groupHourlyRate: 1,
-          oneOnOneHourlyRate: 1,
+          subjects: '$tutorProfile.subjects',
+          groupHourlyRate: '$tutorProfile.groupHourlyRate',
+          oneOnOneHourlyRate: '$tutorProfile.oneOnOneHourlyRate',
           averageRating: 1, // assuming this field exists or is calculated
           ratingCount: 1, // assuming this field exists or is calculated
         },
@@ -184,19 +197,35 @@ export class TutorsService {
     ];
 
     // Perform the aggregation with pagination
-    const [data, totalResult] = await Promise.all([
+    // Build a count pipeline mirroring filters (without pagination)
+    const countPipeline: any[] = [
+      { $match: { ...matchConditions, role: UserRole.Tutor } },
+      ...(!isAdmin ? [{ $match: { isApproved: true } }] : []),
+      {
+        $lookup: {
+          from: 'tutorprofiles',
+          localField: '_id',
+          foreignField: 'user',
+          as: 'tutorProfile',
+        },
+      },
+      { $unwind: { path: '$tutorProfile', preserveNullAndEmptyArrays: true } },
+      ...(subjectFilter
+        ? [{ $match: { 'tutorProfile.subjects': { $in: subjectFilter } } }]
+        : []),
+      { $count: 'total' },
+    ];
+
+    const [tutors, totalResult] = await Promise.all([
       this.userModel.aggregate(pipeline),
-      this.userModel.aggregate([
-        { $match: matchConditions },
-        { $count: 'total' },
-      ]),
+      this.userModel.aggregate(countPipeline),
     ]);
 
     const total = totalResult[0]?.total || 0;
 
     return {
       message: 'Tutors fetched successfully',
-      data,
+      tutors,
       meta: {
         total,
         page,

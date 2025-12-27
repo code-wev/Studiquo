@@ -45,9 +45,11 @@ const FindTutorPage = () => {
   const { data: tutorData, isLoading, isError } = useGetTutorQuery(queryParams);
   const { data: subjectsData } = useGetSubjectsQuery();
 
-  const tutors = tutorData?.data?.data || [];
+  const tutors = tutorData?.data?.tutors || [];
   const meta = tutorData?.data?.meta;
   const subjects = subjectsData?.data || [];
+
+  console.log(tutors);
 
   // Calculate total pages
   const totalPages = meta?.totalPages || 1;
@@ -142,8 +144,8 @@ const FindTutorPage = () => {
                   Price Range
                 </label>
                 <div className='flex justify-between mt-2 text-sm mb-1'>
-                  <span>€{priceRange[0]}</span>
-                  <span>€{priceRange[1]}</span>
+                  <span>£{priceRange[0]}</span>
+                  <span>£{priceRange[1]}</span>
                 </div>
                 <input
                   type='range'
@@ -154,7 +156,7 @@ const FindTutorPage = () => {
                   className='w-full h-2 bg-[#CCB7F8] rounded-lg appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[#3A0E95]'
                 />
                 <div className='text-xs text-gray-500 text-center mt-1'>
-                  Up to €{priceRange[1]}/hour
+                  Up to £{priceRange[1]}/hour
                 </div>
               </div>
 
@@ -240,7 +242,7 @@ const FindTutorPage = () => {
                       <div className='flex justify-between gap-3 mb-2'>
                         <div className='flex-1'>
                           <h4 className='font-semibold text-lg'>
-                            {tutor?.user?.firstName} {tutor?.user?.lastName}
+                            {tutor?.firstName} {tutor?.lastName}
                           </h4>
                           <p className='text-gray-500 text-sm mb-2'>
                             {tutor.subjects?.map((s, index) => (
@@ -253,8 +255,8 @@ const FindTutorPage = () => {
                         </div>
 
                         <Image
-                          src={tutor.user?.avatar || "/default-avatar.png"}
-                          alt={tutor?.user?.firstName}
+                          src={tutor?.avatar || "/default-avatar.png"}
+                          alt={tutor?.firstName}
                           width={300}
                           height={300}
                           className='w-12 h-12 rounded-full object-cover border-2 border-purple-100'
@@ -278,7 +280,7 @@ const FindTutorPage = () => {
                           </span>
                         </div>
                         <p className='font-semibold text-xl text-purple-700'>
-                          €{tutor?.groupHourlyRate} - €
+                          £{tutor?.groupHourlyRate} - £
                           {tutor?.oneOnOneHourlyRate}
                           /hour
                         </p>

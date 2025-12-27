@@ -2,9 +2,9 @@
 
 import TitleSection from "@/components/dashboard/shared/TitleSection";
 import {
+  useChangePasswordMutation,
   useMyProfileQuery,
   useUpdateProfileMutation,
-  useChangePasswordMutation,
 } from "@/feature/shared/AuthApi";
 import Image from "next/image";
 import { useEffect, useState } from "react";
@@ -16,7 +16,8 @@ const TutorProfilePage = () => {
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
   const { data: myPofile, refetch } = useMyProfileQuery();
   const [uploading, setUploading] = useState(false);
-  const [changePassword, { isLoading: passwordLoading }] = useChangePasswordMutation();
+  const [changePassword, { isLoading: passwordLoading }] =
+    useChangePasswordMutation();
 
   const [profileData, setProfileData] = useState({
     firstName: "",
@@ -31,7 +32,7 @@ const TutorProfilePage = () => {
 
   const [passwordData, setPasswordData] = useState({
     oldPassword: "",
-    newPassword: ""
+    newPassword: "",
   });
 
   console.log(myPofile, "tomi amar my profile");
@@ -179,11 +180,11 @@ const TutorProfilePage = () => {
   const handlePasswordHandler = async () => {
     console.log("Old Password:", passwordData.oldPassword);
     console.log("New Password:", passwordData.newPassword);
-    
+
     try {
       const payload = {
         oldPassword: passwordData.oldPassword,
-        newPassword: passwordData.newPassword
+        newPassword: passwordData.newPassword,
       };
 
       const result = await changePassword(payload);
@@ -192,17 +193,17 @@ const TutorProfilePage = () => {
         toast.error(result?.error?.data?.message);
         return;
       }
-      
+
       toast.success("Password changed successfully");
       console.log(result, "Password change successfully");
 
       // Reset the form
       setPasswordData({
         oldPassword: "",
-        newPassword: ""
+        newPassword: "",
       });
     } catch (error) {
-      toast.error('Something went wrong! Please try again later!');
+      toast.error("Something went wrong! Please try again later!");
     }
   };
 
@@ -445,11 +446,11 @@ const TutorProfilePage = () => {
               {/* One-on-One Rate */}
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-2'>
-                  One-on-One Session Rate (€)
+                  One-on-One Session Rate (£)
                 </label>
                 <div className='relative'>
                   <span className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500'>
-                    €
+                    £
                   </span>
                   <input
                     type='number'
@@ -473,11 +474,11 @@ const TutorProfilePage = () => {
               {/* Group Rate */}
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-2'>
-                  Group Session Rate (€)
+                  Group Session Rate (£)
                 </label>
                 <div className='relative'>
                   <span className='absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500'>
-                    €
+                    £
                   </span>
                   <input
                     type='number'
@@ -535,43 +536,48 @@ const TutorProfilePage = () => {
         )}
 
         {/* Change Password Section */}
-        <div className="mt-8 p-6 bg-white border border-gray-200 rounded-xl shadow-sm">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Change Password</h2>
-          
-          <div className="grid grid-cols-2 gap-6">
+        <div className='mt-8 p-6 bg-white border border-gray-200 rounded-xl shadow-sm'>
+          <h2 className='text-2xl font-semibold text-gray-800 mb-6'>
+            Change Password
+          </h2>
+
+          <div className='grid grid-cols-2 gap-6'>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
                 Old Password
               </label>
               <input
-                type="password"
+                type='password'
                 value={passwordData.oldPassword}
-                onChange={(e) => handlePasswordChange("oldPassword", e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Enter your old password"
+                onChange={(e) =>
+                  handlePasswordChange("oldPassword", e.target.value)
+                }
+                className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500'
+                placeholder='Enter your old password'
               />
             </div>
-            
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
                 New Password
               </label>
               <input
-                type="password"
+                type='password'
                 value={passwordData.newPassword}
-                onChange={(e) => handlePasswordChange("newPassword", e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                placeholder="Enter your new password"
+                onChange={(e) =>
+                  handlePasswordChange("newPassword", e.target.value)
+                }
+                className='w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500'
+                placeholder='Enter your new password'
               />
             </div>
           </div>
-          
-          <div className="mt-6 flex justify-end">
+
+          <div className='mt-6 flex justify-end'>
             <button
               onClick={handlePasswordHandler}
               disabled={passwordLoading}
-              className="px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow disabled:opacity-70 disabled:cursor-not-allowed"
-            >
+              className='px-6 py-2 bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow disabled:opacity-70 disabled:cursor-not-allowed'>
               {passwordLoading ? "Changing..." : "Change Password"}
             </button>
           </div>

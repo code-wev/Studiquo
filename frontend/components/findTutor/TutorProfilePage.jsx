@@ -100,7 +100,7 @@ const TutorProfilePage = () => {
                   </span>
                 </div>
                 <p className='text-orange-500 text-lg font-semibold'>
-                  €{tutorData?.groupHourlyRate} -{" "}
+                  £{tutorData?.groupHourlyRate} -{" "}
                   {tutorData?.oneOnOneHourlyRate} / hour
                 </p>
                 <div>
