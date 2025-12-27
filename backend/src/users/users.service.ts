@@ -183,7 +183,12 @@ export class UsersService extends BaseService<User> {
         if (!stream)
           throw new BadRequestException('No avatar stream available');
 
-        const key = `avatars/${user.userId}/${now}${keyExt}`;
+        const defaultKey = `avatars/${user.userId}/${now}${keyExt}`;
+        const key =
+          process.env.S3_UPLOAD_DIRECT === 'true'
+            ? `avatars-${user.userId}-${now}${keyExt}`
+            : defaultKey;
+        this.logger.debug(`Uploading avatar to S3 key: ${key}`);
         const uploadResp = await this.awsService.uploadStream(
           key,
           stream,
