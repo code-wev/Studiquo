@@ -57,6 +57,16 @@ export class AdminController {
     return this.adminService.getStudents(search, { page, limit });
   }
 
+  /**
+   * Get all the refund requests.
+   *
+   * @returns list of refund requests with pagination
+   */
+  @Get('refunds')
+  async getRefunds(@Query() query: searchPaginationQueryDto) {
+    return this.adminService.getRefunds(query);
+  }
+
   @Put('payouts/:payoutId/approve')
   async approvePayout(@Param('payoutId') payoutId: MongoIdDto['id']) {
     return this.adminService.updatePayoutStatus(payoutId, 'approved');

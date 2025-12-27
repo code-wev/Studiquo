@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { Refund, RefundSchema } from 'src/models/Refund.model';
 import { Booking, BookingSchema } from '../models/Booking.model';
 import { Payment, PaymentSchema } from '../models/Payment.model';
 import { Payout, PayoutSchema } from '../models/Payout.model';
@@ -22,6 +23,7 @@ import { AdminService } from './admin.service';
       { name: Payment.name, schema: PaymentSchema },
       { name: Payout.name, schema: PayoutSchema },
       { name: TutorProfile.name, schema: TutorProfileSchema },
+      { name: Refund.name, schema: RefundSchema },
     ]),
   ],
   controllers: [AdminController],

@@ -4,6 +4,7 @@ import { PaginationDto } from 'common/dto/pagination.dto';
 import { SearchDto } from 'common/dto/search.dto';
 import { searchPaginationQueryDto } from 'common/dto/searchPagination.dto';
 import { Model, Types } from 'mongoose';
+import { Refund } from 'src/models/Refund.model';
 import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { Booking } from '../models/Booking.model';
 import { Payment } from '../models/Payment.model';
@@ -19,7 +20,7 @@ export class AdminService {
     @InjectModel(Booking.name) private bookingModel: Model<Booking>,
     @InjectModel(Payment.name) private paymentModel: Model<Payment>,
     @InjectModel(Payout.name) private payoutModel: Model<Payout>,
-    @InjectModel(TutorProfile.name)
+    @InjectModel(Refund.name) private refundModel: Model<Refund>,
     private tutorProfileModel: Model<TutorProfile>,
   ) {}
 
@@ -324,6 +325,51 @@ export class AdminService {
     return {
       message: 'Search completed',
       results,
+    };
+  }
+
+  /**
+   * Get all the refund requests.
+   *
+   * @returns list of refund requests with pagination
+   */
+  async getRefunds(query: searchPaginationQueryDto) {
+    const regex = new RegExp(query.search ?? '', 'i');
+
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const orConditions: any[] = [
+      { status: { $regex: regex } },
+      { currency: { $regex: regex } },
+      { method: { $regex: regex } },
+      { reason: { $regex: regex } },
+    ];
+
+    const searchNum = Number(query.search);
+    if (!Number.isNaN(searchNum)) {
+      orConditions.push({ amount: searchNum });
+    }
+
+    const refunds = await this.refundModel
+      .find({ $or: orConditions })
+      .select('-metadata -__v')
+      .skip(skip)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const total = await this.refundModel.countDocuments({ $or: orConditions });
+
+    return {
+      message: 'Refunds retrieved successfully',
+      refunds,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
