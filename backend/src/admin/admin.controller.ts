@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Put, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Put,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { searchPaginationQueryDto } from 'common/dto/searchPagination.dto';
 import { JwtAuthGuard } from 'common/guards/jwt-auth.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -6,7 +14,7 @@ import { MongoIdDto } from '../../common/dto/mongoId.dto';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { UserRole } from '../models/User.model';
 import { AdminService } from './admin.service';
-import { AdminOverViewQueryDto } from './dto/admin.dto';
+import { AdminOverViewQueryDto, ChangeRefundStatusDto } from './dto/admin.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -65,6 +73,31 @@ export class AdminController {
   @Get('refunds')
   async getRefunds(@Query() query: searchPaginationQueryDto) {
     return this.adminService.getRefunds(query);
+  }
+
+  /**
+   * Get refund request details with id
+   *
+   * @param refundId - ID of the refund request
+   * @returns refund request details
+   */
+  @Get('refunds/:refundId')
+  async getRefundDetails(@Param('refundId') refundId: MongoIdDto['id']) {
+    return this.adminService.getRefundDetails(refundId);
+  }
+
+  /**
+   * Approve a payout request by updating its status to 'APPROVED', 'COMPLETED', 'FAILED'.
+   *
+   * @param payoutId - ID of the payout request to approve
+   * @returns updated payout request
+   */
+  @Put('refunds/:refundId')
+  async processRefund(
+    @Param('refundId') refundId: MongoIdDto['id'],
+    @Body() body: ChangeRefundStatusDto,
+  ) {
+    return this.adminService.processRefund(refundId, body.status);
   }
 
   @Put('payouts/:payoutId/approve')

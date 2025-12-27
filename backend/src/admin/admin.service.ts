@@ -11,7 +11,7 @@ import { Payment } from '../models/Payment.model';
 import { Payout } from '../models/Payout.model';
 import { TutorProfile } from '../models/TutorProfile.model';
 import { User, UserRole } from '../models/User.model';
-import { AdminOverViewQueryDto } from './dto/admin.dto';
+import { AdminOverViewQueryDto, ChangeRefundStatusDto } from './dto/admin.dto';
 
 @Injectable()
 export class AdminService {
@@ -371,6 +371,55 @@ export class AdminService {
         limit,
         totalPages: Math.ceil(total / limit),
       },
+    };
+  }
+
+  /**
+   * Get refund request details with id
+   *
+   * @param refundId - ID of the refund request
+   * @returns refund request details
+   */
+  async getRefundDetails(refundId: MongoIdDto['id']) {
+    const refund = await this.refundModel
+      .findById(refundId)
+      .select('-metadata -__v')
+      .populate('payment', '-metadata -__v')
+      .populate('booking', '-metadata -__v')
+      .populate('student', 'firstName lastName email studentId')
+      .populate('tutor', 'firstName lastName email');
+
+    if (!refund) {
+    }
+
+    return {
+      message: 'Refund details retrieved successfully',
+      refund,
+    };
+  }
+
+  /**
+   * Process a refund request by updating its status.
+   *
+   * @param refundId - ID of the refund request
+   * @param status - New status for the refund request
+   * @returns success message and updated refund request
+   */
+  async processRefund(
+    refundId: MongoIdDto['id'],
+    status: ChangeRefundStatusDto['status'],
+  ) {
+    const refund = await this.refundModel.findByIdAndUpdate(refundId, {
+      status,
+    });
+
+    if (!refund) {
+      throw new Error('Refund request not found');
+    }
+
+    return {
+      message: 'Refund status updated successfully',
+      refund,
     };
   }
 

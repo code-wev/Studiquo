@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional } from 'class-validator';
+import { IsEnum, IsNumber, IsOptional } from 'class-validator';
 
 export class AdminOverViewQueryDto {
   @IsOptional()
@@ -11,4 +11,11 @@ export class AdminOverViewQueryDto {
   @Type(() => Number)
   @IsNumber()
   year?: number;
+}
+
+export class ChangeRefundStatusDto {
+  @IsEnum(['APPROVED', 'COMPLETED', 'FAILED'], {
+    message: 'status must be APPROVED, COMPLETED, or FAILED',
+  })
+  status: 'APPROVED' | 'COMPLETED' | 'FAILED';
 }
