@@ -1,7 +1,10 @@
 "use client";
 
 import TitleSection from "@/components/dashboard/shared/TitleSection";
-import { useGetMyUpcomingBookingsQuery } from "@/feature/student/BookingApi";
+import {
+  useCancelBookingMutation,
+  useGetMyUpcomingBookingsQuery,
+} from "@/feature/student/BookingApi";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { BiBookOpen, BiVideo, BiX } from "react-icons/bi";
@@ -196,11 +199,17 @@ export default function UpcomingClass() {
     }
   };
 
-  const handleCancelClass = (booking) => {
-    if (confirm("Are you sure you want to cancel this class?")) {
-      console.log("Cancel class:", booking);
-      // Implement cancel functionality
-      alert("Cancel functionality to be implemented");
+  const [cancelBooking, { isLoading: isCancelling }] =
+    useCancelBookingMutation();
+
+  const handleCancelClass = async (booking) => {
+    if (!confirm("Are you sure you want to cancel this class?")) return;
+    try {
+      const res = await cancelBooking(booking._id).unwrap();
+      alert(res.message || "Class cancelled successfully");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to cancel class. Please try again.");
     }
   };
 

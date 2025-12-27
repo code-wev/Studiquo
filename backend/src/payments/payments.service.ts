@@ -77,23 +77,60 @@ export class PaymentsService {
 
   /**
    * Refund a payment on Stripe.
-   * @param paymentIntentId - Stripe PaymentIntent or Charge id stored in `transactionId`
-   * @param amount - optional amount in main currency units (e.g., GBP). If provided, a partial
-   * refund will be issued for this amount. Otherwise full refund issued.
+   * @param transactionId - PaymentIntent ID (pi_), Charge ID (ch_), or Checkout Session ID (cs_)
+   * @param amount - Optional amount in main currency units (e.g. GBP). If not provided, full refund.
    */
-  async refundPayment(paymentIntentId: string, amount?: number) {
-    const params: Stripe.RequestOptions = {} as any;
+  async refundPayment(
+    transactionId: string,
+    amount?: number,
+  ): Promise<Stripe.Refund> {
+    let paymentIntentId: string | undefined;
 
-    const refundData: any = {};
+    // 1️⃣ Checkout Session (cs_)
+    if (transactionId.startsWith('cs_')) {
+      const session = await this.stripe.checkout.sessions.retrieve(
+        transactionId,
+        { expand: ['payment_intent'] },
+      );
 
-    // If amount provided, convert to cents/pence
-    if (typeof amount === 'number' && amount > 0) {
-      refundData.amount = Math.round(amount * 100);
+      if (!session.payment_intent) {
+        throw new Error('No payment_intent found on checkout session');
+      }
+
+      paymentIntentId =
+        typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : session.payment_intent.id;
     }
 
-    // Prefer refund by payment_intent id
-    refundData.payment_intent = paymentIntentId;
+    // 2️⃣ PaymentIntent (pi_)
+    else if (transactionId.startsWith('pi_')) {
+      paymentIntentId = transactionId;
+    }
 
-    return await this.stripe.refunds.create(refundData, params);
+    // 3️⃣ Charge (ch_) → get PaymentIntent
+    else if (transactionId.startsWith('ch_')) {
+      const charge = await this.stripe.charges.retrieve(transactionId);
+
+      if (!charge.payment_intent) {
+        throw new Error('Charge does not have an attached payment_intent');
+      }
+
+      paymentIntentId = charge.payment_intent as string;
+    } else {
+      throw new Error('Invalid Stripe transaction id');
+    }
+
+    // Refund params
+    const refundParams: Stripe.RefundCreateParams = {
+      payment_intent: paymentIntentId,
+    };
+
+    // Partial refund
+    if (typeof amount === 'number' && amount > 0) {
+      refundParams.amount = Math.round(amount * 100); // convert to cents/pence
+    }
+
+    return this.stripe.refunds.create(refundParams);
   }
 }

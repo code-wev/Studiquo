@@ -1386,6 +1386,7 @@ export class BookingsService {
     }
 
     const slot = await this.timeSlotModel.findById(booking.timeSlot);
+
     if (!slot) {
       throw new BadRequestException('Invalid time slot for booking');
     }
@@ -1410,10 +1411,11 @@ export class BookingsService {
     }
 
     // Find completed payments for this booking
-    const completedPayments = await this.paymentModel.find({
-      booking: booking._id,
-      status: 'COMPLETED',
-    });
+    const completedPayments = await this.paymentModel
+      .find({ booking: booking._id, status: 'COMPLETED' })
+      .populate('student')
+      .populate('tutor')
+      .populate('booking');
 
     // No completed payments — simply cancel
     if (!completedPayments || completedPayments.length === 0) {
@@ -1426,7 +1428,7 @@ export class BookingsService {
     }
 
     // Helper to refund a single payment and adjust tutor wallet
-    const processRefund = async (payment: any) => {
+    const processRefund = async (payment: Payment) => {
       let refundRecord: any = null;
       let stripeRefundId: string | undefined;
       let refundStatus: 'PENDING' | 'FAILED' = 'FAILED';
@@ -1516,7 +1518,7 @@ export class BookingsService {
 
     // Multiple paid students: only refund payments belonging to the cancelling student
     const paymentsForCaller = completedPayments.filter(
-      (p: any) =>
+      (p: Payment) =>
         enrolledIds.includes(String(p.student)) &&
         String(p.student) === callerId,
     );
@@ -1558,6 +1560,7 @@ export class BookingsService {
     // If timeslot is ONE_TO_ONE -> cancel booking
     if (slot.type === 'ONE_TO_ONE') {
       booking.status = 'CANCELLED';
+
       await booking.save();
       return {
         message: 'ONE_TO_ONE booking cancelled and refunds (if any) processed',

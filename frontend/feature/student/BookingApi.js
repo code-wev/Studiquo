@@ -60,6 +60,14 @@ export const BookingApi = createApi({
       }),
       providesTags: ["Booking"],
     }),
+
+    cancelBooking: builder.mutation({
+      query: (bookingId) => ({
+        url: `/bookings/${bookingId}/cancel`,
+        method: "PUT",
+      }),
+      invalidatesTags: ["Booking"],
+    }),
   }),
 });
 
@@ -69,4 +77,5 @@ export const {
   useMakePaymentMutation,
   useGetMyUpcomingBookingsQuery,
   useGetTutorBookingsQuery,
+  useCancelBookingMutation,
 } = BookingApi;
