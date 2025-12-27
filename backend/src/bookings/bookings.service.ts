@@ -8,6 +8,7 @@ import { Booking } from '../models/Booking.model';
 import { BookingStudents } from '../models/BookingStudents.model';
 import { LessonReport } from '../models/LessonReport.model';
 import { Payment } from '../models/Payment.model';
+import { Refund } from '../models/Refund.model';
 import { TimeSlot } from '../models/TimeSlot.model';
 import { TutorAvailability } from '../models/TutorAvailability.model';
 import { TutorProfile } from '../models/TutorProfile.model';
@@ -41,6 +42,7 @@ export class BookingsService {
     @InjectModel(User.name) private userModel: Model<User>,
     @InjectModel(Payment.name) private paymentModel: Model<Payment>,
     @InjectModel(Wallet.name) private walletModel: Model<Wallet>,
+    @InjectModel(Refund.name) private refundModel: Model<Refund>,
   ) {}
 
   /**
@@ -1425,26 +1427,65 @@ export class BookingsService {
 
     // Helper to refund a single payment and adjust tutor wallet
     const processRefund = async (payment: any) => {
+      let refundRecord: any = null;
+      let stripeRefundId: string | undefined;
+      let refundStatus: 'COMPLETED' | 'FAILED' = 'FAILED';
+
       try {
-        await this.paymentsService.refundPayment(
+        const stripeRefund: any = await this.paymentsService.refundPayment(
           payment.transactionId,
           payment.amount,
         );
+        stripeRefundId = stripeRefund?.id;
+        refundStatus = 'COMPLETED';
       } catch (err: any) {
-        // Non-fatal: log and continue (controller/logger not injected here)
         console.error(
           `Failed to refund payment ${payment._id}: ${err.message}`,
         );
+        refundStatus = 'FAILED';
       }
 
+      // Create refund record for admin tracking
       try {
-        payment.status = 'REFUNDED';
-        await payment.save();
-      } catch (e) {}
+        refundRecord = await this.refundModel.create({
+          payment: payment._id,
+          booking: payment.booking,
+          student: payment.student,
+          tutor: payment.tutor,
+          amount: payment.amount,
+          currency: payment.currency || 'gbp',
+          method: 'stripe',
+          status: refundStatus,
+          stripeRefundId,
+          reason: 'Student cancellation',
+          metadata: { initiatedBy: String(user.userId) },
+        });
+      } catch (e: any) {
+        console.error(
+          `Failed to create refund record for payment ${payment._id}: ${e.message}`,
+        );
+      }
 
-      // Reverse tutor wallet credit if any
+      // Update payment status if refund succeeded
       try {
-        if (payment.tutor && payment.tutorEarning && this.walletModel) {
+        if (refundStatus === 'COMPLETED') {
+          payment.status = 'REFUNDED';
+          await payment.save();
+        }
+      } catch (e: any) {
+        console.error(
+          `Failed to update payment status ${payment._id}: ${e.message}`,
+        );
+      }
+
+      // Reverse tutor wallet credit if any and refund completed
+      try {
+        if (
+          refundStatus === 'COMPLETED' &&
+          payment.tutor &&
+          payment.tutorEarning &&
+          this.walletModel
+        ) {
           await this.walletModel.findOneAndUpdate(
             { tutorId: payment.tutor },
             {
@@ -1459,6 +1500,7 @@ export class BookingsService {
           `Failed to adjust tutor wallet for payment ${payment._id}: ${e.message}`,
         );
       }
+      return refundRecord;
     };
 
     // If only one paid student -> refund and cancel booking

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Payment, PaymentSchema } from 'src/models/Payment.model';
+import { Refund, RefundSchema } from 'src/models/Refund.model';
 import { Wallet, WalletSchema } from 'src/models/Wallet.model';
 import { jwtConfig } from '../../common/jwt.config';
 import { Booking, BookingSchema } from '../models/Booking.model';
@@ -37,6 +38,7 @@ import { BookingsService } from './bookings.service';
       { name: TutorAvailability.name, schema: TutorAvailabilitySchema },
       { name: TutorProfile.name, schema: TutorProfileSchema },
       { name: User.name, schema: UserSchema },
+      { name: Refund.name, schema: RefundSchema },
       { name: Payment.name, schema: PaymentSchema },
       { name: Wallet.name, schema: WalletSchema },
     ]),
