@@ -62,6 +62,8 @@ export class TutorsService {
       limit = 10,
     } = query;
 
+    // TODO: if the user is admin, show unapproved tutors too
+
     const skip = (page - 1) * limit;
     const isAdmin = user?.role === UserRole.Admin;
 
