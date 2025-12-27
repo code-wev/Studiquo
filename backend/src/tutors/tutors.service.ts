@@ -116,11 +116,11 @@ export class TutorsService {
       : [];
 
     const pipeline: any[] = [
-      // Match users based on filtering conditions
-      { $match: matchConditions },
-
-      // Match the role: Admin can see all, non-admins only approved tutors
-      ...(!isAdmin ? [{ $match: { isApproved: true } }] : []),
+          // Match users based on filtering conditions
+          { $match: { ...matchConditions, role: UserRole.Tutor } },
+    
+          // Match the role: Admin can see all, non-admins only approved tutors
+          ...(!isAdmin ? [{ $match: { isApproved: true } }] : []),
 
       // Include user details
       {
