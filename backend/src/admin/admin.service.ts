@@ -21,6 +21,7 @@ export class AdminService {
     @InjectModel(Payment.name) private paymentModel: Model<Payment>,
     @InjectModel(Payout.name) private payoutModel: Model<Payout>,
     @InjectModel(Refund.name) private refundModel: Model<Refund>,
+    @InjectModel(TutorProfile.name)
     private tutorProfileModel: Model<TutorProfile>,
   ) {}
 
